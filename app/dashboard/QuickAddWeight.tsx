@@ -12,7 +12,7 @@ export default function QuickAddWeight({ profileId }: { profileId: string }) {
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
-    const value = parseFloat(weight);
+    const value = parseFloat(weight.replace(",", "."));
     if (!value || value <= 0) {
       setError("Informe um peso válido.");
       return;
@@ -22,11 +22,14 @@ export default function QuickAddWeight({ profileId }: { profileId: string }) {
     const supabase = createClient();
     const today = new Date().toISOString().slice(0, 10);
 
-    const { error: weightError } = await supabase.from("weight_logs").insert({
-      profile_id: profileId,
-      weight: value,
-      logged_at: today,
-    });
+    const { error: weightError } = await supabase.from("weight_logs").upsert(
+      {
+        profile_id: profileId,
+        weight: value,
+        logged_at: today,
+      },
+      { onConflict: "profile_id,logged_at" }
+    );
     if (weightError) {
       setSaving(false);
       setError(weightError.message);
