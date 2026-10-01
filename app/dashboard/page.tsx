@@ -56,6 +56,15 @@ export default async function DashboardPage() {
     <>
       <TopBar title="Painel de evolução" />
       <div className="fx-app">
+        <div className="fx-nav-row">
+          <a className="btn secondary" href="/medidas">
+            📏 Medidas
+          </a>
+          <a className="btn secondary" href="/treino">
+            🏋️ Treino
+          </a>
+        </div>
+
         {personal && (
           <div className="card">
             <h2>💬 Conversa com seu personal{personal.name ? ` (${personal.name})` : ""}</h2>

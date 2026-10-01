@@ -1,0 +1,111 @@
+"use client";
+
+import { useState } from "react";
+import { useRouter } from "next/navigation";
+import { createClient } from "@/lib/supabase/client";
+import { MEASUREMENT_FIELDS } from "@/lib/fenix-domain";
+
+export default function QuickAddMeasurements({ profileId }: { profileId: string }) {
+  const router = useRouter();
+  const [values, setValues] = useState<Record<string, string>>({});
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  function handleChange(key: string, raw: string) {
+    setValues((prev) => ({ ...prev, [key]: raw }));
+  }
+
+  async function handleSubmit(e: React.FormEvent) {
+    e.preventDefault();
+
+    // Only fields the user actually filled in are saved, matching the
+    // prototype's partial-measurement-entry approach.
+    const parsed: Record<string, number> = {};
+    for (const field of MEASUREMENT_FIELDS) {
+      const raw = values[field.key];
+      if (raw == null || raw.trim() === "") continue;
+      const num = parseFloat(raw.replace(",", "."));
+      if (!Number.isFinite(num) || num <= 0) {
+        setError(`Valor inválido para ${field.label}.`);
+        return;
+      }
+      parsed[field.key] = num;
+    }
+
+    if (Object.keys(parsed).length === 0) {
+      setError("Preencha ao menos uma medida.");
+      return;
+    }
+
+    setSaving(true);
+    setError(null);
+    const supabase = createClient();
+    const today = new Date().toISOString().slice(0, 10);
+
+    // Fetch today's existing row (if any) so we merge new values into it
+    // instead of wiping fields the user didn't touch today.
+    const { data: existing, error: fetchError } = await supabase
+      .from("measurements")
+      .select("values")
+      .eq("profile_id", profileId)
+      .eq("logged_at", today)
+      .maybeSingle();
+
+    if (fetchError) {
+      setSaving(false);
+      setError(fetchError.message);
+      return;
+    }
+
+    const merged = { ...(existing?.values ?? {}), ...parsed };
+
+    const { error: upsertError } = await supabase.from("measurements").upsert(
+      {
+        profile_id: profileId,
+        logged_at: today,
+        values: merged,
+      },
+      { onConflict: "profile_id,logged_at" }
+    );
+
+    if (upsertError) {
+      setSaving(false);
+      setError(upsertError.message);
+      return;
+    }
+
+    await supabase.from("activity_days").upsert(
+      { profile_id: profileId, activity_date: today },
+      { onConflict: "profile_id,activity_date" }
+    );
+
+    setSaving(false);
+    setValues({});
+    router.refresh();
+  }
+
+  return (
+    <form onSubmit={handleSubmit}>
+      <div className="row2">
+        {MEASUREMENT_FIELDS.map((field) => (
+          <div className="field" key={field.key}>
+            <label>
+              {field.label} ({field.unit})
+            </label>
+            <input
+              type="number"
+              step="0.1"
+              value={values[field.key] ?? ""}
+              onChange={(e) => handleChange(field.key, e.target.value)}
+              placeholder="Ex: 82.5"
+            />
+          </div>
+        ))}
+      </div>
+      {error && <div className="form-error">{error}</div>}
+      <button className="btn" type="submit" disabled={saving}>
+        {saving ? "Salvando..." : "Registrar medidas de hoje"}
+      </button>
+    </form>
+  );
+}

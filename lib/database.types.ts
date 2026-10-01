@@ -108,6 +108,19 @@ export type CustomPlan = {
   created_at: string;
 };
 
+export type WorkoutLogEntry = {
+  id: string;
+  profile_id: string;
+  logged_at: string;
+  exercise_id: string;
+  checked: boolean;
+  sets: number | null;
+  reps: number | null;
+  load: number | null;
+  created_at: string;
+  updated_at: string;
+};
+
 // Minimal Database generic shape so @supabase/ssr's / supabase-js's generics
 // compile and give us real autocomplete + type-checking on .from(...) calls.
 // Not exhaustive (Insert/Update variants collapse to Partial<Row>, no
@@ -133,6 +146,7 @@ export type Database = {
       activity_days: Table<ActivityDay>;
       badges_unlocked: Table<BadgeUnlocked>;
       custom_plans: Table<CustomPlan>;
+      workout_log_entries: Table<WorkoutLogEntry>;
     };
     Views: Record<string, never>;
     Functions: Record<string, never>;

@@ -106,16 +106,17 @@ export const ACTIVITY_LEVELS: {
   },
 ];
 
-// Ported from the Medidas module's `FIELDS` array.
-export const MEASUREMENT_FIELDS: { key: string; label: string }[] = [
-  { key: "cintura", label: "Cintura" },
-  { key: "quadril", label: "Quadril" },
-  { key: "peito", label: "Peito" },
-  { key: "braco", label: "Braço" },
-  { key: "coxa", label: "Coxa" },
-  { key: "panturrilha", label: "Panturrilha" },
-  { key: "abdomen", label: "Abdômen" },
-  { key: "pescoco", label: "Pescoço" },
+// Ported from the Medidas module's `FIELDS` array. All measurements are
+// circumferences in centimeters.
+export const MEASUREMENT_FIELDS: { key: string; label: string; unit: string }[] = [
+  { key: "cintura", label: "Cintura", unit: "cm" },
+  { key: "quadril", label: "Quadril", unit: "cm" },
+  { key: "peito", label: "Peito", unit: "cm" },
+  { key: "braco", label: "Braço", unit: "cm" },
+  { key: "coxa", label: "Coxa", unit: "cm" },
+  { key: "panturrilha", label: "Panturrilha", unit: "cm" },
+  { key: "abdomen", label: "Abdômen", unit: "cm" },
+  { key: "pescoco", label: "Pescoço", unit: "cm" },
 ];
 
 export interface ProfileTargets {

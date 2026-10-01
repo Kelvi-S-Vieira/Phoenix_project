@@ -99,7 +99,8 @@ create table if not exists public.weight_logs (
   profile_id uuid not null references public.profiles(id) on delete cascade,
   weight numeric(6,2) not null,
   logged_at date not null default current_date,
-  created_at timestamptz not null default now()
+  created_at timestamptz not null default now(),
+  unique (profile_id, logged_at)
 );
 
 create index if not exists weight_logs_profile_id_logged_at_idx
@@ -221,6 +222,31 @@ create table if not exists public.custom_plans (
 
 create index if not exists custom_plans_profile_id_idx on public.custom_plans(profile_id);
 
+-- -----------------------------------------------------------------------------
+-- workout_log_entries
+-- Per-user, per-day log of the "treino-basico" module (see
+-- lib/treino-basico-data.ts for the static exercise pool / split templates,
+-- which do NOT live in the database). `exercise_id` is a stable key built
+-- from day+type+group+exercise name (see `exerciseId()` in that file), e.g.
+-- "seg::musculacao::peito::Supino reto na máquina".
+-- -----------------------------------------------------------------------------
+create table if not exists public.workout_log_entries (
+  id uuid primary key default gen_random_uuid(),
+  profile_id uuid not null references public.profiles(id) on delete cascade,
+  logged_at date not null default current_date,
+  exercise_id text not null,
+  checked boolean not null default false,
+  sets numeric(5,1),
+  reps numeric(5,1),
+  load numeric(6,2),
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now(),
+  unique (profile_id, logged_at, exercise_id)
+);
+
+create index if not exists workout_log_entries_profile_id_logged_at_idx
+  on public.workout_log_entries(profile_id, logged_at);
+
 -- =============================================================================
 -- Auto-create a profiles row whenever a new auth.users row appears
 -- (standard Supabase recipe: a trigger function on auth.users insert).
@@ -310,6 +336,7 @@ alter table public.chat_messages enable row level security;
 alter table public.activity_days enable row level security;
 alter table public.badges_unlocked enable row level security;
 alter table public.custom_plans enable row level security;
+alter table public.workout_log_entries enable row level security;
 
 -- --- profiles -----------------------------------------------------------
 -- Everyone can read their own profile; a personal can also read the
@@ -521,6 +548,29 @@ create policy "custom_plans_update_own"
 create policy "custom_plans_delete_own"
   on public.custom_plans for delete
   using (profile_id = auth.uid());
+
+-- --- workout_log_entries -----------------------------------------------------
+create policy "workout_log_entries_select_own"
+  on public.workout_log_entries for select
+  using (profile_id = auth.uid());
+
+create policy "workout_log_entries_insert_own"
+  on public.workout_log_entries for insert
+  with check (profile_id = auth.uid());
+
+create policy "workout_log_entries_update_own"
+  on public.workout_log_entries for update
+  using (profile_id = auth.uid())
+  with check (profile_id = auth.uid());
+
+create policy "workout_log_entries_select_by_personal"
+  on public.workout_log_entries for select
+  using (
+    exists (
+      select 1 from public.profiles p
+      where p.id = workout_log_entries.profile_id and p.linked_personal_id = auth.uid()
+    )
+  );
 
 -- --- personal write access for workout application --------------------------
 -- A personal applying a saved workout template to one of their alunos needs

@@ -609,6 +609,186 @@ p {
   background: var(--border);
 }
 
+/* --------------------------------------------------------------------------
+   Medidas — small-multiples grid of per-field evolution charts
+   -------------------------------------------------------------------------- */
+.fx-measure-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(230px, 1fr));
+  gap: 14px;
+}
+.fx-measure-card {
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  padding: 12px;
+}
+.fx-measure-card-title {
+  font-size: 12.5px;
+  font-weight: 700;
+  color: var(--text);
+  margin-bottom: 6px;
+}
+.fx-measure-card-title .unit {
+  color: var(--text-muted);
+  font-weight: 400;
+}
+
+/* --------------------------------------------------------------------------
+   Treino — day strip + exercise cards (Básico tier)
+   -------------------------------------------------------------------------- */
+.fx-nav-row {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+  margin-bottom: 18px;
+}
+.fx-nav-row a.btn {
+  width: auto;
+}
+
+.fx-day-strip {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 8px;
+  margin-bottom: 18px;
+}
+@media (max-width: 560px) {
+  .fx-day-strip {
+    grid-template-columns: repeat(4, 1fr);
+  }
+}
+.fx-day-chip {
+  background: var(--surface-2);
+  border: 1.5px solid var(--border);
+  border-radius: var(--radius-sm);
+  padding: 10px 6px;
+  text-align: center;
+  cursor: pointer;
+  transition: border-color 0.15s ease, background 0.15s ease;
+}
+.fx-day-chip:hover {
+  border-color: var(--ember-dim);
+}
+.fx-day-chip.active {
+  border-color: var(--ember);
+  background: var(--ember-dim);
+}
+.fx-day-chip.rest {
+  opacity: 0.55;
+}
+.fx-day-chip .fx-day-name {
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--text);
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+}
+.fx-day-chip .fx-day-groups {
+  font-size: 10.5px;
+  color: var(--text-muted);
+  margin-top: 4px;
+  line-height: 1.3;
+  min-height: 2.2em;
+}
+.fx-day-chip .fx-day-check {
+  font-size: 11px;
+  color: var(--good);
+  margin-top: 4px;
+  height: 1em;
+}
+
+.fx-group-block {
+  margin-bottom: 18px;
+}
+.fx-group-block h4 {
+  margin: 0 0 8px;
+  font-size: 14.5px;
+  color: var(--text);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.fx-group-block h4 .fx-group-count {
+  font-size: 11px;
+  color: var(--text-muted);
+  font-weight: 400;
+}
+
+.fx-exercise-card {
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  padding: 14px;
+  margin-bottom: 10px;
+  transition: border-color 0.15s ease, background 0.15s ease;
+}
+.fx-exercise-card.checked {
+  border-color: var(--good);
+  background: rgba(127, 184, 138, 0.08);
+}
+.fx-exercise-main {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+}
+.fx-exercise-main input[type="checkbox"] {
+  width: 19px;
+  height: 19px;
+  margin-top: 2px;
+  accent-color: var(--good);
+  cursor: pointer;
+  flex-shrink: 0;
+}
+.fx-exercise-main .fx-exercise-name {
+  font-weight: 700;
+  font-size: 14px;
+  color: var(--text);
+}
+.fx-exercise-media {
+  width: 100%;
+  max-width: 220px;
+  border-radius: var(--radius-sm);
+  margin: 8px 0;
+  display: block;
+}
+.fx-exercise-details p {
+  margin: 6px 0;
+  font-size: 12.5px;
+  line-height: 1.5;
+  color: var(--text-muted);
+}
+.fx-exercise-details p.fx-exercise-erro {
+  color: var(--warn);
+}
+.fx-exercise-details p b {
+  color: var(--gold);
+}
+.fx-exercise-fields {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin-top: 8px;
+  align-items: center;
+}
+.fx-exercise-fields label {
+  font-size: 11px;
+  color: var(--text-muted);
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+.fx-exercise-fields input[type="number"] {
+  width: 72px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 7px;
+  padding: 7px 8px;
+  color: var(--text);
+  font-size: 13.5px;
+  font-family: inherit;
+}
+
 .fx-collapsible-toggle {
   color: var(--gold);
   font-size: 13px;
