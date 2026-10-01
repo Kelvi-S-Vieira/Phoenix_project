@@ -9,6 +9,7 @@ import * as treinoBasico from "@/lib/treino-basico-data";
 import * as treinoIntermediario from "@/lib/treino-intermediario-data";
 import * as treinoAvancado from "@/lib/treino-avancado-data";
 import type { Tier } from "@/lib/database.types";
+import { TIER_LABELS } from "@/lib/fenix-domain";
 
 // Each tier's own data module keeps its own stricter MuscleGroupKey/SplitKey
 // unions; this lookup only needs the generic (string-keyed) shape so the
@@ -96,6 +97,22 @@ export default async function TreinoPage() {
             splitKey={profile.current_split}
             tierData={tierData}
           />
+        )}
+
+        {tierData && (
+          <details className="card fx-change-plan">
+            <summary>⚙️ Trocar nível ou frequência de treino</summary>
+            <div style={{ marginTop: 16 }}>
+              <h3 style={{ marginBottom: 8 }}>Nível</h3>
+              <TierPicker profileId={user.id} />
+            </div>
+            <div style={{ marginTop: 20 }}>
+              <h3 style={{ marginBottom: 8 }}>
+                Frequência semanal ({TIER_LABELS[profile.current_tier as Tier]})
+              </h3>
+              <SplitPicker profileId={user.id} splits={tierData.SPLITS} />
+            </div>
+          </details>
         )}
       </div>
     </>

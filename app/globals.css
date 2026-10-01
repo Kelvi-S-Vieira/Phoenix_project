@@ -1040,3 +1040,16 @@ p {
     grid-template-columns: 1fr;
   }
 }
+
+.fx-change-plan summary {
+  cursor: pointer;
+  font-weight: 600;
+  color: var(--text);
+  list-style: none;
+}
+.fx-change-plan summary::-webkit-details-marker {
+  display: none;
+}
+.fx-change-plan[open] summary {
+  margin-bottom: 4px;
+}
