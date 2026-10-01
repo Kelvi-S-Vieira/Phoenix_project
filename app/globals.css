@@ -1053,3 +1053,14 @@ p {
 .fx-change-plan[open] summary {
   margin-bottom: 4px;
 }
+
+.fx-grad-box {
+  margin-top: 14px;
+  background: linear-gradient(135deg, var(--ember-dim), transparent);
+  border: 1px solid var(--ember);
+  border-radius: var(--radius-sm);
+  padding: 14px 16px;
+  font-size: 13.5px;
+  color: var(--text);
+  line-height: 1.5;
+}

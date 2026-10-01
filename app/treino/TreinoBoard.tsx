@@ -92,8 +92,10 @@ export default function TreinoBoard({
   const typeInfo = workoutTypes[activeTab];
 
   return (
-    <div>
-      <div className="fx-day-strip">
+    <>
+      <div className="card">
+        <h2>2. Sua semana</h2>
+        <div className="fx-day-strip">
         {DAYS.map((d) => {
           const dayGroups = split.week[d.key];
           const groupsLabel = dayGroups
@@ -116,8 +118,11 @@ export default function TreinoBoard({
             </div>
           );
         })}
+        </div>
       </div>
 
+      <div className="card">
+        <h2>3. Treino do dia</h2>
       {!selectedDay && (
         <div className="fx-empty-state">
           Selecione um dia da semana acima para ver os exercícios.
@@ -240,6 +245,7 @@ export default function TreinoBoard({
           })}
         </>
       )}
-    </div>
+      </div>
+    </>
   );
 }

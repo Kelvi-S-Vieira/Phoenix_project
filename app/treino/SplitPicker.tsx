@@ -8,9 +8,11 @@ import type { Split } from "@/lib/treino-shared-types";
 export default function SplitPicker({
   profileId,
   splits,
+  currentSplit,
 }: {
   profileId: string;
   splits: Record<string, Split>;
+  currentSplit?: string | null;
 }) {
   const router = useRouter();
   const [saving, setSaving] = useState<string | null>(null);
@@ -37,13 +39,13 @@ export default function SplitPicker({
   return (
     <div>
       <p className="sub" style={{ marginBottom: 12 }}>
-        Escolha sua frequência semanal para começar.
+        Você pode trocar quando quiser.
       </p>
       <div className="choice-grid">
         {options.map(([key, split]) => (
           <div
             key={key}
-            className="choice-card"
+            className={"choice-card" + (currentSplit === key ? " selected" : "")}
             onClick={() => choose(key)}
             role="button"
           >

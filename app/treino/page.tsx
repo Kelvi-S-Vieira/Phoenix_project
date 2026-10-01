@@ -4,7 +4,7 @@ import TopBar from "@/components/TopBar";
 import SplitPicker from "./SplitPicker";
 import TierPicker from "./TierPicker";
 import TreinoBoard from "./TreinoBoard";
-import { DAYS, type DayKey, type TierWorkoutData } from "@/lib/treino-shared-types";
+import { DAYS, type DayKey, type Split, type TierWorkoutData } from "@/lib/treino-shared-types";
 import * as treinoBasico from "@/lib/treino-basico-data";
 import * as treinoIntermediario from "@/lib/treino-intermediario-data";
 import * as treinoAvancado from "@/lib/treino-avancado-data";
@@ -86,62 +86,106 @@ export default async function TreinoPage() {
               <TierPicker profileId={user.id} />
             </div>
           )
-        ) : !profile.current_split ? (
-          <div className="card">
-            <h2>Escolha sua frequência semanal</h2>
-            <SplitPicker profileId={user.id} splits={tierData.SPLITS} />
-          </div>
         ) : (
-          <TreinoContent
+          <TreinoTierPage
             profileId={user.id}
-            splitKey={profile.current_split}
+            profile={profile}
+            tier={profile.current_tier as Tier}
             tierData={tierData}
           />
-        )}
-
-        {tierData && (
-          <details className="card fx-change-plan">
-            <summary>⚙️ Trocar nível ou frequência de treino</summary>
-            <div style={{ marginTop: 16 }}>
-              <h3 style={{ marginBottom: 8 }}>Nível</h3>
-              <TierPicker profileId={user.id} />
-            </div>
-            <div style={{ marginTop: 20 }}>
-              <h3 style={{ marginBottom: 8 }}>
-                Frequência semanal ({TIER_LABELS[profile.current_tier as Tier]})
-              </h3>
-              <SplitPicker profileId={user.id} splits={tierData.SPLITS} />
-            </div>
-          </details>
         )}
       </div>
     </>
   );
 }
 
-async function TreinoContent({
+// Per-tier wording for section 1's heading — the prototype calls it
+// "frequência semanal" in Básico and "divisão" in Intermediário/Avançado.
+// (Avançado's prototype section 1 is actually "Ponto de partida (opcional)"
+// feeding a fully-custom day builder, which is out of scope here — a prior
+// migration pass already simplified Avançado to the same muscle-group-
+// browsing UI as the other two tiers, so it reuses the simpler "divisão"
+// wording rather than the custom-builder copy.)
+const SPLIT_SECTION_TITLE: Record<Tier, string> = {
+  "treino-basico": "1. Escolha sua frequência semanal",
+  "treino-intermediario": "1. Escolha sua divisão",
+  "treino-avancado": "1. Escolha sua divisão",
+};
+
+async function TreinoTierPage({
   profileId,
-  splitKey,
+  profile,
+  tier,
   tierData,
 }: {
   profileId: string;
-  splitKey: string;
+  profile: { current_split: string | null };
+  tier: Tier;
   tierData: TierWorkoutData;
 }) {
-  const split = tierData.SPLITS[splitKey];
-  if (!split) {
-    // Defensive: current_split holds a key from a different tier (e.g. the
-    // aluno's tier changed after picking a split) — don't crash.
-    return (
-      <div className="card">
-        <h2>Treino</h2>
-        <div className="fx-empty-state">
-          Split não reconhecido para o seu nível atual. Fale com seu personal.
-        </div>
-      </div>
-    );
-  }
+  const splitKey = profile.current_split;
+  const split = splitKey ? tierData.SPLITS[splitKey] : null;
 
+  return (
+    <>
+      <div className="card">
+        <h2>
+          {TIER_LABELS[tier]} — Treino
+        </h2>
+        <details className="fx-change-plan" style={{ marginTop: 4 }}>
+          <summary>⚙️ Trocar nível</summary>
+          <div style={{ marginTop: 16 }}>
+            <TierPicker profileId={profileId} />
+          </div>
+        </details>
+      </div>
+
+      <div className="card">
+        <h2>{SPLIT_SECTION_TITLE[tier]}</h2>
+        <SplitPicker
+          profileId={profileId}
+          splits={tierData.SPLITS}
+          currentSplit={splitKey}
+        />
+      </div>
+
+      {!split ? (
+        <>
+          <div className="card">
+            <h2>2. Sua semana</h2>
+            <div className="fx-empty-state">
+              Escolha uma divisão acima para ver sua semana.
+            </div>
+          </div>
+          <div className="card">
+            <h2>3. Treino do dia</h2>
+            <div className="fx-empty-state">
+              Escolha uma divisão acima para ver os exercícios.
+            </div>
+          </div>
+          <div className="card">
+            <h2>4. Resumo da semana</h2>
+            <div className="fx-empty-state">
+              Escolha uma divisão acima para ver seu resumo.
+            </div>
+          </div>
+        </>
+      ) : (
+        <TreinoContent profileId={profileId} split={split} tierData={tierData} />
+      )}
+    </>
+  );
+}
+
+async function TreinoContent({
+  profileId,
+  split,
+  tierData,
+}: {
+  profileId: string;
+  split: Split;
+  tierData: TierWorkoutData;
+}) {
   const supabase = await createClient();
   const today = new Date().toISOString().slice(0, 10);
   const { data: entries } = await supabase
@@ -168,12 +212,47 @@ async function TreinoContent({
     ? todayKey
     : DAYS.find((d) => split.week[d.key])?.key ?? null;
 
+  // --- "4. Resumo da semana" --------------------------------------------
+  // The prototype's state.log has no date dimension at all (it's keyed only
+  // by dayKey::type::group::exercise, so "checked" just means "last time you
+  // logged this slot"). Our workout_log_entries table is properly date-
+  // scoped (profile_id, logged_at, exercise_id), so "esta semana" needs an
+  // actual definition: the current ISO week, Monday through Sunday, using
+  // the server's local notion of "today" (no timezone handling needed).
+  const now = new Date();
+  const jsDay = now.getDay(); // 0 = domingo ... 6 = sábado
+  const diffToMonday = (jsDay + 6) % 7; // Monday itself -> 0, Sunday -> 6
+  const monday = new Date(now);
+  monday.setDate(now.getDate() - diffToMonday);
+  const sunday = new Date(monday);
+  sunday.setDate(monday.getDate() + 6);
+  const weekStart = monday.toISOString().slice(0, 10);
+  const weekEnd = sunday.toISOString().slice(0, 10);
+
+  const { data: weekEntries } = await supabase
+    .from("workout_log_entries")
+    .select("exercise_id")
+    .eq("profile_id", profileId)
+    .eq("checked", true)
+    .gte("logged_at", weekStart)
+    .lte("logged_at", weekEnd);
+
+  const scheduledDayKeys = DAYS.filter((d) => split.week[d.key]).map((d) => d.key);
+  const scheduledSet = new Set<string>(scheduledDayKeys);
+
+  const trainedDaySet = new Set<string>();
+  for (const e of weekEntries ?? []) {
+    const dayKey = e.exercise_id.split("::")[0];
+    if (scheduledSet.has(dayKey)) trainedDaySet.add(dayKey);
+  }
+
+  const scheduledDays = scheduledDayKeys.length;
+  const trainedDays = trainedDaySet.size;
+  const totalChecked = weekEntries?.length ?? 0;
+  const allTrained = scheduledDays > 0 && trainedDays >= scheduledDays;
+
   return (
-    <div className="card">
-      <h2>{split.label}</h2>
-      <p className="sub" style={{ marginBottom: 16 }}>
-        {split.desc}
-      </p>
+    <>
       <TreinoBoard
         profileId={profileId}
         split={split}
@@ -182,6 +261,31 @@ async function TreinoContent({
         initialLog={initialLog}
         defaultDay={defaultDay}
       />
-    </div>
+
+      <div className="card">
+        <h2>4. Resumo da semana</h2>
+        <div className="summary-grid">
+          <div className="sum-card">
+            <div className="label">Dias treinados esta semana</div>
+            <div className="value">
+              {trainedDays}
+              <span className="unit"> / {scheduledDays}</span>
+            </div>
+          </div>
+          <div className="sum-card">
+            <div className="label">Exercícios marcados como feitos</div>
+            <div className="value">{totalChecked}</div>
+          </div>
+        </div>
+        {allTrained && (
+          <div className="fx-grad-box">
+            🔥 Você completou todos os treinos planejados desta semana! Se
+            isso vem se repetindo semana após semana e os exercícios já estão
+            ficando confortáveis, talvez seja hora de dar uma olhada no
+            próximo nível — sem pressa, no seu tempo.
+          </div>
+        )}
+      </div>
+    </>
   );
 }
