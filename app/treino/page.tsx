@@ -2,8 +2,10 @@ import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import TopBar from "@/components/TopBar";
 import SplitPicker from "./SplitPicker";
+import TierPicker from "./TierPicker";
 import TreinoBoard from "./TreinoBoard";
 import { DAYS, SPLITS, type DayKey, type SplitKey } from "@/lib/treino-basico-data";
+import { TIER_LABELS } from "@/lib/fenix-domain";
 
 // Monday-first weekday order, matching DAYS/SPLITS ("seg"..."dom").
 // Date#getDay() is Sunday-first (0 = domingo), so remap it here.
@@ -38,13 +40,35 @@ export default async function TreinoPage() {
         ]}
       />
       <div className="fx-app">
-        {profile.current_tier !== "treino-basico" ? (
+        {!profile.current_tier ? (
+          profile.linked_personal_id ? (
+            <div className="card">
+              <h2>Treino</h2>
+              <div className="fx-empty-state">
+                Seu personal ainda não te atribuiu um nível de treino. Fale
+                com ele(a) ou, se preferir, escolha um por conta própria mais
+                abaixo.
+              </div>
+              <div style={{ marginTop: 16 }}>
+                <TierPicker profileId={user.id} />
+              </div>
+            </div>
+          ) : (
+            <div className="card">
+              <h2>Escolha seu nível</h2>
+              <TierPicker profileId={user.id} />
+            </div>
+          )
+        ) : profile.current_tier !== "treino-basico" ? (
           <div className="card">
             <h2>Treino</h2>
             <div className="fx-empty-state">
-              Seu personal ainda não te atribuiu o nível Básico, ou você está
-              em Intermediário/Avançado — essas versões chegam em breve nesta
-              plataforma web.
+              Você está no nível {TIER_LABELS[profile.current_tier]} — essa
+              versão ainda chega em breve nesta plataforma web. Só o nível
+              Básico está disponível por aqui por enquanto.
+            </div>
+            <div style={{ marginTop: 16 }}>
+              <TierPicker profileId={user.id} />
             </div>
           </div>
         ) : !profile.current_split ? (
