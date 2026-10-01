@@ -40,7 +40,15 @@ export default async function MedidasPage() {
 
   return (
     <>
-      <TopBar title="Medidas corporais" />
+      <TopBar
+        title="Medidas corporais"
+        nav={[
+          { href: "/dashboard", label: "Dashboard" },
+          { href: "/medidas", label: "Medidas" },
+          { href: "/treino", label: "Treino" },
+          { href: "/fotos", label: "Fotos" },
+        ]}
+      />
       <div className="fx-app">
         <div className="card">
           <h2>Registrar medidas de hoje</h2>

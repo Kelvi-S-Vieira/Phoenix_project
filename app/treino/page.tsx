@@ -28,7 +28,15 @@ export default async function TreinoPage() {
 
   return (
     <>
-      <TopBar title="Treino" />
+      <TopBar
+        title="Treino"
+        nav={[
+          { href: "/dashboard", label: "Dashboard" },
+          { href: "/medidas", label: "Medidas" },
+          { href: "/treino", label: "Treino" },
+          { href: "/fotos", label: "Fotos" },
+        ]}
+      />
       <div className="fx-app">
         {profile.current_tier !== "treino-basico" ? (
           <div className="card">

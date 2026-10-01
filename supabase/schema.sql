@@ -135,8 +135,14 @@ create table if not exists public.progress_photos (
   profile_id uuid not null references public.profiles(id) on delete cascade,
   storage_path text not null, -- e.g. "{profile_id}/2026-09-30-front.jpg"
   taken_at date not null default current_date,
+  pose text check (pose in ('frente', 'lado', 'costas')),
+  weight_at_photo numeric(6,2),
   created_at timestamptz not null default now()
 );
+
+-- NOTE: `create table if not exists` above won't alter an already-created
+-- table, so an existing deployment also needs the standalone
+-- migration_progress_photos_columns.sql run once in the SQL editor.
 
 create index if not exists progress_photos_profile_id_taken_at_idx
   on public.progress_photos(profile_id, taken_at);

@@ -54,17 +54,16 @@ export default async function DashboardPage() {
 
   return (
     <>
-      <TopBar title="Painel de evolução" />
+      <TopBar
+        title="Painel de evolução"
+        nav={[
+          { href: "/dashboard", label: "Dashboard" },
+          { href: "/medidas", label: "Medidas" },
+          { href: "/treino", label: "Treino" },
+          { href: "/fotos", label: "Fotos" },
+        ]}
+      />
       <div className="fx-app">
-        <div className="fx-nav-row">
-          <a className="btn secondary" href="/medidas">
-            📏 Medidas
-          </a>
-          <a className="btn secondary" href="/treino">
-            🏋️ Treino
-          </a>
-        </div>
-
         {personal && (
           <div className="card">
             <h2>💬 Conversa com seu personal{personal.name ? ` (${personal.name})` : ""}</h2>

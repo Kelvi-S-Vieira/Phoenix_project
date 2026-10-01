@@ -56,11 +56,15 @@ export type Measurement = {
   created_at: string;
 };
 
+export type Pose = "frente" | "lado" | "costas";
+
 export type ProgressPhoto = {
   id: string;
   profile_id: string;
   storage_path: string;
   taken_at: string;
+  pose: Pose | null;
+  weight_at_photo: number | null;
   created_at: string;
 };
 

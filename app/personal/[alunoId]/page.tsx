@@ -38,7 +38,10 @@ export default async function AlunoDetailPage({
 
   return (
     <>
-      <TopBar title={aluno.name || "Aluno"} />
+      <TopBar
+        title={aluno.name || "Aluno"}
+        nav={[{ href: "/personal", label: "← Meus alunos" }]}
+      />
       <div className="fx-app">
         <div className="fx-top">
           <div className="eyebrow">Projeto Fênix · Relatório de evolução</div>
