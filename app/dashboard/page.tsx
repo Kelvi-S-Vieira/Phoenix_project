@@ -1,7 +1,8 @@
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { computeStreak } from "@/lib/streak";
-import { TIER_LABELS } from "@/lib/fenix-domain";
+import { TIER_LABELS, BADGES } from "@/lib/fenix-domain";
+import { checkAndUnlockBadges } from "@/lib/badges";
 import TopBar from "@/components/TopBar";
 import WeightChart from "@/components/WeightChart";
 import ChatThread from "@/components/ChatThread";
@@ -45,6 +46,16 @@ export default async function DashboardPage() {
     ]);
 
   const streak = computeStreak((activityDays ?? []).map((d) => d.activity_date));
+
+  // Cheap enough to run on every dashboard load (same call the prototype
+  // made on every Dashboard open) — persists any newly-earned badges.
+  await checkAndUnlockBadges(supabase, user.id);
+  const { data: unlockedBadges } = await supabase
+    .from("badges_unlocked")
+    .select("badge_key")
+    .eq("profile_id", user.id);
+  const unlockedBadgeKeys = new Set((unlockedBadges ?? []).map((b) => b.badge_key));
+
   const currentWeight = profile.current_weight;
   const targetWeight = profile.target_weight;
   const diff =
@@ -104,10 +115,35 @@ export default async function DashboardPage() {
           </div>
           <div className="sum-card">
             <div className="label">Sequência</div>
-            <div className={"fx-streak-pill" + (streak === 0 ? " fx-streak-zero" : "")}>
-              <span>🔥</span>
+            <div
+              className={
+                "fx-streak-pill" +
+                (streak === 0 ? " fx-streak-zero" : "") +
+                (streak >= 30 ? " fx-streak-tier2" : streak >= 7 ? " fx-streak-tier1" : "")
+              }
+            >
+              <span className="fx-streak-flame">{streak >= 30 ? "🔥🔥" : "🔥"}</span>
               <span>{streak} dia{streak === 1 ? "" : "s"} seguidos</span>
             </div>
+          </div>
+        </div>
+
+        <div className="card">
+          <h2>🏆 Conquistas</h2>
+          <div className="fx-badges-row">
+            {Object.entries(BADGES).map(([key, badge]) => {
+              const unlocked = unlockedBadgeKeys.has(key);
+              return (
+                <div
+                  key={key}
+                  className={"fx-badge-chip" + (unlocked ? " unlocked" : " locked")}
+                  title={unlocked ? badge.label : `Bloqueada: ${badge.label}`}
+                >
+                  <span className="fx-badge-icon">{unlocked ? badge.icon : "🔒"}</span>
+                  <span className="fx-badge-label">{badge.label}</span>
+                </div>
+              );
+            })}
           </div>
         </div>
 

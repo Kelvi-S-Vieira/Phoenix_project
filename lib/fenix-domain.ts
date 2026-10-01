@@ -187,6 +187,16 @@ export function computeTargets(input: {
   };
 }
 
+// Ported from `window.FX_BADGES` in the prototype's streak/achievements module.
+export const BADGES: Record<string, { label: string; icon: string }> = {
+  primeiro_treino: { label: "Primeiro treino", icon: "💪" },
+  primeira_semana: { label: "Primeira semana", icon: "📅" },
+  primeira_foto: { label: "Primeira foto", icon: "📸" },
+  primeira_medida: { label: "Primeira medida", icon: "📏" },
+  streak_30: { label: "30 dias seguidos", icon: "🔥" },
+  meta_batida: { label: "Meta batida", icon: "🏆" },
+};
+
 /** Generates a short, shareable invite code for a new `personal` account. */
 export function generateInviteCode(): string {
   const alphabet = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789"; // no 0/O/1/I

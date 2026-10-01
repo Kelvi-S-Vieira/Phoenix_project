@@ -3,7 +3,8 @@ import { createClient } from "@/lib/supabase/server";
 import TopBar from "@/components/TopBar";
 import WeightChart from "@/components/WeightChart";
 import ChatThread from "@/components/ChatThread";
-import { GOAL_LABELS, TIER_LABELS } from "@/lib/fenix-domain";
+import { GOAL_LABELS, TIER_LABELS, SPLIT_OPTIONS } from "@/lib/fenix-domain";
+import ApplyTemplate from "./ApplyTemplate";
 
 export default async function AlunoDetailPage({
   params,
@@ -31,6 +32,12 @@ export default async function AlunoDetailPage({
     .select("logged_at, weight")
     .eq("profile_id", alunoId)
     .order("logged_at", { ascending: true });
+
+  const { data: templates } = await supabase
+    .from("workout_templates")
+    .select("*")
+    .eq("personal_id", user.id)
+    .order("created_at", { ascending: false });
 
   const first = weightLogs?.[0]?.weight ?? null;
   const latest = weightLogs?.[weightLogs.length - 1]?.weight ?? aluno.current_weight;
@@ -75,7 +82,18 @@ export default async function AlunoDetailPage({
             <div className="value" style={{ fontSize: 16 }}>
               {aluno.current_tier ? TIER_LABELS[aluno.current_tier] : "—"}
             </div>
+            {aluno.current_tier && aluno.current_split && (
+              <div className="sub" style={{ marginTop: 2, fontSize: 12 }}>
+                {SPLIT_OPTIONS[aluno.current_tier]?.find((s) => s.key === aluno.current_split)
+                  ?.label ?? aluno.current_split}
+              </div>
+            )}
           </div>
+        </div>
+
+        <div className="card">
+          <h2>Aplicar modelo de treino</h2>
+          <ApplyTemplate alunoId={aluno.id} templates={templates ?? []} />
         </div>
 
         <div className="card">

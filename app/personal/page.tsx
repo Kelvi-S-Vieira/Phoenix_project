@@ -3,6 +3,7 @@ import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
 import TopBar from "@/components/TopBar";
 import { TIER_LABELS } from "@/lib/fenix-domain";
+import TemplateLibrary from "./TemplateLibrary";
 
 export default async function PersonalRosterPage() {
   const supabase = await createClient();
@@ -25,6 +26,12 @@ export default async function PersonalRosterPage() {
     .select("id, name, current_weight, target_weight, current_tier, goal")
     .eq("linked_personal_id", user.id)
     .order("name", { ascending: true });
+
+  const { data: templates } = await supabase
+    .from("workout_templates")
+    .select("*")
+    .eq("personal_id", user.id)
+    .order("created_at", { ascending: false });
 
   return (
     <>
@@ -62,6 +69,11 @@ export default async function PersonalRosterPage() {
               </Link>
             ))
           )}
+        </div>
+
+        <div className="card">
+          <h2>Biblioteca de treinos</h2>
+          <TemplateLibrary personalId={user.id} templates={templates ?? []} />
         </div>
       </div>
     </>

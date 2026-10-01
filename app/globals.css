@@ -472,6 +472,55 @@ p {
 .fx-streak-pill.fx-streak-zero {
   opacity: 0.55;
 }
+.fx-streak-pill.fx-streak-tier1 {
+  border-color: var(--ember);
+  box-shadow: 0 0 0 1px var(--ember-dim);
+}
+.fx-streak-pill.fx-streak-tier2 {
+  border-color: var(--gold);
+  background: linear-gradient(135deg, var(--ember-dim), transparent);
+  box-shadow: 0 0 14px rgba(242, 166, 90, 0.35);
+  font-size: 14.5px;
+}
+.fx-streak-flame {
+  filter: drop-shadow(0 0 0 transparent);
+}
+.fx-streak-pill.fx-streak-tier1 .fx-streak-flame,
+.fx-streak-pill.fx-streak-tier2 .fx-streak-flame {
+  filter: drop-shadow(0 0 4px rgba(255, 107, 53, 0.6));
+}
+
+/* --------------------------------------------------------------------------
+   Badges / Conquistas (dashboard)
+   -------------------------------------------------------------------------- */
+.fx-badges-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+.fx-badge-chip {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 14px;
+  border-radius: 999px;
+  border: 1px solid var(--border);
+  background: var(--surface-2);
+  font-size: 12.5px;
+  font-weight: 600;
+}
+.fx-badge-chip.unlocked {
+  border-color: var(--gold);
+  color: var(--text);
+}
+.fx-badge-chip.locked {
+  color: var(--text-muted);
+  filter: grayscale(1);
+  opacity: 0.55;
+}
+.fx-badge-icon {
+  font-size: 16px;
+}
 
 /* --------------------------------------------------------------------------
    Weight chart (plain SVG line chart)
@@ -584,6 +633,28 @@ p {
   color: var(--text-muted);
   padding: 30px 10px;
   font-size: 13.5px;
+}
+
+.fx-template-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 12px 14px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  background: var(--surface-2);
+  margin-bottom: 8px;
+}
+.fx-template-item .name {
+  font-weight: 700;
+  color: var(--text);
+  font-size: 13.5px;
+}
+.fx-template-item .meta {
+  font-size: 12px;
+  color: var(--text-muted);
+  margin-top: 2px;
 }
 
 .fx-invite-code {
