@@ -4,7 +4,6 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import type { Role } from "@/lib/database.types";
-import { generateInviteCode } from "@/lib/fenix-domain";
 
 // Shown after a Google OAuth signup, since the OAuth flow can't carry the
 // role/invite-code metadata that the email/password form sends. Also acts
@@ -37,34 +36,22 @@ export default function CompleteProfilePage() {
       return;
     }
 
-    let linkedPersonalId: string | null = null;
-    if (role === "aluno" && inviteCode.trim()) {
-      const { data: personal } = await supabase
-        .from("profiles")
-        .select("id")
-        .eq("code", inviteCode.trim().toUpperCase())
-        .maybeSingle();
-      if (!personal) {
-        setLoading(false);
-        setError("Código de convite não encontrado.");
-        return;
-      }
-      linkedPersonalId = personal.id;
-    }
-
-    const { error: updateError } = await supabase
-      .from("profiles")
-      .update({
-        role,
-        name: name || null,
-        linked_personal_id: linkedPersonalId,
-        code: role === "personal" ? generateInviteCode() : null,
-      })
-      .eq("id", user.id);
+    // Role/linked_personal_id can no longer be set via a raw client
+    // .update() on profiles — this SECURITY DEFINER RPC validates the
+    // invite code (if any) server-side and applies both atomically.
+    const { error: rpcError } = await supabase.rpc("complete_oauth_profile", {
+      p_role: role,
+      p_name: name || "",
+      p_invite_code: role === "aluno" ? inviteCode.trim() || null : null,
+    });
 
     setLoading(false);
-    if (updateError) {
-      setError(updateError.message);
+    if (rpcError) {
+      setError(
+        rpcError.message === "code_not_found"
+          ? "Código não encontrado"
+          : rpcError.message
+      );
       return;
     }
     router.push("/");

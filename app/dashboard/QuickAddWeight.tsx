@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
+import { todayBR } from "@/lib/date-br";
 
 export default function QuickAddWeight({ profileId }: { profileId: string }) {
   const router = useRouter();
@@ -20,7 +21,7 @@ export default function QuickAddWeight({ profileId }: { profileId: string }) {
     setSaving(true);
     setError(null);
     const supabase = createClient();
-    const today = new Date().toISOString().slice(0, 10);
+    const today = todayBR();
 
     const { error: weightError } = await supabase.from("weight_logs").upsert(
       {

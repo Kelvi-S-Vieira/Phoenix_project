@@ -1,5 +1,6 @@
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
+import { todayBR, weekRangeBR, weekdayIndexBR } from "@/lib/date-br";
 import TopBar from "@/components/TopBar";
 import SplitPicker from "./SplitPicker";
 import TierPicker from "./TierPicker";
@@ -171,7 +172,7 @@ async function TreinoTierPage({
           </div>
         </>
       ) : (
-        <TreinoContent profileId={profileId} split={split} tierData={tierData} />
+        <TreinoContent profileId={profileId} split={split} tierData={tierData} tier={tier} />
       )}
     </>
   );
@@ -181,54 +182,80 @@ async function TreinoContent({
   profileId,
   split,
   tierData,
+  tier,
 }: {
   profileId: string;
   split: Split;
   tierData: TierWorkoutData;
+  tier: Tier;
 }) {
   const supabase = await createClient();
-  const today = new Date().toISOString().slice(0, 10);
+  const today = todayBR();
+
+  // "Esta semana" (also used below for the summary) is the current BRT
+  // calendar week, Monday through Sunday — see lib/date-br.ts.
+  const { weekStart, weekEnd } = weekRangeBR();
+
+  // The whole week's entries, not just today's: a given exercise_id (which
+  // already encodes the weekday, e.g. "seg::musculacao::peito::Supino") can
+  // have more than one dated row within the week if the user logs that same
+  // weekday's workout on more than one date (e.g. doing Monday's workout as
+  // a makeup on Wednesday). Loading only `today`'s rows made every other
+  // day's checked state disappear whenever you viewed it on a different
+  // date, and made sets/reps/load reset to blank instead of carrying
+  // forward the last values logged for that exercise.
   const { data: entries } = await supabase
     .from("workout_log_entries")
-    .select("exercise_id, checked, sets, reps, load")
+    .select("exercise_id, logged_at, checked, sets, reps, load")
     .eq("profile_id", profileId)
-    .eq("logged_at", today);
+    .gte("logged_at", weekStart)
+    .lte("logged_at", weekEnd);
+
+  const entriesByExercise = new Map<string, NonNullable<typeof entries>>();
+  for (const e of entries ?? []) {
+    const arr = entriesByExercise.get(e.exercise_id) ?? [];
+    arr.push(e);
+    entriesByExercise.set(e.exercise_id, arr);
+  }
 
   const initialLog: Record<
     string,
     { checked: boolean; sets: string; reps: string; load: string }
   > = {};
-  for (const e of entries ?? []) {
-    initialLog[e.exercise_id] = {
-      checked: e.checked,
-      sets: e.sets != null ? String(e.sets) : "",
-      reps: e.reps != null ? String(e.reps) : "",
-      load: e.load != null ? String(e.load) : "",
+  for (const [exerciseId, rows] of entriesByExercise) {
+    const sorted = [...rows].sort((a, b) => a.logged_at.localeCompare(b.logged_at));
+    const todayRow = sorted.find((r) => r.logged_at === today);
+    // "Checked" is strictly per calendar day — each day's checkbox must
+    // reflect that day's OWN saved state, never a different date's. Default
+    // to unchecked when there's no row for today yet.
+    const checked = todayRow?.checked ?? false;
+    // Sets/reps/load carry forward as display defaults from the most
+    // recent entry this week that actually has a value for that field
+    // (today's own value wins when present, since it's the most recent).
+    const latestNonNull = (get: (r: (typeof sorted)[number]) => number | null) => {
+      for (let i = sorted.length - 1; i >= 0; i--) {
+        const v = get(sorted[i]);
+        if (v != null) return v;
+      }
+      return null;
+    };
+    const sets = latestNonNull((r) => r.sets);
+    const reps = latestNonNull((r) => r.reps);
+    const load = latestNonNull((r) => r.load);
+    initialLog[exerciseId] = {
+      checked,
+      sets: sets != null ? String(sets) : "",
+      reps: reps != null ? String(reps) : "",
+      load: load != null ? String(load) : "",
     };
   }
 
-  const todayKey = JS_DAY_TO_KEY[new Date().getDay()];
+  const todayKey = JS_DAY_TO_KEY[weekdayIndexBR()];
   const defaultDay: DayKey | null = split.week[todayKey]
     ? todayKey
     : DAYS.find((d) => split.week[d.key])?.key ?? null;
 
   // --- "4. Resumo da semana" --------------------------------------------
-  // The prototype's state.log has no date dimension at all (it's keyed only
-  // by dayKey::type::group::exercise, so "checked" just means "last time you
-  // logged this slot"). Our workout_log_entries table is properly date-
-  // scoped (profile_id, logged_at, exercise_id), so "esta semana" needs an
-  // actual definition: the current ISO week, Monday through Sunday, using
-  // the server's local notion of "today" (no timezone handling needed).
-  const now = new Date();
-  const jsDay = now.getDay(); // 0 = domingo ... 6 = sábado
-  const diffToMonday = (jsDay + 6) % 7; // Monday itself -> 0, Sunday -> 6
-  const monday = new Date(now);
-  monday.setDate(now.getDate() - diffToMonday);
-  const sunday = new Date(monday);
-  sunday.setDate(monday.getDate() + 6);
-  const weekStart = monday.toISOString().slice(0, 10);
-  const weekEnd = sunday.toISOString().slice(0, 10);
-
   const { data: weekEntries } = await supabase
     .from("workout_log_entries")
     .select("exercise_id")
@@ -249,7 +276,9 @@ async function TreinoContent({
   const scheduledDays = scheduledDayKeys.length;
   const trainedDays = trainedDaySet.size;
   const totalChecked = weekEntries?.length ?? 0;
-  const allTrained = scheduledDays > 0 && trainedDays >= scheduledDays;
+  // Avançado is the top tier — there's nothing to "level up" into, so never
+  // suggest it regardless of how consistently the user trains.
+  const allTrained = tier !== "treino-avancado" && scheduledDays > 0 && trainedDays >= scheduledDays;
 
   return (
     <>

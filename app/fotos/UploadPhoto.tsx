@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
+import { todayBR } from "@/lib/date-br";
 import type { Pose } from "@/lib/database.types";
 
 function extensionFor(file: File): string {
@@ -16,7 +17,7 @@ function extensionFor(file: File): string {
 
 export default function UploadPhoto({ profileId }: { profileId: string }) {
   const router = useRouter();
-  const [date, setDate] = useState(() => new Date().toISOString().slice(0, 10));
+  const [date, setDate] = useState(() => todayBR());
   const [pose, setPose] = useState<Pose>("frente");
   const [weight, setWeight] = useState("");
   const [file, setFile] = useState<File | null>(null);
@@ -76,7 +77,7 @@ export default function UploadPhoto({ profileId }: { profileId: string }) {
     setSaving(false);
     setFile(null);
     setWeight("");
-    setDate(new Date().toISOString().slice(0, 10));
+    setDate(todayBR());
     router.refresh();
   }
 

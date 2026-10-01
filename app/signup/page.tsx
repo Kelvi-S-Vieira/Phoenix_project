@@ -30,6 +30,29 @@ export default function SignupPage() {
 
     setLoading(true);
     const supabase = createClient();
+
+    // Validate a typed invite code BEFORE creating the account — an
+    // unrecognized code must stop signup with an error, not silently create
+    // an unlinked account. An empty code is fine (link later).
+    const trimmedCode = inviteCode.trim();
+    if (role === "aluno" && trimmedCode) {
+      const { data: personal, error: lookupError } = await supabase
+        .from("personal_lookup")
+        .select("id")
+        .eq("code", trimmedCode.toUpperCase())
+        .maybeSingle();
+      if (lookupError) {
+        setLoading(false);
+        setError(lookupError.message);
+        return;
+      }
+      if (!personal) {
+        setLoading(false);
+        setError("Código não encontrado");
+        return;
+      }
+    }
+
     const { data, error } = await supabase.auth.signUp({
       email,
       password,

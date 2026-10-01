@@ -91,6 +91,25 @@ comment on column public.profiles.code is
 create index if not exists profiles_linked_personal_id_idx on public.profiles(linked_personal_id);
 create index if not exists profiles_code_idx on public.profiles(code);
 
+-- Column-limited view for invite-code lookup (signup / "link later" flows).
+-- security_invoker = false (the default) is intentional: owned by a
+-- privileged role, this view is evaluated with that role's privileges
+-- against `profiles` — bypassing `profiles`' own RLS — while only ever
+-- exposing the three columns below to whoever it's granted to. This is what
+-- makes it safe to grant select to `authenticated` even though `profiles`
+-- itself must stay locked down to self/linked rows.
+create or replace view public.personal_lookup
+  with (security_invoker = false)
+as
+  select id, name, code
+  from public.profiles
+  where role = 'personal' and code is not null;
+
+comment on view public.personal_lookup is
+  'Column-limited, publicly-queryable-by-authenticated-users view for resolving a personal trainer''s invite code at signup / linking time. Never expose public.profiles directly for this.';
+
+grant select on public.personal_lookup to authenticated;
+
 -- -----------------------------------------------------------------------------
 -- weight_logs
 -- -----------------------------------------------------------------------------
@@ -266,7 +285,9 @@ create index if not exists workout_log_entries_profile_id_logged_at_idx
 --   - if role='personal', a fresh unique invite code is generated for them.
 -- Google OAuth signups arrive with no such metadata (role is null); the app
 -- sends those users to /complete-profile to pick a role afterwards, which
--- updates this same row client-side (allowed by profiles_update_own).
+-- calls the complete_oauth_profile() RPC (defined below) rather than
+-- updating this row directly — role/linked_personal_id are no longer
+-- settable via a raw client .update() on profiles.
 -- =============================================================================
 create or replace function public.generate_invite_code()
 returns text
@@ -331,6 +352,190 @@ create trigger on_auth_user_created
   for each row execute procedure public.handle_new_user();
 
 -- =============================================================================
+-- Column-level protection on profiles
+-- Postgres RLS policies control row visibility/writability, not individual
+-- columns, so the few columns that need per-column rules (role,
+-- linked_personal_id; and the "a personal may only touch current_tier/
+-- current_split on a linked aluno" rule) are enforced by this BEFORE UPDATE
+-- trigger instead, diffing OLD vs NEW.
+--
+-- role / linked_personal_id can never be set by a raw client .update() on
+-- profiles — the only two ways to set them are the SECURITY DEFINER RPCs
+-- below (redeem_invite_code, complete_oauth_profile), which briefly flip the
+-- `fenix.trusted_profile_update` session setting so this trigger lets their
+-- own UPDATE through.
+-- =============================================================================
+create or replace function public.profiles_protect_restricted_columns()
+returns trigger
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  acting_uid uuid := auth.uid();
+  is_trusted boolean := coalesce(current_setting('fenix.trusted_profile_update', true), '') = 'true';
+begin
+  if is_trusted then
+    return new;
+  end if;
+
+  if acting_uid is null then
+    -- No auth context (service role, trigger-driven writes, etc.).
+    return new;
+  end if;
+
+  if acting_uid = new.id then
+    -- Self-update: role and linked_personal_id are immutable from the
+    -- client. Use redeem_invite_code() / complete_oauth_profile() instead.
+    if new.role is distinct from old.role then
+      new.role := old.role;
+    end if;
+    if new.linked_personal_id is distinct from old.linked_personal_id then
+      new.linked_personal_id := old.linked_personal_id;
+    end if;
+  elsif old.linked_personal_id = acting_uid then
+    -- A personal updating a linked aluno's row: only current_tier/
+    -- current_split may actually change; revert everything else.
+    if new.role is distinct from old.role then new.role := old.role; end if;
+    if new.name is distinct from old.name then new.name := old.name; end if;
+    if new.linked_personal_id is distinct from old.linked_personal_id then
+      new.linked_personal_id := old.linked_personal_id;
+    end if;
+    if new.code is distinct from old.code then new.code := old.code; end if;
+    if new.goal is distinct from old.goal then new.goal := old.goal; end if;
+    if new.sex is distinct from old.sex then new.sex := old.sex; end if;
+    if new.current_weight is distinct from old.current_weight then
+      new.current_weight := old.current_weight;
+    end if;
+    if new.target_weight is distinct from old.target_weight then
+      new.target_weight := old.target_weight;
+    end if;
+    if new.height is distinct from old.height then new.height := old.height; end if;
+    if new.age is distinct from old.age then new.age := old.age; end if;
+    if new.activity_level is distinct from old.activity_level then
+      new.activity_level := old.activity_level;
+    end if;
+    if new.calorie_target is distinct from old.calorie_target then
+      new.calorie_target := old.calorie_target;
+    end if;
+    if new.protein_target is distinct from old.protein_target then
+      new.protein_target := old.protein_target;
+    end if;
+    if new.onboarding_completed is distinct from old.onboarding_completed then
+      new.onboarding_completed := old.onboarding_completed;
+    end if;
+    -- current_tier / current_split: left untouched, i.e. allowed.
+  end if;
+
+  return new;
+end;
+$$;
+
+drop trigger if exists profiles_protect_restricted_columns_trg on public.profiles;
+create trigger profiles_protect_restricted_columns_trg
+  before update on public.profiles
+  for each row execute procedure public.profiles_protect_restricted_columns();
+
+-- Redeem an invite code for the CURRENT user (an aluno already signed up,
+-- with or without a personal, using the new /perfil/vincular-personal
+-- screen). SECURITY DEFINER so it can resolve `code` across all of
+-- `profiles` despite RLS, without exposing that lookup directly to clients.
+create or replace function public.redeem_invite_code(p_code text)
+returns table (personal_id uuid, personal_name text)
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  v_code text := upper(trim(coalesce(p_code, '')));
+  v_personal_id uuid;
+  v_personal_name text;
+begin
+  if auth.uid() is null then
+    raise exception 'not_authenticated';
+  end if;
+  if v_code = '' then
+    raise exception 'code_not_found';
+  end if;
+
+  select id, name into v_personal_id, v_personal_name
+  from public.profiles
+  where role = 'personal' and code = v_code;
+
+  if v_personal_id is null then
+    raise exception 'code_not_found';
+  end if;
+
+  perform set_config('fenix.trusted_profile_update', 'true', true);
+  update public.profiles set linked_personal_id = v_personal_id where id = auth.uid();
+  perform set_config('fenix.trusted_profile_update', 'false', true);
+
+  return query select v_personal_id, v_personal_name;
+end;
+$$;
+
+grant execute on function public.redeem_invite_code(text) to authenticated;
+
+-- Used by /complete-profile (the post-Google-OAuth "pick a role" screen).
+-- Only works once per account (role must currently be null) — this is the
+-- OAuth completion path, never a general way to change role later.
+create or replace function public.complete_oauth_profile(
+  p_role public.profile_role,
+  p_name text,
+  p_invite_code text default null
+)
+returns void
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  v_uid uuid := auth.uid();
+  v_code text := upper(trim(coalesce(p_invite_code, '')));
+  v_linked_personal uuid;
+  v_own_code text;
+  v_current_role public.profile_role;
+begin
+  if v_uid is null then
+    raise exception 'not_authenticated';
+  end if;
+
+  select role into v_current_role from public.profiles where id = v_uid;
+  if v_current_role is not null then
+    raise exception 'profile_already_set';
+  end if;
+
+  if p_role = 'aluno' and v_code <> '' then
+    select id into v_linked_personal
+    from public.profiles
+    where role = 'personal' and code = v_code;
+
+    if v_linked_personal is null then
+      raise exception 'code_not_found';
+    end if;
+  end if;
+
+  if p_role = 'personal' then
+    loop
+      v_own_code := public.generate_invite_code();
+      exit when not exists (select 1 from public.profiles where code = v_own_code);
+    end loop;
+  end if;
+
+  perform set_config('fenix.trusted_profile_update', 'true', true);
+  update public.profiles
+  set role = p_role,
+      name = coalesce(nullif(p_name, ''), name),
+      linked_personal_id = v_linked_personal,
+      code = v_own_code
+  where id = v_uid;
+  perform set_config('fenix.trusted_profile_update', 'false', true);
+end;
+$$;
+
+grant execute on function public.complete_oauth_profile(public.profile_role, text, text) to authenticated;
+
+-- =============================================================================
 -- Row Level Security
 -- =============================================================================
 alter table public.profiles enable row level security;
@@ -346,12 +551,11 @@ alter table public.workout_log_entries enable row level security;
 
 -- --- profiles -----------------------------------------------------------
 -- Everyone can read their own profile; a personal can also read the
--- profiles of alunos linked to them (roster + evolution report). Anyone
--- authenticated can read a personal's profile by matching `code` at signup
--- (name + code only would be ideal via a view, but for this sprint we allow
--- reading any profile row where `code` is set, which only exposes a
--- personal's id/name/code — never an aluno's private data, since alunos
--- never set `code`).
+-- profiles of alunos linked to them (roster + evolution report). Invite-code
+-- lookup at signup/linking time goes through the public.personal_lookup
+-- view below (id/name/code of personals only), NOT a profiles policy — a
+-- "code is not null" SELECT policy here would expose a personal's entire
+-- row (email-linked info and all) to any authenticated user.
 create policy "profiles_select_own"
   on public.profiles for select
   using (auth.uid() = id);
@@ -360,10 +564,9 @@ create policy "profiles_select_linked_alunos_by_personal"
   on public.profiles for select
   using (linked_personal_id = auth.uid());
 
-create policy "profiles_select_personal_by_code"
-  on public.profiles for select
-  using (code is not null);
-
+-- Row-level only: can update any column on their own row. The
+-- profiles_protect_restricted_columns_trg trigger (above) additionally
+-- blocks role/linked_personal_id from actually changing via this path.
 create policy "profiles_update_own"
   on public.profiles for update
   using (auth.uid() = id)
@@ -577,6 +780,10 @@ create policy "workout_log_entries_select_by_personal"
       where p.id = workout_log_entries.profile_id and p.linked_personal_id = auth.uid()
     )
   );
+
+create policy "workout_log_entries_delete_own"
+  on public.workout_log_entries for delete
+  using (profile_id = auth.uid());
 
 -- --- personal write access for workout application --------------------------
 -- A personal applying a saved workout template to one of their alunos needs

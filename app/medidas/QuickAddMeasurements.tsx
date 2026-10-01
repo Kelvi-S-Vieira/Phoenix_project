@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
+import { todayBR } from "@/lib/date-br";
 import { MEASUREMENT_FIELDS } from "@/lib/fenix-domain";
 
 export default function QuickAddMeasurements({ profileId }: { profileId: string }) {
@@ -40,7 +41,7 @@ export default function QuickAddMeasurements({ profileId }: { profileId: string 
     setSaving(true);
     setError(null);
     const supabase = createClient();
-    const today = new Date().toISOString().slice(0, 10);
+    const today = todayBR();
 
     // Fetch today's existing row (if any) so we merge new values into it
     // instead of wiping fields the user didn't touch today.
@@ -74,10 +75,9 @@ export default function QuickAddMeasurements({ profileId }: { profileId: string 
       return;
     }
 
-    await supabase.from("activity_days").upsert(
-      { profile_id: profileId, activity_date: today },
-      { onConflict: "profile_id,activity_date" }
-    );
+    // Measurements alone must NOT count as an "activity day" for streak/
+    // badge purposes — only weight check-ins and checked workout exercises
+    // do. See lib/badges.ts / lib/streak.ts.
 
     setSaving(false);
     setValues({});

@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
+import { todayBR } from "@/lib/date-br";
 import {
   ACTIVITY_LEVELS,
   GOALS,
@@ -85,7 +86,7 @@ export default function OnboardingWizard() {
       return;
     }
 
-    const today = new Date().toISOString().slice(0, 10);
+    const today = todayBR();
 
     const { error: profileError } = await supabase
       .from("profiles")

@@ -125,6 +125,15 @@ export type WorkoutLogEntry = {
   updated_at: string;
 };
 
+// Column-limited view backing invite-code lookup — see
+// supabase/schema.sql's public.personal_lookup. Never query `profiles`
+// directly by `code` from the client.
+export type PersonalLookup = {
+  id: string;
+  name: string | null;
+  code: string | null;
+};
+
 // Minimal Database generic shape so @supabase/ssr's / supabase-js's generics
 // compile and give us real autocomplete + type-checking on .from(...) calls.
 // Not exhaustive (Insert/Update variants collapse to Partial<Row>, no
@@ -152,8 +161,22 @@ export type Database = {
       custom_plans: Table<CustomPlan>;
       workout_log_entries: Table<WorkoutLogEntry>;
     };
-    Views: Record<string, never>;
-    Functions: Record<string, never>;
+    Views: {
+      personal_lookup: {
+        Row: PersonalLookup;
+        Relationships: [];
+      };
+    };
+    Functions: {
+      redeem_invite_code: {
+        Args: { p_code: string };
+        Returns: { personal_id: string; personal_name: string | null }[];
+      };
+      complete_oauth_profile: {
+        Args: { p_role: Role; p_name: string; p_invite_code?: string | null };
+        Returns: void;
+      };
+    };
     Enums: {
       profile_role: Role;
       goal_type: Goal;

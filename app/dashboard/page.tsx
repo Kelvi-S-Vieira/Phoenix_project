@@ -3,6 +3,7 @@ import { createClient } from "@/lib/supabase/server";
 import { computeStreak } from "@/lib/streak";
 import { TIER_LABELS, BADGES } from "@/lib/fenix-domain";
 import { checkAndUnlockBadges } from "@/lib/badges";
+import Link from "next/link";
 import TopBar from "@/components/TopBar";
 import WeightChart from "@/components/WeightChart";
 import ChatThread from "@/components/ChatThread";
@@ -75,7 +76,7 @@ export default async function DashboardPage() {
         ]}
       />
       <div className="fx-app">
-        {personal && (
+        {personal ? (
           <div className="card">
             <h2>💬 Conversa com seu personal{personal.name ? ` (${personal.name})` : ""}</h2>
             <ChatThread
@@ -84,6 +85,17 @@ export default async function DashboardPage() {
               senderRole="aluno"
               compact
             />
+          </div>
+        ) : (
+          <div className="card">
+            <h2>🔗 Sem personal vinculado</h2>
+            <div className="sub" style={{ marginBottom: 12 }}>
+              Tem um código de convite? Vincule-se ao seu personal para liberar
+              o acompanhamento e o chat.
+            </div>
+            <Link href="/perfil/vincular-personal" className="btn">
+              Vincular personal
+            </Link>
           </div>
         )}
 

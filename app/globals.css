@@ -817,6 +817,20 @@ p {
   font-weight: 400;
 }
 
+.fx-portion-block {
+  margin-bottom: 14px;
+  padding-left: 10px;
+  border-left: 2px solid var(--border);
+}
+.fx-portion-title {
+  font-size: 12px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.02em;
+  color: var(--text-muted);
+  margin-bottom: 8px;
+}
+
 .fx-exercise-card {
   background: var(--surface-2);
   border: 1px solid var(--border);

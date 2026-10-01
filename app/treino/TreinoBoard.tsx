@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { createClient } from "@/lib/supabase/client";
+import { todayBR } from "@/lib/date-br";
 import ExerciseMedia from "@/components/ExerciseMedia";
 import {
   DAYS,
@@ -11,6 +12,7 @@ import {
   type WorkoutType,
   type WorkoutTypeKey,
   type MuscleGroup,
+  type Exercise,
 } from "@/lib/treino-shared-types";
 
 interface LogEntry {
@@ -56,7 +58,7 @@ export default function TreinoBoard({
   async function persist(id: string, entry: LogEntry) {
     setSavingId(id);
     const supabase = createClient();
-    const today = new Date().toISOString().slice(0, 10);
+    const today = todayBR();
     await supabase.from("workout_log_entries").upsert(
       {
         profile_id: profileId,
@@ -90,6 +92,83 @@ export default function TreinoBoard({
 
   const groups = selectedDay ? split.week[selectedDay] : null;
   const typeInfo = workoutTypes[activeTab];
+  // Some workout types (e.g. Avançado's calistenia, organized by movement
+  // pattern rather than by the day's scheduled muscle groups) declare a
+  // fixed `alwaysGroups` list that should render on any training day,
+  // instead of the day-specific `groups` list above (which only applies to
+  // musculação-style, muscle-group-scheduled tabs).
+  const renderGroups = typeInfo.alwaysGroups ?? groups;
+
+  function renderExerciseCard(
+    ex: Exercise,
+    dayKey: DayKey,
+    typeKey: WorkoutTypeKey,
+    groupKey: string,
+    portionKey?: string
+  ) {
+    const id = exerciseId(dayKey, typeKey, groupKey, ex.name, portionKey);
+    const entry = entryFor(id);
+    return (
+      <div
+        className={"fx-exercise-card" + (entry.checked ? " checked" : "")}
+        key={id}
+      >
+        <div className="fx-exercise-main">
+          <input
+            type="checkbox"
+            checked={entry.checked}
+            onChange={(e) =>
+              updateField(id, "checked", e.target.checked, true)
+            }
+          />
+          <div className="fx-exercise-name">{ex.name}</div>
+        </div>
+        {ex.gif && <ExerciseMedia name={ex.name} frames={ex.gif} />}
+        <div className="fx-exercise-details">
+          <p>
+            <b>Como fazer:</b> {ex.exec}
+          </p>
+          <p className="fx-exercise-erro">
+            <b>Erro comum:</b> {ex.erro}
+          </p>
+        </div>
+        <div className="fx-exercise-fields">
+          <label>
+            Séries
+            <input
+              type="number"
+              value={entry.sets}
+              onChange={(e) => updateField(id, "sets", e.target.value, false)}
+              onBlur={() => persist(id, entryFor(id))}
+            />
+          </label>
+          <label>
+            Repetições
+            <input
+              type="number"
+              value={entry.reps}
+              onChange={(e) => updateField(id, "reps", e.target.value, false)}
+              onBlur={() => persist(id, entryFor(id))}
+            />
+          </label>
+          <label>
+            Carga (kg)
+            <input
+              type="number"
+              value={entry.load}
+              onChange={(e) => updateField(id, "load", e.target.value, false)}
+              onBlur={() => persist(id, entryFor(id))}
+            />
+          </label>
+          {savingId === id && (
+            <span className="sub" style={{ fontSize: 11 }}>
+              Salvando...
+            </span>
+          )}
+        </div>
+      </div>
+    );
+  }
 
   return (
     <>
@@ -129,14 +208,14 @@ export default function TreinoBoard({
         </div>
       )}
 
-      {selectedDay && !groups && (
+      {selectedDay && !renderGroups && (
         <div className="fx-empty-state">
           Hoje é dia de descanso nesse plano. Aproveite para recuperar — o
           descanso também faz parte do treino.
         </div>
       )}
 
-      {selectedDay && groups && (
+      {selectedDay && renderGroups && (
         <>
           <div className="fx-nav-row" style={{ marginBottom: 14 }}>
             {(Object.keys(workoutTypes) as WorkoutTypeKey[]).map((typeKey) => (
@@ -151,94 +230,55 @@ export default function TreinoBoard({
             ))}
           </div>
 
-          {groups.map((groupKey) => {
+          {renderGroups.map((groupKey) => {
             const groupDef = typeInfo.groups[groupKey];
-            const label = muscleGroups[groupKey]?.label ?? groupKey;
+            // Prefer the group's own label from this workout type (e.g.
+            // Avançado's "calistenia" pseudo-group, labeled "Calistenia" and
+            // unrelated to any `muscleGroups` entry) over the musculação
+            // muscle-group label, so a tab whose groups aren't muscle-group
+            // keyed never shows a misleading heading like "Quadríceps" for
+            // what's actually a "Pernas" bodyweight pattern.
+            const label = groupDef?.label ?? muscleGroups[groupKey]?.label ?? groupKey;
+            const portions = groupDef?.portions;
             const exercises = groupDef?.exercises ?? [];
+            const totalCount = portions
+              ? Object.values(portions).reduce((sum, p) => sum + p.exercises.length, 0)
+              : exercises.length;
             return (
               <div className="fx-group-block" key={groupKey}>
                 <h4>
                   {label}{" "}
                   <span className="fx-group-count">
-                    ({exercises.length}{" "}
-                    {exercises.length === 1 ? "exercício" : "exercícios"})
+                    ({totalCount}{" "}
+                    {totalCount === 1 ? "exercício" : "exercícios"})
                   </span>
                 </h4>
-                {exercises.length === 0 ? (
+                {portions ? (
+                  Object.entries(portions).map(([portionKey, portion]) => (
+                    <div className="fx-portion-block" key={portionKey}>
+                      <div className="fx-portion-title">
+                        {label} — {portion.label}
+                      </div>
+                      {portion.exercises.length === 0 ? (
+                        <div className="fx-empty-state">
+                          Ainda não há exercício cadastrado para essa porção.
+                        </div>
+                      ) : (
+                        portion.exercises.map((ex) =>
+                          renderExerciseCard(ex, selectedDay, activeTab, groupKey, portionKey)
+                        )
+                      )}
+                    </div>
+                  ))
+                ) : exercises.length === 0 ? (
                   <div className="fx-empty-state">
                     Ainda não há exercício de peso corporal para esse grupo —
                     use a aba Musculação.
                   </div>
                 ) : (
-                  exercises.map((ex) => {
-                    const id = exerciseId(
-                      selectedDay,
-                      activeTab,
-                      groupKey,
-                      ex.name
-                    );
-                    const entry = entryFor(id);
-                    return (
-                      <div
-                        className={"fx-exercise-card" + (entry.checked ? " checked" : "")}
-                        key={id}
-                      >
-                        <div className="fx-exercise-main">
-                          <input
-                            type="checkbox"
-                            checked={entry.checked}
-                            onChange={(e) =>
-                              updateField(id, "checked", e.target.checked, true)
-                            }
-                          />
-                          <div className="fx-exercise-name">{ex.name}</div>
-                        </div>
-                        {ex.gif && <ExerciseMedia name={ex.name} frames={ex.gif} />}
-                        <div className="fx-exercise-details">
-                          <p>
-                            <b>Como fazer:</b> {ex.exec}
-                          </p>
-                          <p className="fx-exercise-erro">
-                            <b>Erro comum:</b> {ex.erro}
-                          </p>
-                        </div>
-                        <div className="fx-exercise-fields">
-                          <label>
-                            Séries
-                            <input
-                              type="number"
-                              value={entry.sets}
-                              onChange={(e) => updateField(id, "sets", e.target.value, false)}
-                              onBlur={() => persist(id, entryFor(id))}
-                            />
-                          </label>
-                          <label>
-                            Repetições
-                            <input
-                              type="number"
-                              value={entry.reps}
-                              onChange={(e) => updateField(id, "reps", e.target.value, false)}
-                              onBlur={() => persist(id, entryFor(id))}
-                            />
-                          </label>
-                          <label>
-                            Carga (kg)
-                            <input
-                              type="number"
-                              value={entry.load}
-                              onChange={(e) => updateField(id, "load", e.target.value, false)}
-                              onBlur={() => persist(id, entryFor(id))}
-                            />
-                          </label>
-                          {savingId === id && (
-                            <span className="sub" style={{ fontSize: 11 }}>
-                              Salvando...
-                            </span>
-                          )}
-                        </div>
-                      </div>
-                    );
-                  })
+                  exercises.map((ex) =>
+                    renderExerciseCard(ex, selectedDay, activeTab, groupKey)
+                  )
                 )}
               </div>
             );
