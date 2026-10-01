@@ -5,14 +5,13 @@ import { createClient } from "@/lib/supabase/client";
 import ExerciseMedia from "@/components/ExerciseMedia";
 import {
   DAYS,
-  WORKOUT_TYPES,
-  MUSCLE_GROUPS,
   exerciseId,
   type DayKey,
   type Split,
+  type WorkoutType,
   type WorkoutTypeKey,
-  type MuscleGroupKey,
-} from "@/lib/treino-basico-data";
+  type MuscleGroup,
+} from "@/lib/treino-shared-types";
 
 interface LogEntry {
   checked: boolean;
@@ -26,11 +25,15 @@ const EMPTY_ENTRY: LogEntry = { checked: false, sets: "", reps: "", load: "" };
 export default function TreinoBoard({
   profileId,
   split,
+  workoutTypes,
+  muscleGroups,
   initialLog,
   defaultDay,
 }: {
   profileId: string;
   split: Split;
+  workoutTypes: Record<WorkoutTypeKey, WorkoutType>;
+  muscleGroups: Record<string, MuscleGroup>;
   initialLog: Record<string, LogEntry>;
   defaultDay: DayKey | null;
 }) {
@@ -86,7 +89,7 @@ export default function TreinoBoard({
   }
 
   const groups = selectedDay ? split.week[selectedDay] : null;
-  const typeInfo = WORKOUT_TYPES[activeTab];
+  const typeInfo = workoutTypes[activeTab];
 
   return (
     <div>
@@ -94,7 +97,7 @@ export default function TreinoBoard({
         {DAYS.map((d) => {
           const dayGroups = split.week[d.key];
           const groupsLabel = dayGroups
-            ? dayGroups.map((g) => MUSCLE_GROUPS[g]?.label ?? g).join(", ")
+            ? dayGroups.map((g) => muscleGroups[g]?.label ?? g).join(", ")
             : "Descanso";
           return (
             <div
@@ -131,21 +134,21 @@ export default function TreinoBoard({
       {selectedDay && groups && (
         <>
           <div className="fx-nav-row" style={{ marginBottom: 14 }}>
-            {(Object.keys(WORKOUT_TYPES) as WorkoutTypeKey[]).map((typeKey) => (
+            {(Object.keys(workoutTypes) as WorkoutTypeKey[]).map((typeKey) => (
               <button
                 key={typeKey}
                 type="button"
                 className={"btn small" + (activeTab === typeKey ? "" : " secondary")}
                 onClick={() => setActiveTab(typeKey)}
               >
-                {WORKOUT_TYPES[typeKey].label}
+                {workoutTypes[typeKey].label}
               </button>
             ))}
           </div>
 
           {groups.map((groupKey) => {
-            const groupDef = typeInfo.groups[groupKey as MuscleGroupKey];
-            const label = MUSCLE_GROUPS[groupKey as MuscleGroupKey]?.label ?? groupKey;
+            const groupDef = typeInfo.groups[groupKey];
+            const label = muscleGroups[groupKey]?.label ?? groupKey;
             const exercises = groupDef?.exercises ?? [];
             return (
               <div className="fx-group-block" key={groupKey}>
@@ -166,7 +169,7 @@ export default function TreinoBoard({
                     const id = exerciseId(
                       selectedDay,
                       activeTab,
-                      groupKey as MuscleGroupKey,
+                      groupKey,
                       ex.name
                     );
                     const entry = entryFor(id);

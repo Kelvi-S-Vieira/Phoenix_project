@@ -4,8 +4,32 @@ import TopBar from "@/components/TopBar";
 import SplitPicker from "./SplitPicker";
 import TierPicker from "./TierPicker";
 import TreinoBoard from "./TreinoBoard";
-import { DAYS, SPLITS, type DayKey, type SplitKey } from "@/lib/treino-basico-data";
-import { TIER_LABELS } from "@/lib/fenix-domain";
+import { DAYS, type DayKey, type TierWorkoutData } from "@/lib/treino-shared-types";
+import * as treinoBasico from "@/lib/treino-basico-data";
+import * as treinoIntermediario from "@/lib/treino-intermediario-data";
+import * as treinoAvancado from "@/lib/treino-avancado-data";
+import type { Tier } from "@/lib/database.types";
+
+// Each tier's own data module keeps its own stricter MuscleGroupKey/SplitKey
+// unions; this lookup only needs the generic (string-keyed) shape so the
+// page/components can work with whichever tier is active.
+const TIER_DATA: Record<Tier, TierWorkoutData> = {
+  "treino-basico": {
+    MUSCLE_GROUPS: treinoBasico.MUSCLE_GROUPS,
+    WORKOUT_TYPES: treinoBasico.WORKOUT_TYPES,
+    SPLITS: treinoBasico.SPLITS,
+  },
+  "treino-intermediario": {
+    MUSCLE_GROUPS: treinoIntermediario.MUSCLE_GROUPS,
+    WORKOUT_TYPES: treinoIntermediario.WORKOUT_TYPES,
+    SPLITS: treinoIntermediario.SPLITS,
+  },
+  "treino-avancado": {
+    MUSCLE_GROUPS: treinoAvancado.MUSCLE_GROUPS,
+    WORKOUT_TYPES: treinoAvancado.WORKOUT_TYPES,
+    SPLITS: treinoAvancado.SPLITS,
+  },
+};
 
 // Monday-first weekday order, matching DAYS/SPLITS ("seg"..."dom").
 // Date#getDay() is Sunday-first (0 = domingo), so remap it here.
@@ -28,6 +52,8 @@ export default async function TreinoPage() {
   if (profile.role === "personal") redirect("/personal");
   if (!profile.onboarding_completed) redirect("/onboarding");
 
+  const tierData = profile.current_tier ? TIER_DATA[profile.current_tier as Tier] : null;
+
   return (
     <>
       <TopBar
@@ -40,7 +66,7 @@ export default async function TreinoPage() {
         ]}
       />
       <div className="fx-app">
-        {!profile.current_tier ? (
+        {!profile.current_tier || !tierData ? (
           profile.linked_personal_id ? (
             <div className="card">
               <h2>Treino</h2>
@@ -59,25 +85,17 @@ export default async function TreinoPage() {
               <TierPicker profileId={user.id} />
             </div>
           )
-        ) : profile.current_tier !== "treino-basico" ? (
-          <div className="card">
-            <h2>Treino</h2>
-            <div className="fx-empty-state">
-              Você está no nível {TIER_LABELS[profile.current_tier]} — essa
-              versão ainda chega em breve nesta plataforma web. Só o nível
-              Básico está disponível por aqui por enquanto.
-            </div>
-            <div style={{ marginTop: 16 }}>
-              <TierPicker profileId={user.id} />
-            </div>
-          </div>
         ) : !profile.current_split ? (
           <div className="card">
             <h2>Escolha sua frequência semanal</h2>
-            <SplitPicker profileId={user.id} />
+            <SplitPicker profileId={user.id} splits={tierData.SPLITS} />
           </div>
         ) : (
-          <TreinoContent profileId={user.id} splitKey={profile.current_split as SplitKey} />
+          <TreinoContent
+            profileId={user.id}
+            splitKey={profile.current_split}
+            tierData={tierData}
+          />
         )}
       </div>
     </>
@@ -87,19 +105,21 @@ export default async function TreinoPage() {
 async function TreinoContent({
   profileId,
   splitKey,
+  tierData,
 }: {
   profileId: string;
-  splitKey: SplitKey;
+  splitKey: string;
+  tierData: TierWorkoutData;
 }) {
-  const split = SPLITS[splitKey];
+  const split = tierData.SPLITS[splitKey];
   if (!split) {
-    // Defensive: current_split holds a key from a tier this page doesn't
-    // know about (shouldn't happen for treino-basico, but don't crash).
+    // Defensive: current_split holds a key from a different tier (e.g. the
+    // aluno's tier changed after picking a split) — don't crash.
     return (
       <div className="card">
         <h2>Treino</h2>
         <div className="fx-empty-state">
-          Split não reconhecido para o nível Básico. Fale com seu personal.
+          Split não reconhecido para o seu nível atual. Fale com seu personal.
         </div>
       </div>
     );
@@ -140,6 +160,8 @@ async function TreinoContent({
       <TreinoBoard
         profileId={profileId}
         split={split}
+        workoutTypes={tierData.WORKOUT_TYPES}
+        muscleGroups={tierData.MUSCLE_GROUPS}
         initialLog={initialLog}
         defaultDay={defaultDay}
       />

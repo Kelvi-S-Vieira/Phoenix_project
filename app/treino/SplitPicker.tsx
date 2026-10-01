@@ -3,16 +3,22 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
-import { SPLITS, type SplitKey } from "@/lib/treino-basico-data";
+import type { Split } from "@/lib/treino-shared-types";
 
-export default function SplitPicker({ profileId }: { profileId: string }) {
+export default function SplitPicker({
+  profileId,
+  splits,
+}: {
+  profileId: string;
+  splits: Record<string, Split>;
+}) {
   const router = useRouter();
   const [saving, setSaving] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
 
-  const options = Object.entries(SPLITS) as [SplitKey, (typeof SPLITS)[SplitKey]][];
+  const options = Object.entries(splits);
 
-  async function choose(splitKey: SplitKey) {
+  async function choose(splitKey: string) {
     setSaving(splitKey);
     setError(null);
     const supabase = createClient();

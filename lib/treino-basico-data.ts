@@ -7,38 +7,25 @@
  * user's per-day log (checked/sets/reps/load) is dynamic, stored in the
  * `workout_log_entries` table (see supabase/schema.sql).
  *
- * Intermediário/Avançado tiers are out of scope for this module and are a
- * natural follow-up using the same shape.
+ * Intermediário/Avançado tiers live in their own sibling modules
+ * (treino-intermediario-data.ts, treino-avancado-data.ts), reusing the
+ * shared shape from treino-shared-types.ts.
  */
 
-export interface Exercise {
-  name: string;
-  exec: string;
-  erro: string;
-  gif?: string[];
-}
+import {
+  type Exercise,
+  type MuscleGroup,
+  type DayKey,
+  type DayInfo,
+  DAYS,
+  type WorkoutTypeKey,
+  type WorkoutType as SharedWorkoutType,
+  type Split as SharedSplit,
+  exerciseId as sharedExerciseId,
+} from "./treino-shared-types";
 
-export interface MuscleGroup {
-  label: string;
-  exercises: Exercise[];
-}
-
-export type DayKey = "seg" | "ter" | "qua" | "qui" | "sex" | "sab" | "dom";
-
-export interface DayInfo {
-  key: DayKey;
-  label: string;
-}
-
-export const DAYS: DayInfo[] = [
-    { key: "seg", label: "Segunda" },
-    { key: "ter", label: "Terça" },
-    { key: "qua", label: "Quarta" },
-    { key: "qui", label: "Quinta" },
-    { key: "sex", label: "Sexta" },
-    { key: "sab", label: "Sábado" },
-    { key: "dom", label: "Domingo" }
-  ];
+export type { Exercise, MuscleGroup, DayKey, DayInfo, WorkoutTypeKey };
+export { DAYS };
 
 export type MuscleGroupKey =
   | "peito"
@@ -252,13 +239,7 @@ export const CALIST_GROUPS: Record<MuscleGroupKey, MuscleGroup> = {
     }
   };
 
-export type WorkoutTypeKey = "musculacao" | "calistenia";
-
-export interface WorkoutType {
-  key: WorkoutTypeKey;
-  label: string;
-  groups: Record<MuscleGroupKey, MuscleGroup>;
-}
+export type WorkoutType = SharedWorkoutType;
 
 export const WORKOUT_TYPES: Record<WorkoutTypeKey, WorkoutType> = {
   musculacao: { key: "musculacao", label: "🏋️ Musculação", groups: MUSCLE_GROUPS },
@@ -267,11 +248,7 @@ export const WORKOUT_TYPES: Record<WorkoutTypeKey, WorkoutType> = {
 
 export type SplitKey = "full_2x" | "full_3x" | "div_5x";
 
-export interface Split {
-  label: string;
-  desc: string;
-  week: Record<DayKey, MuscleGroupKey[] | null>;
-}
+export type Split = SharedSplit;
 
 export const SPLITS: Record<SplitKey, Split> = {
     full_2x: {
@@ -324,5 +301,5 @@ export function exerciseId(
   groupKey: MuscleGroupKey,
   name: string
 ): string {
-  return `${dayKey}::${typeKey}::${groupKey}::${name}`;
+  return sharedExerciseId(dayKey, typeKey, groupKey, name);
 }
