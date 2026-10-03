@@ -70,6 +70,12 @@ create table if not exists public.profiles (
   activity_level activity_level,
   calorie_target integer,
   protein_target integer, -- grams
+  -- Diário targets (see /diario, supabase/migration_diary.sql). Computed by
+  -- the same onboarding wizard call as calorie_target/protein_target
+  -- (lib/fenix-domain.ts computeTargets()), previously discarded.
+  carb_target numeric, -- grams
+  fat_target numeric, -- grams
+  timeframe_weeks integer, -- weeks entered in onboarding step 4, used only to shape the deficit %
 
   -- Current training assignment (tier + one of that tier's SPLIT_OPTIONS
   -- keys — see lib/fenix-domain.ts). Set by the aluno or applied by their
@@ -338,6 +344,40 @@ create table if not exists public.weekly_cardio (
   sun boolean not null default false,
   updated_at timestamptz not null default now()
 );
+
+-- -----------------------------------------------------------------------------
+-- diary_entries
+-- One row per logged food item (Diário / food diary, see app/diario). Unlike
+-- measurements/weekly_cardio, a day can hold many rows per meal, so there's
+-- no unique(profile_id, logged_at) constraint here. `food_name`/kcal/macros
+-- are copied in at insert time (from lib/food-database.ts or typed in
+-- manually) rather than referencing a foods table, since FOOD_DB is static
+-- reference data, not a table — matching this project's treino-pool pattern.
+-- -----------------------------------------------------------------------------
+create table if not exists public.diary_entries (
+  id uuid primary key default gen_random_uuid(),
+  profile_id uuid not null references public.profiles(id) on delete cascade,
+  logged_at date not null default current_date,
+  meal text not null check (meal in ('cafe', 'almoco', 'lanche', 'jantar', 'extra')),
+  food_name text not null,
+  quantity numeric,
+  unit text,
+  kcal numeric not null,
+  protein numeric not null default 0,
+  carb numeric not null default 0,
+  fat numeric not null default 0,
+  source text not null check (source in ('db', 'manual')),
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now()
+);
+
+create index if not exists diary_entries_profile_id_logged_at_idx
+  on public.diary_entries(profile_id, logged_at);
+
+-- NOTE: `create table if not exists` above won't alter an already-created
+-- table, so an existing deployment also needs the standalone
+-- supabase/migration_diary.sql run once in the SQL editor (it also adds the
+-- profiles.carb_target/fat_target/timeframe_weeks columns above).
 
 -- =============================================================================
 -- Auto-create a profiles row whenever a new auth.users row appears
@@ -618,6 +658,7 @@ alter table public.workout_log_entries enable row level security;
 alter table public.avancado_plans enable row level security;
 alter table public.lifts enable row level security;
 alter table public.weekly_cardio enable row level security;
+alter table public.diary_entries enable row level security;
 
 -- --- profiles -----------------------------------------------------------
 -- Everyone can read their own profile; a personal can also read the
@@ -931,6 +972,33 @@ create policy "weekly_cardio_update_own"
   on public.weekly_cardio for update
   using (profile_id = auth.uid())
   with check (profile_id = auth.uid());
+
+-- --- diary_entries -----------------------------------------------------------
+create policy "diary_entries_select_own"
+  on public.diary_entries for select
+  using (profile_id = auth.uid());
+
+create policy "diary_entries_select_by_personal"
+  on public.diary_entries for select
+  using (
+    exists (
+      select 1 from public.profiles p
+      where p.id = diary_entries.profile_id and p.linked_personal_id = auth.uid()
+    )
+  );
+
+create policy "diary_entries_insert_own"
+  on public.diary_entries for insert
+  with check (profile_id = auth.uid());
+
+create policy "diary_entries_update_own"
+  on public.diary_entries for update
+  using (profile_id = auth.uid())
+  with check (profile_id = auth.uid());
+
+create policy "diary_entries_delete_own"
+  on public.diary_entries for delete
+  using (profile_id = auth.uid());
 
 -- --- personal write access for workout application --------------------------
 -- A personal applying a saved workout template to one of their alunos needs

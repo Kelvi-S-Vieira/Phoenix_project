@@ -8,9 +8,11 @@ import {
   ACTIVITY_LEVELS,
   GOALS,
   computeTargets,
+  activityLabel,
 } from "@/lib/fenix-domain";
 import type { ActivityLevel, Goal } from "@/lib/database.types";
 import { getWeightUnit, toDisplayWeight, fromDisplayWeight } from "@/lib/weight-unit";
+import { getPaceSuggestions, getEndDateHint, getPaceFeedback } from "@/lib/pace-suggestions";
 
 const TOTAL_STEPS = 5;
 
@@ -81,6 +83,10 @@ export default function OnboardingWizard({
     return true;
   }
 
+  const currentWeightKg = state.weight ? parseFloat(state.weight) : null;
+  const targetWeightKg = state.targetWeight ? parseFloat(state.targetWeight) : null;
+  const timeframeWeeksNum = state.timeframeWeeks ? parseFloat(state.timeframeWeeks) : null;
+
   const pctPerWeek = (() => {
     const w = parseFloat(state.weight);
     const t = parseFloat(state.targetWeight);
@@ -88,6 +94,10 @@ export default function OnboardingWizard({
     if (w && t && wk && wk > 0) return (Math.abs(w - t) / wk / w) * 100;
     return null;
   })();
+
+  const paceSuggestions = getPaceSuggestions(currentWeightKg, targetWeightKg, timeframeWeeksNum);
+  const endDateHint = getEndDateHint(timeframeWeeksNum);
+  const paceFeedback = getPaceFeedback(currentWeightKg, targetWeightKg, timeframeWeeksNum);
 
   const targets =
     state.sex && state.age && state.height && state.weight && state.activity && state.goal
@@ -129,6 +139,11 @@ export default function OnboardingWizard({
         goal: state.goal,
         calorie_target: targets.calorieTarget,
         protein_target: targets.proteinG,
+        // Diário targets (see /diario) — computeTargets() already derives
+        // these with the prototype's exact formula; previously discarded.
+        carb_target: targets.carbG,
+        fat_target: targets.fatG,
+        timeframe_weeks: timeframeWeeksNum,
         onboarding_completed: true,
       })
       .eq("id", user.id);
@@ -310,25 +325,47 @@ export default function OnboardingWizard({
                 }
               />
             </div>
-            <div className="field">
+            {paceSuggestions && (
+              <div id="pf_paceSuggestions">
+                <div className="pace-sugg-hint">Sugestões de ritmo (clique pra preencher o prazo):</div>
+                <div className="pace-sugg-grid">
+                  {paceSuggestions.map((card) => (
+                    <div
+                      key={card.key}
+                      className={"pace-sugg-card" + ` ${card.key}` + (card.active ? " active" : "")}
+                      onClick={() => update("timeframeWeeks", String(card.weeks))}
+                    >
+                      <div className="ps-label">{card.label}</div>
+                      <div className="ps-weeks">
+                        {card.weeks}
+                        <span className="unit"> sem</span>
+                      </div>
+                      <div className="ps-date">
+                        ~{card.pct}%/sem · {card.dateStr}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+            <div className="field" style={{ marginTop: 16 }}>
               <label>Prazo (semanas)</label>
               <input
                 type="number"
                 value={state.timeframeWeeks}
                 onChange={(e) => update("timeframeWeeks", e.target.value)}
               />
+              {endDateHint && (
+                <div className="pace-sugg-hint" style={{ marginTop: 6 }}>
+                  Começando hoje ({endDateHint.startStr}), {endDateHint.weeks} semana
+                  {endDateHint.weeks === 1 ? "" : "s"} terminaria em{" "}
+                  <b style={{ color: "var(--gold)" }}>{endDateHint.endStr}</b>.
+                </div>
+              )}
             </div>
-            {pctPerWeek !== null && (
-              <div
-                className={pctPerWeek > 1.2 ? "form-error" : "form-success"}
-                style={{ marginTop: 4 }}
-              >
-                Ritmo: ~{pctPerWeek.toFixed(2)}%/semana
-                {pctPerWeek > 1.2
-                  ? " — prazo muito curto, considere um período mais longo."
-                  : pctPerWeek > 0.7
-                    ? " — ritmo agressivo, preste atenção à proteína e ao treino de força."
-                    : " — ritmo seguro."}
+            {paceFeedback && (
+              <div className={`pace-feedback ${paceFeedback.cls}`}>
+                <b>{paceFeedback.title}</b> {paceFeedback.message}
               </div>
             )}
           </>
@@ -360,7 +397,7 @@ export default function OnboardingWizard({
               <div className="sum-card">
                 <div className="label">Proteína</div>
                 <div className="value">
-                  {targets.proteinG} <span className="unit">g</span>
+                  {targets.proteinG} <span className="unit">g ({targets.proteinPerKg}g/kg)</span>
                 </div>
               </div>
               <div className="sum-card">
@@ -368,6 +405,33 @@ export default function OnboardingWizard({
                 <div className="value" style={{ fontSize: 18 }}>
                   {targets.carbG}g / {targets.fatG}g
                 </div>
+              </div>
+              <div className="sum-card">
+                <div className="label">Ritmo estimado</div>
+                <div className="value">
+                  {pctPerWeek !== null ? (
+                    <>
+                      {pctPerWeek.toFixed(2)} <span className="unit">%/sem</span>
+                    </>
+                  ) : (
+                    "—"
+                  )}
+                </div>
+              </div>
+            </div>
+            <div className="breakdown" style={{ marginTop: 12 }}>
+              <div className="b-row">
+                <span>Fórmula usada</span>
+                <b>Mifflin-St Jeor</b>
+              </div>
+              <div className="b-row">
+                <span>Nível de atividade</span>
+                <b>{activityLabel(state.activity)}</b>
+              </div>
+              <hr />
+              <div className="b-row">
+                <span>Estratégia</span>
+                <span style={{ maxWidth: "60%", textAlign: "right" }}>{targets.rationale}</span>
               </div>
             </div>
           </>

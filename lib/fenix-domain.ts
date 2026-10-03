@@ -124,8 +124,12 @@ export interface ProfileTargets {
   tdee: number;
   calorieTarget: number;
   proteinG: number;
+  /** g of protein per kg of bodyweight used to derive `proteinG` (e.g. 1.8), ported from the prototype's `proteinPerKg`. */
+  proteinPerKg: number;
   fatG: number;
   carbG: number;
+  /** One-line rationale for the calorie strategy, ported verbatim (pt-BR) from the prototype's `rationale`. */
+  rationale: string;
 }
 
 /**
@@ -153,6 +157,7 @@ export function computeTargets(input: {
 
   let calorieTarget: number;
   let proteinPerKg: number;
+  let rationale: string;
 
   if (goal === "perder") {
     const deficitPct = pctPerWeek
@@ -160,15 +165,20 @@ export function computeTargets(input: {
       : 0.18;
     calorieTarget = tdee * (1 - deficitPct);
     proteinPerKg = 2.1;
+    rationale = "Déficit calórico com proteína alta pra minimizar perda de massa magra.";
   } else if (goal === "ganhar") {
     calorieTarget = tdee * 1.12;
     proteinPerKg = 1.8;
+    rationale = "Superávit moderado — rápido demais favorece mais gordura que músculo.";
   } else if (goal === "recomp") {
     calorieTarget = tdee * 0.95;
     proteinPerKg = 2.2;
+    rationale =
+      "Déficit leve com proteína bem alta — perde gordura e sustenta ganho de músculo com o treino certo.";
   } else {
     calorieTarget = tdee;
     proteinPerKg = 1.7;
+    rationale = "Calorias na manutenção — foco em recomposição via treino, não em balanço calórico.";
   }
 
   const proteinG = proteinPerKg * w;
@@ -182,9 +192,17 @@ export function computeTargets(input: {
     tdee: Math.round(tdee),
     calorieTarget: Math.round(calorieTarget),
     proteinG: Math.round(proteinG),
+    proteinPerKg,
     fatG,
     carbG,
+    rationale,
   };
+}
+
+/** Display label for an activity level key (prototype's `activityLabel`), falling back to "—" when not found. */
+export function activityLabel(key: ActivityLevel | "" | null | undefined): string {
+  const a = ACTIVITY_LEVELS.find((x) => x.key === key);
+  return a ? a.title : "—";
 }
 
 // Ported from `window.FX_BADGES` in the prototype's streak/achievements module.

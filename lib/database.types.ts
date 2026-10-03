@@ -34,6 +34,10 @@ export type Profile = {
   activity_level: ActivityLevel | null;
   calorie_target: number | null;
   protein_target: number | null;
+  // Diário targets (see /diario, supabase/migration_diary.sql).
+  carb_target: number | null;
+  fat_target: number | null;
+  timeframe_weeks: number | null;
   current_tier: Tier | null;
   current_split: string | null;
   onboarding_completed: boolean;
@@ -174,6 +178,27 @@ export type WeeklyCardio = {
   updated_at: string;
 };
 
+export type Meal = "cafe" | "almoco" | "lanche" | "jantar" | "extra";
+
+// Diário (food diary) entries — one row per logged food item. See
+// app/diario and supabase/migration_diary.sql.
+export type DiaryEntry = {
+  id: string;
+  profile_id: string;
+  logged_at: string;
+  meal: Meal;
+  food_name: string;
+  quantity: number | null;
+  unit: string | null;
+  kcal: number;
+  protein: number;
+  carb: number;
+  fat: number;
+  source: "db" | "manual";
+  created_at: string;
+  updated_at: string;
+};
+
 // Column-limited view backing invite-code lookup — see
 // supabase/schema.sql's public.personal_lookup. Never query `profiles`
 // directly by `code` from the client.
@@ -212,6 +237,7 @@ export type Database = {
       avancado_plans: Table<AvancadoPlanRow>;
       lifts: Table<Lift>;
       weekly_cardio: Table<WeeklyCardio>;
+      diary_entries: Table<DiaryEntry>;
     };
     Views: {
       personal_lookup: {

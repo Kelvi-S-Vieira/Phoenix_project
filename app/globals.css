@@ -524,6 +524,17 @@ h1 {
   }
 }
 
+.row3 {
+  display: grid;
+  grid-template-columns: 2fr 1fr 1fr;
+  gap: 14px;
+}
+@media (max-width: 480px) {
+  .row3 {
+    grid-template-columns: 1fr;
+  }
+}
+
 .btn {
   display: inline-flex;
   align-items: center;
@@ -693,6 +704,265 @@ h1 {
   font-size: 13px;
   color: var(--text-muted);
   font-weight: 400;
+}
+
+/* --------------------------------------------------------------------------
+   Diário (food diary) — ported from the prototype's #page-diario <style>
+   block (projeto_fenix_app_final.html, ~lines 1315-1427). Reuses
+   .summary-grid/.sum-card/.sc-label/.sc-value/.field/.row2/.row3/.btn above.
+   -------------------------------------------------------------------------- */
+.date-nav {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.date-nav button {
+  width: 34px;
+  height: 34px;
+  border-radius: 8px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  color: var(--text);
+  cursor: pointer;
+  font-size: 16px;
+}
+.date-nav input[type="date"] {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  color: var(--text);
+  font-family: var(--font-mono);
+  font-size: 13px;
+  padding: 8px 10px;
+}
+
+.sc-top {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  margin-bottom: 10px;
+}
+.sc-target {
+  font-size: 12px;
+  color: var(--text-muted);
+  font-family: var(--font-mono);
+}
+.sum-track {
+  height: 8px;
+  border-radius: 6px;
+  background: var(--surface-2);
+  overflow: hidden;
+  border: 1px solid var(--border);
+  margin-top: 8px;
+}
+.sum-fill {
+  height: 100%;
+  border-radius: 6px;
+  transition: width 0.4s ease;
+}
+.sum-fill.kcal {
+  background: linear-gradient(90deg, var(--ember-deep), var(--ember), var(--gold));
+}
+.sum-fill.protein {
+  background: linear-gradient(90deg, #4a7a6a, var(--good));
+}
+.sum-fill.carb {
+  background: linear-gradient(90deg, #6b8cae, #8fb8e0);
+}
+.sum-fill.fat {
+  background: linear-gradient(90deg, #b88a4a, var(--warn));
+}
+.sum-over {
+  color: var(--warn) !important;
+}
+
+.meal-tabs {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 16px;
+  flex-wrap: wrap;
+}
+.meal-tab {
+  padding: 8px 16px;
+  border-radius: 20px;
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  color: var(--text-muted);
+  font-family: var(--font-mono);
+  font-size: 11px;
+  cursor: pointer;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+}
+.meal-tab.active {
+  background: linear-gradient(90deg, var(--ember-deep), var(--ember));
+  color: #fff;
+  border-color: transparent;
+}
+
+.entry-mode {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 16px;
+}
+.mode-btn {
+  padding: 6px 14px;
+  border-radius: 8px;
+  background: transparent;
+  border: 1px solid var(--border);
+  color: var(--text-muted);
+  font-size: 12px;
+  cursor: pointer;
+}
+.mode-btn.active {
+  border-color: var(--ember);
+  color: var(--ember);
+  background: var(--ember-dim);
+}
+
+.food-search {
+  position: relative;
+  margin-bottom: 12px;
+}
+.food-search input {
+  width: 100%;
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  color: var(--text);
+  font-family: var(--font-sans);
+  font-size: 14px;
+  padding: 11px 14px;
+}
+.food-search input:focus {
+  outline: none;
+  border-color: var(--ember);
+}
+.food-dropdown {
+  position: absolute;
+  top: calc(100% + 4px);
+  left: 0;
+  right: 0;
+  max-height: 240px;
+  overflow-y: auto;
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  z-index: 10;
+  display: none;
+}
+.food-dropdown.open {
+  display: block;
+}
+.food-opt {
+  padding: 10px 14px;
+  cursor: pointer;
+  font-size: 13px;
+  border-bottom: 1px solid var(--border);
+}
+.food-opt:last-child {
+  border-bottom: none;
+}
+.food-opt:hover {
+  background: var(--surface);
+}
+.food-opt .fo-macro {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  color: var(--text-muted);
+  margin-top: 2px;
+}
+
+.selected-food {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 10px 14px;
+  background: var(--ember-dim);
+  border: 1px solid var(--ember-dim);
+  border-radius: 10px;
+  margin-bottom: 12px;
+}
+.selected-food .sf-name {
+  font-size: 13px;
+  font-weight: 600;
+}
+.selected-food .sf-macro {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: var(--gold);
+}
+.selected-food .sf-clear {
+  background: none;
+  border: none;
+  color: var(--text-muted);
+  cursor: pointer;
+  font-size: 16px;
+}
+
+.computed-preview {
+  display: flex;
+  gap: 16px;
+  padding: 10px 14px;
+  background: var(--surface-2);
+  border-radius: 8px;
+  font-family: var(--font-mono);
+  font-size: 12px;
+  color: var(--gold);
+  margin-bottom: 12px;
+}
+
+.meal-group {
+  margin-bottom: 18px;
+}
+.meal-group:last-child {
+  margin-bottom: 0;
+}
+.meal-group-title {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: var(--gold);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  margin-bottom: 8px;
+  display: flex;
+  justify-content: space-between;
+}
+.food-entry {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 10px 14px;
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  margin-bottom: 6px;
+}
+.food-entry .fe-name {
+  font-size: 13px;
+}
+.food-entry .fe-qty {
+  font-size: 11px;
+  color: var(--text-muted);
+  margin-left: 8px;
+}
+.food-entry .fe-macro {
+  font-family: var(--font-mono);
+  font-size: 12px;
+  color: var(--gold);
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.fe-del {
+  background: none;
+  border: none;
+  color: var(--text-muted);
+  cursor: pointer;
+  font-size: 15px;
+}
+.fe-del:hover {
+  color: var(--ember);
 }
 
 .fx-streak-pill {
@@ -2729,4 +2999,132 @@ h1 {
   color: var(--text-muted);
   font-size: 0.85rem;
   font-style: italic;
+}
+
+/* Onboarding step 4 ("Sua meta") — pace-suggestion cards, end-date hint and
+   risk feedback. Ported from the prototype's `.pace-feedback` /
+   `.pace-sugg-*` rules (projeto_fenix_app_final.html ~line 1234). The
+   prototype's `.pace-feedback.perigoso` used an ad hoc `--bad` token; this
+   codebase already has an equivalent `--danger` token, used here instead. */
+.pace-feedback {
+  margin-top: 14px;
+  padding: 14px 16px;
+  border-radius: 12px;
+  font-size: 12px;
+  line-height: 1.6;
+  border: 1px solid var(--border);
+}
+.pace-feedback.conservador {
+  background: rgba(127, 184, 138, 0.08);
+  border-color: rgba(127, 184, 138, 0.3);
+  color: var(--good);
+}
+.pace-feedback.recomendado {
+  background: rgba(242, 166, 90, 0.08);
+  border-color: rgba(242, 166, 90, 0.3);
+  color: var(--gold);
+}
+.pace-feedback.agressivo {
+  background: rgba(224, 184, 92, 0.08);
+  border-color: rgba(224, 184, 92, 0.3);
+  color: var(--warn);
+}
+.pace-feedback.perigoso {
+  background: rgba(224, 100, 92, 0.1);
+  border-color: rgba(224, 100, 92, 0.4);
+  color: var(--danger);
+}
+.pace-feedback b {
+  color: inherit;
+}
+
+.pace-sugg-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr;
+  gap: 10px;
+  margin: 14px 0 4px;
+}
+.pace-sugg-card {
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 14px 12px;
+  cursor: pointer;
+  text-align: center;
+  transition: 0.15s;
+}
+.pace-sugg-card:hover {
+  border-color: rgba(255, 107, 53, 0.4);
+}
+.pace-sugg-card.active {
+  border-color: var(--ember);
+  background: rgba(255, 107, 53, 0.08);
+}
+.pace-sugg-card .ps-label {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  margin-bottom: 6px;
+}
+.pace-sugg-card.conservador .ps-label {
+  color: var(--good);
+}
+.pace-sugg-card.recomendado .ps-label {
+  color: var(--gold);
+}
+.pace-sugg-card.agressivo .ps-label {
+  color: var(--warn);
+}
+.pace-sugg-card .ps-weeks {
+  font-family: var(--font-display);
+  font-size: 22px;
+  font-weight: 700;
+  color: var(--text);
+  line-height: 1;
+}
+.pace-sugg-card .ps-weeks .unit {
+  font-size: 11px;
+  color: var(--text-muted);
+  font-weight: 400;
+}
+.pace-sugg-card .ps-date {
+  font-size: 10px;
+  color: var(--text-muted);
+  margin-top: 4px;
+}
+.pace-sugg-hint {
+  font-size: 11px;
+  color: var(--text-muted);
+  margin-bottom: 2px;
+}
+@media (max-width: 480px) {
+  .pace-sugg-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* Onboarding step 5 ("Seu plano calculado") — formula breakdown block.
+   Ported from the prototype's `.breakdown` rules (~line 1284). */
+.breakdown {
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 16px 18px;
+  font-size: 12px;
+  color: var(--text-muted);
+  line-height: 2;
+  margin-bottom: 18px;
+}
+.breakdown .b-row {
+  display: flex;
+  justify-content: space-between;
+}
+.breakdown .b-row b {
+  color: var(--text);
+}
+.breakdown hr {
+  border: none;
+  border-top: 1px solid var(--border);
+  margin: 6px 0;
 }
