@@ -4,8 +4,9 @@ import { useEffect, useRef, useState } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { todayBR } from "@/lib/date-br";
 import ExerciseMedia from "@/components/ExerciseMedia";
-import { DAYS, type DayKey, exerciseKey } from "@/lib/treino-shared-types";
+import { DAYS, type DayKey, type Exercise, exerciseKey } from "@/lib/treino-shared-types";
 import { MUSCLE_GROUPS, CALIST_GROUPS, SPLITS, type MuscleGroupKey, type SplitKey } from "@/lib/treino-avancado-data";
+import { HIIT_EXERCISES, TABATA_EXERCISES, HYROX_STATIONS, CROSSFIT_EXERCISES } from "@/lib/treino-circuitos-data";
 import {
   ALL_GROUP_KEYS,
   EQUIPMENT_TYPES,
@@ -35,7 +36,32 @@ import {
   newEntryId,
   type AvancadoPlan,
   type DayPlan,
+  type CircuitDayPlan,
+  type CrossfitFormat,
+  CROSSFIT_FORMATS,
+  isCircuitFormat,
+  getIntensityPresets,
+  applyCircuitPreset,
+  applyTimeBuilder,
+  computeCircuitEstimate,
+  TIME_BUILDER_OPTIONS,
+  pickSwapReplacement,
 } from "@/lib/treino-avancado-builder";
+import {
+  type SetLogEntry,
+  estimate1RM,
+  bestPR,
+  isNewPR,
+  needsDeload,
+  suggestProgression,
+} from "@/lib/treino-progression";
+
+const CIRCUIT_POOLS: Record<GenericTypeKey, Exercise[]> = {
+  hiit: HIIT_EXERCISES,
+  tabata: TABATA_EXERCISES,
+  hyrox: HYROX_STATIONS,
+  crossfit: CROSSFIT_EXERCISES,
+};
 
 interface BodyInfo {
   weight: number | null;
@@ -69,15 +95,18 @@ export default function AvancadoBuilder({
   initialPlan,
   initialBody,
   initialLog,
+  initialSetLogs,
 }: {
   profileId: string;
   initialPlan: AvancadoPlan;
   initialBody: BodyInfo;
   initialLog: Record<string, LogEntry>;
+  initialSetLogs: Record<string, SetLogEntry[]>;
 }) {
   const [plan, setPlan] = useState<AvancadoPlan>(initialPlan);
   const [body, setBody] = useState<BodyInfo>(initialBody);
   const [log, setLog] = useState<Record<string, LogEntry>>(initialLog);
+  const [setLogs, setSetLogs] = useState<Record<string, SetLogEntry[]>>(initialSetLogs);
   const [selectedDay, setSelectedDay] = useState<DayKey | null>(null);
   const [activeTab, setActiveTab] = useState<string>("musculacao");
   const [openGroups, setOpenGroups] = useState<Record<string, boolean>>({});
@@ -174,6 +203,86 @@ export default function AvancadoBuilder({
   }
 
   // -------------------------------------------------------------------------
+  // Training log (1RM/PR/progression) — exercise_set_logs, keyed by the
+  // day-independent exerciseKey(). Saves immediately on click (not
+  // debounced), unlike the plan's scheduleSave — ported from the
+  // prototype's synchronous addLogEntry.
+  function logFor(id: string): SetLogEntry[] {
+    return setLogs[id] ?? [];
+  }
+
+  async function saveSetLog(id: string, weight: number, reps: number, rpe: number | null, pain: boolean) {
+    const entry: SetLogEntry = { date: todayBR(), weight, reps, rpe, pain };
+    setSetLogs((prev) => ({ ...prev, [id]: [...(prev[id] ?? []), entry] }));
+    const supabase = createClient();
+    await supabase.from("exercise_set_logs").insert({
+      profile_id: profileId,
+      exercise_key: id,
+      logged_at: entry.date,
+      weight,
+      reps,
+      rpe,
+      pain,
+    });
+  }
+
+  // Swaps a selected exercise for a random different one from the same
+  // group/portion, keeping the user's sets/reps/warmupSets config. The old
+  // exercise's own log history is left untouched under its own key (not
+  // deleted) — see lib/treino-progression.ts header comment.
+  function swapExerciseInSelection(dayKey: DayKey, oldId: string, groupKey: MuscleGroupKey, portionKey: string, portionExercises: Exercise[]) {
+    const candidates = portionExercises.filter((ex) => exerciseKey("musculacao", groupKey, ex.name, portionKey) !== oldId);
+    const pick = pickSwapReplacement(candidates);
+    if (!pick) return;
+    const newId = exerciseKey("musculacao", groupKey, pick.name, portionKey);
+    updateDay(
+      dayKey,
+      (day) => {
+        const sel = day.selections[oldId];
+        if (!sel) return day;
+        const next = { ...day.selections };
+        delete next[oldId];
+        next[newId] = sel;
+        return { ...day, selections: next };
+      },
+      true
+    );
+  }
+
+  function updateCircuitDay(dayKey: DayKey, type: GenericTypeKey, patch: Partial<CircuitDayPlan>, immediate = false) {
+    updateDay(
+      dayKey,
+      (day) => ({ ...day, generic: { ...day.generic, [type]: { ...day.generic[type], ...patch } } }),
+      immediate
+    );
+  }
+  function toggleCircuitExercise(dayKey: DayKey, type: GenericTypeKey, exName: string) {
+    updateDay(
+      dayKey,
+      (day) => {
+        const current = day.generic[type];
+        const has = current.exercises.includes(exName);
+        const exercises = has ? current.exercises.filter((n) => n !== exName) : [...current.exercises, exName];
+        return { ...day, generic: { ...day.generic, [type]: { ...current, exercises } } };
+      },
+      true
+    );
+  }
+  function applyCircuitPresetToDay(dayKey: DayKey, type: GenericTypeKey, intensity: Intensity) {
+    updateDay(
+      dayKey,
+      (day) => ({ ...day, generic: { ...day.generic, [type]: applyCircuitPreset(type, day.generic[type], intensity, CIRCUIT_POOLS[type]) } }),
+      true
+    );
+  }
+  function applyTimeBuilderToDay(dayKey: DayKey, type: GenericTypeKey, targetMinutes: number) {
+    updateDay(
+      dayKey,
+      (day) => ({ ...day, generic: { ...day.generic, [type]: applyTimeBuilder(type, day.generic[type], targetMinutes, CIRCUIT_POOLS[type]) } }),
+      true
+    );
+  }
+
   function chooseTemplate(key: SplitKey) {
     setPlan((prev) => {
       const next = applyTemplate(prev, key);
@@ -309,29 +418,6 @@ export default function AvancadoBuilder({
   }
   function updateSportEntry(dayKey: DayKey, id: string, patch: Partial<DayPlan["sports"][number]>) {
     updateDay(dayKey, (day) => ({ ...day, sports: day.sports.map((e) => (e.id === id ? { ...e, ...patch } : e)) }));
-  }
-
-  function addGenericEntry(dayKey: DayKey, type: GenericTypeKey) {
-    updateDay(
-      dayKey,
-      (day) => ({
-        ...day,
-        generic: {
-          ...day.generic,
-          [type]: [...day.generic[type], { id: newEntryId("g"), label: "", intensity: "moderado" as Intensity, minutes: 20 }],
-        },
-      }),
-      true
-    );
-  }
-  function removeGenericEntry(dayKey: DayKey, type: GenericTypeKey, id: string) {
-    updateDay(dayKey, (day) => ({ ...day, generic: { ...day.generic, [type]: day.generic[type].filter((e) => e.id !== id) } }), true);
-  }
-  function updateGenericEntry(dayKey: DayKey, type: GenericTypeKey, id: string, patch: Partial<DayPlan["generic"][GenericTypeKey][number]>) {
-    updateDay(dayKey, (day) => ({
-      ...day,
-      generic: { ...day.generic, [type]: day.generic[type].map((e) => (e.id === id ? { ...e, ...patch } : e)) },
-    }));
   }
 
   function toggleEquipment(key: string) {
@@ -475,7 +561,7 @@ export default function AvancadoBuilder({
             if (dp.cardio.length) labels.push("Cardio");
             if (dp.sports.length) labels.push("Esporte");
             GENERIC_TYPE_KEYS.forEach((k) => {
-              if (dp.generic[k].length) labels.push(GENERIC_TAB_LABELS[k].replace(/^\S+\s/, ""));
+              if (dp.generic[k].exercises.length) labels.push(GENERIC_TAB_LABELS[k].replace(/^\S+\s/, ""));
             });
             return (
               <div
@@ -558,6 +644,15 @@ export default function AvancadoBuilder({
                   setOpenDetails={setOpenDetails}
                   entryFor={entryFor}
                   onToggleDone={toggleDone}
+                  logFor={logFor}
+                  onSaveLog={saveSetLog}
+                  onSwapExercise={(groupKey, portionKey, oldId, portionExercises) =>
+                    swapExerciseInSelection(selectedDay, oldId, groupKey, portionKey, portionExercises)
+                  }
+                  onRezone={(id, zone) => {
+                    updateSelectionField(selectedDay, id, "reps", zone);
+                    scheduleSave(true);
+                  }}
                 />
               )}
               {activeTab === "calistenia" && (
@@ -589,13 +684,17 @@ export default function AvancadoBuilder({
                 />
               )}
               {(["hiit", "tabata", "hyrox", "crossfit"] as GenericTypeKey[]).includes(activeTab as GenericTypeKey) && (
-                <GenericTab
+                <CircuitTab
                   type={activeTab as GenericTypeKey}
                   day={day}
                   weight={body.weight}
-                  onAdd={() => addGenericEntry(selectedDay, activeTab as GenericTypeKey)}
-                  onRemove={(id) => removeGenericEntry(selectedDay, activeTab as GenericTypeKey, id)}
-                  onUpdate={(id, patch) => updateGenericEntry(selectedDay, activeTab as GenericTypeKey, id, patch)}
+                  levelFilter={plan.levelFilter}
+                  openDetails={openDetails}
+                  setOpenDetails={setOpenDetails}
+                  onUpdateField={(patch, immediate) => updateCircuitDay(selectedDay, activeTab as GenericTypeKey, patch, immediate)}
+                  onToggleExercise={(name) => toggleCircuitExercise(selectedDay, activeTab as GenericTypeKey, name)}
+                  onApplyPreset={(intensity) => applyCircuitPresetToDay(selectedDay, activeTab as GenericTypeKey, intensity)}
+                  onApplyTimeBuilder={(minutes) => applyTimeBuilderToDay(selectedDay, activeTab as GenericTypeKey, minutes)}
                   onBlurPersist={() => scheduleSave(true)}
                 />
               )}
@@ -836,6 +935,186 @@ function ExerciseDetails({
 }
 
 // =============================================================================
+// Training-log box (1RM/PR/progression/deload/swap + "registrar hoje" form)
+// — ported from the prototype's `tv-log-box` block (lines ~10628-10770).
+// Rendered inside a selected musculação exercise row, collapsed behind the
+// same "detalhes" toggle as ExerciseDetails to keep the list scannable.
+// =============================================================================
+function OneRMSparkline({ log }: { log: SetLogEntry[] }) {
+  const last10 = log.slice(-10);
+  if (last10.length < 2) return null;
+  const values = last10.map((e) => estimate1RM(e.weight, e.reps));
+  const minV = Math.min(...values);
+  const maxV = Math.max(...values);
+  const svgW = 220;
+  const svgH = 50;
+  const pad = 6;
+  const range = maxV - minV || 1;
+  const stepX = values.length > 1 ? (svgW - pad * 2) / (values.length - 1) : 0;
+  const coords = values.map((v, i) => ({
+    x: pad + i * stepX,
+    y: svgH - pad - ((v - minV) / range) * (svgH - pad * 2),
+  }));
+  const points = coords.map((c) => `${c.x.toFixed(1)},${c.y.toFixed(1)}`).join(" ");
+  return (
+    <div style={{ marginBottom: 6 }}>
+      <div style={{ opacity: 0.6, fontSize: 11, marginBottom: 2 }}>📉 1RM estimado — últimas {last10.length} sessões</div>
+      <svg width={svgW} height={svgH} viewBox={`0 0 ${svgW} ${svgH}`} style={{ display: "block" }}>
+        <polyline points={points} style={{ fill: "none", stroke: "var(--ember)", strokeWidth: 2 }} />
+        {coords.map((c, i) => (
+          <circle key={i} cx={c.x} cy={c.y} r={2.5} style={{ fill: "var(--ember)" }} />
+        ))}
+      </svg>
+      <div style={{ display: "flex", justifyContent: "space-between", fontSize: 10, opacity: 0.6, width: svgW }}>
+        <span>{minV}kg</span>
+        <span>{maxV}kg</span>
+      </div>
+    </div>
+  );
+}
+
+function ExerciseLogBox({
+  targetReps,
+  log,
+  onSave,
+  onSwap,
+  onRezone,
+}: {
+  targetReps: string;
+  log: SetLogEntry[];
+  onSave: (weight: number, reps: number, rpe: number | null, pain: boolean) => void;
+  onSwap: () => void;
+  onRezone: (zone: string) => void;
+}) {
+  const [weight, setWeight] = useState("");
+  const [reps, setReps] = useState("");
+  const [rpe, setRpe] = useState("");
+  const [pain, setPain] = useState(false);
+  const [showHistory, setShowHistory] = useState(false);
+
+  const progression = suggestProgression(log, targetReps);
+  const lastEntry = log.length > 0 ? log[log.length - 1] : null;
+  const pr = bestPR(log);
+
+  function handleSave(e: React.MouseEvent) {
+    e.stopPropagation();
+    const w = Number(weight);
+    const r = Number(reps);
+    if (!w || !r) {
+      alert("Informe pelo menos o peso e as reps executadas.");
+      return;
+    }
+    onSave(w, r, rpe === "" ? null : Number(rpe), pain);
+    setWeight("");
+    setReps("");
+    setRpe("");
+    setPain(false);
+  }
+
+  return (
+    <div
+      className="tv-log-box"
+      onClick={(e) => e.stopPropagation()}
+      style={{ width: "100%", marginTop: 8, padding: "8px 10px", background: "rgba(255,255,255,0.03)", borderRadius: 8, fontSize: 13 }}
+    >
+      <div style={{ opacity: 0.85, marginBottom: 6 }}>
+        {progression.stage === "dor" || progression.stage === "swap" || progression.stage === "rezone" ? "" : "📈 "}
+        {progression.message}
+      </div>
+
+      {progression.stage === "rezone" && progression.suggestedZone && (
+        <button type="button" className="tv-add-entry-btn" style={{ marginBottom: 6 }} onClick={() => onRezone(progression.suggestedZone!)}>
+          Mudar zona de reps para {progression.suggestedZone}
+        </button>
+      )}
+
+      {(progression.stage === "swap" || progression.stage === "dor") && (
+        <button
+          type="button"
+          className="tv-add-entry-btn"
+          style={{ marginBottom: 6 }}
+          title="O histórico deste exercício fica salvo, associado a ele, caso você o marque de novo no futuro."
+          onClick={onSwap}
+        >
+          🔄 Trocar exercício (mesma região)
+        </button>
+      )}
+
+      {lastEntry && (
+        <>
+          <div style={{ opacity: 0.7, fontSize: 12, marginBottom: 6 }}>
+            Último registro ({lastEntry.date}): {lastEntry.weight}kg × {lastEntry.reps} reps
+            {lastEntry.rpe != null ? ` · RPE ${lastEntry.rpe}` : ""}
+            {(() => {
+              const oneRM = estimate1RM(lastEntry.weight, lastEntry.reps);
+              return oneRM ? ` · 1RM estimado: ~${oneRM}kg` : "";
+            })()}
+          </div>
+          {isNewPR(log) && (
+            <div style={{ color: "var(--ember)", fontWeight: 600, fontSize: 13, marginBottom: 6 }}>
+              🎉 Novo recorde nessa última sessão!
+            </div>
+          )}
+          {needsDeload(log) && (
+            <div style={{ color: "#e8a33d", fontSize: 12, marginBottom: 6 }}>
+              ⚠️ 1RM estimado sem subir há 3 registros seguidos — considere uma semana de deload (reduza ~40% do volume
+              ou da carga) antes de tentar progredir de novo.
+            </div>
+          )}
+        </>
+      )}
+
+      {pr && (
+        <div style={{ opacity: 0.8, fontSize: 12, marginBottom: 6 }}>
+          🏆 PR: {pr.entry.weight}kg × {pr.entry.reps} reps (1RM ~{pr.oneRM}kg) em {pr.entry.date}
+        </div>
+      )}
+
+      <OneRMSparkline log={log} />
+
+      <div style={{ display: "flex", flexWrap: "wrap", gap: 6, alignItems: "center" }}>
+        <span>Registrar hoje:</span>
+        <input type="number" min="0" step="0.5" placeholder="kg" style={{ width: 60 }} value={weight} onChange={(e) => setWeight(e.target.value)} />
+        <span>kg ×</span>
+        <input type="number" min="0" placeholder="reps" style={{ width: 55 }} value={reps} onChange={(e) => setReps(e.target.value)} />
+        <span>reps · RPE</span>
+        <input type="number" min="1" max="10" placeholder="opc." style={{ width: 50 }} value={rpe} onChange={(e) => setRpe(e.target.value)} />
+        <label style={{ display: "inline-flex", alignItems: "center", gap: 4, fontSize: 12, opacity: 0.85 }}>
+          <input type="checkbox" checked={pain} onChange={(e) => setPain(e.target.checked)} />
+          senti dor/desconforto
+        </label>
+        <button type="button" className="tv-add-entry-btn" onClick={handleSave}>
+          Salvar
+        </button>
+      </div>
+
+      {log.length > 0 && (
+        <>
+          <span className="toggle-details" style={{ display: "inline-block", marginTop: 6, cursor: "pointer" }} onClick={() => setShowHistory((v) => !v)}>
+            ver histórico ({log.length})
+          </span>
+          {showHistory && (
+            <div style={{ marginTop: 6, fontSize: 12, opacity: 0.8 }}>
+              {log
+                .slice()
+                .reverse()
+                .slice(0, 8)
+                .map((entry, i) => (
+                  <div key={i}>
+                    {entry.date}: {entry.weight}kg × {entry.reps} reps
+                    {entry.rpe != null ? ` · RPE ${entry.rpe}` : ""}
+                    {entry.pain ? " · ⚠️ dor/desconforto" : ""}
+                  </div>
+                ))}
+            </div>
+          )}
+        </>
+      )}
+    </div>
+  );
+}
+
+// =============================================================================
 // Tips panel (static reference text, ported verbatim from the prototype) —
 // shown once, at the top of the Musculação tab.
 // =============================================================================
@@ -911,6 +1190,10 @@ function MusculacaoTab({
   setOpenDetails,
   entryFor,
   onToggleDone,
+  logFor,
+  onSaveLog,
+  onSwapExercise,
+  onRezone,
 }: {
   dayLabel: string;
   day: DayPlan;
@@ -931,6 +1214,10 @@ function MusculacaoTab({
   setOpenDetails: React.Dispatch<React.SetStateAction<Record<string, boolean>>>;
   entryFor: (id: string) => LogEntry;
   onToggleDone: (id: string) => void;
+  logFor: (id: string) => SetLogEntry[];
+  onSaveLog: (id: string, weight: number, reps: number, rpe: number | null, pain: boolean) => void;
+  onSwapExercise: (groupKey: MuscleGroupKey, portionKey: string, oldId: string, portionExercises: Exercise[]) => void;
+  onRezone: (id: string, zone: string) => void;
 }) {
   const weeklyVolume = weeklyVolumeByGroup(plan);
 
@@ -1073,6 +1360,15 @@ function MusculacaoTab({
                               </div>
                             )}
                             <ExerciseDetails ex={ex} open={detailsOpen} />
+                            {isChecked && sel && detailsOpen && (
+                              <ExerciseLogBox
+                                targetReps={sel.reps}
+                                log={logFor(id)}
+                                onSave={(weight, reps, rpe, pain) => onSaveLog(id, weight, reps, rpe, pain)}
+                                onSwap={() => onSwapExercise(groupKey, portionKey, id, portion.exercises)}
+                                onRezone={(zone) => onRezone(id, zone)}
+                              />
+                            )}
                           </div>
                         );
                       })}
@@ -1426,74 +1722,239 @@ function SportsTab({
 }
 
 // =============================================================================
-// Generic fallback tab for HIIT / Tabata / HYROX / CrossFit — free-form
-// "what + how long + how hard" entries instead of the prototype's curated
-// 30-45-exercise pools and circuit-round builder (documented scope cut —
-// see the header comment in lib/treino-avancado-builder.ts).
+// Curated circuit tab for HIIT / Tabata / HYROX / CrossFit — ported from the
+// prototype's renderWorkoutBlock (lines ~11112-11392): format select
+// (CrossFit only), duration (non-circuit formats only), intensity (always),
+// rounds/work/rest + "montar circuito sugerido" + "montar por tempo total"
+// (circuit formats only), and the exercise-pool checkbox list (grouped by
+// `categoria` sub-heading for HYROX's oficial/alternativa split).
 // =============================================================================
-function GenericTab({
+function CircuitTab({
   type,
   day,
   weight,
-  onAdd,
-  onRemove,
-  onUpdate,
+  levelFilter,
+  openDetails,
+  setOpenDetails,
+  onUpdateField,
+  onToggleExercise,
+  onApplyPreset,
+  onApplyTimeBuilder,
   onBlurPersist,
 }: {
   type: GenericTypeKey;
   day: DayPlan;
   weight: number | null;
-  onAdd: () => void;
-  onRemove: (id: string) => void;
-  onUpdate: (id: string, patch: Partial<DayPlan["generic"][GenericTypeKey][number]>) => void;
+  levelFilter: Record<string, boolean>;
+  openDetails: Record<string, boolean>;
+  setOpenDetails: React.Dispatch<React.SetStateAction<Record<string, boolean>>>;
+  onUpdateField: (patch: Partial<CircuitDayPlan>, immediate?: boolean) => void;
+  onToggleExercise: (name: string) => void;
+  onApplyPreset: (intensity: Intensity) => void;
+  onApplyTimeBuilder: (minutes: number) => void;
   onBlurPersist: () => void;
 }) {
-  const entries = day.generic[type];
+  const circuitDay = day.generic[type];
+  const pool = CIRCUIT_POOLS[type];
+  const circuit = isCircuitFormat(type, circuitDay);
+  const presets = getIntensityPresets(type);
+  const preset = presets[circuitDay.intensity] || presets.moderado;
+  const presetLabel = circuitDay.intensity === "leve" ? "leve" : circuitDay.intensity === "intenso" ? "intensa" : "moderada";
+  const est = computeCircuitEstimate(type, circuitDay, weight);
+  const hasCategories = pool.some((ex) => !!ex.categoria);
+
   return (
     <div className="tv-subblock">
       <div className="tv-subblock-title">
         <h4>{GENERIC_TAB_LABELS[type]}</h4>
+        <span className="tv-kcal-tag">
+          {circuitDay.exercises.length}/{pool.length} selecionados
+        </span>
       </div>
-      <p className="sub" style={{ marginTop: -4 }}>
-        Descreva o que vai treinar (estações, exercícios do circuito, formato) e informe duração/intensidade para a
-        estimativa de calorias.
-      </p>
-      {entries.map((entry) => {
-        return (
-          <div className="tv-entry-row" key={entry.id}>
-            <input
-              type="text"
-              placeholder="O que vai treinar?"
-              defaultValue={entry.label}
-              style={{ flex: "1 1 180px" }}
-              onChange={(e) => onUpdate(entry.id, { label: e.target.value })}
-              onBlur={onBlurPersist}
-            />
-            <select value={entry.intensity} onChange={(e) => onUpdate(entry.id, { intensity: e.target.value as Intensity })}>
-              <option value="leve">Leve</option>
-              <option value="moderado">Moderado</option>
-              <option value="intenso">Intenso</option>
+
+      {levelFilter.idoso !== false && (
+        <div className="tv-empty-note" style={{ marginBottom: 12 }}>
+          🧓 <b>{GENERIC_TAB_LABELS[type]}</b> normalmente não é recomendado para o perfil 60+/baixo impacto (alto
+          impacto, saltos e/ou alta intensidade). Considere usar as abas 🏋️ Musculação ou 🤸 Calistenia com o filtro
+          de nível &quot;{TRAINING_LEVELS.idoso}&quot; ativado em vez desta.
+        </div>
+      )}
+
+      <div className="tv-duration-row" style={{ flexWrap: "wrap" }}>
+        {type === "crossfit" && (
+          <>
+            <span>Formato:</span>
+            <select value={circuitDay.format ?? "amrap"} onChange={(e) => onUpdateField({ format: e.target.value as CrossfitFormat }, true)}>
+              {CROSSFIT_FORMATS.map((f) => (
+                <option key={f.key} value={f.key}>
+                  {f.label}
+                </option>
+              ))}
             </select>
+          </>
+        )}
+
+        {!circuit && (
+          <>
+            <span>⏱ Duração:</span>
             <input
               type="number"
               min="5"
               step="5"
-              style={{ width: 60 }}
-              defaultValue={entry.minutes}
-              onChange={(e) => onUpdate(entry.id, { minutes: Number(e.target.value) || 20 })}
+              defaultValue={circuitDay.duration}
+              onChange={(e) => onUpdateField({ duration: Number(e.target.value) || 20 })}
               onBlur={onBlurPersist}
             />
-            <span className="tv-unit-label">min</span>
-            <span className="tv-remove-entry" role="button" onClick={() => onRemove(entry.id)}>
-              ✕
+            <span>min</span>
+          </>
+        )}
+
+        <select
+          value={circuitDay.intensity}
+          onChange={(e) => {
+            const intensity = e.target.value as Intensity;
+            if (circuit && circuitDay.exercises.length === 0) {
+              onApplyPreset(intensity);
+            } else {
+              onUpdateField({ intensity }, true);
+            }
+          }}
+        >
+          <option value="leve">Leve</option>
+          <option value="moderado">Moderado</option>
+          <option value="intenso">Intenso</option>
+        </select>
+
+        {circuit && (
+          <>
+            <span>· Rounds:</span>
+            <input
+              type="number"
+              min="1"
+              style={{ width: 50 }}
+              defaultValue={circuitDay.rounds}
+              onChange={(e) => onUpdateField({ rounds: Number(e.target.value) || 4 })}
+              onBlur={onBlurPersist}
+            />
+            <span>· Trabalho:</span>
+            <input
+              type="number"
+              min="5"
+              style={{ width: 50 }}
+              defaultValue={circuitDay.workSec}
+              onChange={(e) => onUpdateField({ workSec: Number(e.target.value) || 40 })}
+              onBlur={onBlurPersist}
+            />
+            <span>s</span>
+            <span>· Descanso:</span>
+            <input
+              type="number"
+              min="0"
+              style={{ width: 50 }}
+              defaultValue={circuitDay.restSec}
+              onChange={(e) => onUpdateField({ restSec: Number(e.target.value) || 20 })}
+              onBlur={onBlurPersist}
+            />
+            <span>s</span>
+          </>
+        )}
+      </div>
+
+      {type === "crossfit" && !circuit && (
+        <div className="tv-duration-row" style={{ marginTop: 6 }}>
+          <span style={{ opacity: 0.8, fontSize: 13 }}>
+            {circuitDay.format === "amrap"
+              ? "AMRAP: esforço contínuo dentro do tempo — sem descanso programado, por isso o gasto usa duração × intensidade."
+              : "For Time: esforço contínuo até terminar — sem descanso programado, por isso o gasto usa duração × intensidade."}
+          </span>
+        </div>
+      )}
+
+      {circuit && (
+        <>
+          <div className="tv-duration-row" style={{ flexWrap: "wrap", marginTop: 8 }}>
+            <button type="button" className="tv-add-entry-btn" onClick={() => onApplyPreset(circuitDay.intensity)}>
+              {circuitDay.exercises.length === 0
+                ? `✨ Montar circuito sugerido (intensidade ${presetLabel})`
+                : `✨ Sortear novo circuito para intensidade ${presetLabel}`}
+            </button>
+            <span style={{ opacity: 0.8, fontSize: 13 }}>
+              Sugestão: {preset.rounds} rounds · {preset.workSec}s trabalho / {preset.restSec}s descanso ·{" "}
+              {preset.exerciseRange} exercícios (sorteados automaticamente, você pode trocar depois na lista abaixo)
             </span>
           </div>
-        );
-      })}
-      <button type="button" className="tv-add-entry-btn" onClick={onAdd}>
-        + Adicionar atividade
-      </button>
-      {!weight && entries.length > 0 && <div className="sub" style={{ marginTop: 6 }}>Informe seu peso na seção 0 para ver a estimativa de calorias.</div>}
+
+          <div className="tv-duration-row" style={{ flexWrap: "wrap", marginTop: 8 }}>
+            <span>🕐 Montar treino por tempo total:</span>
+            <select
+              defaultValue=""
+              onChange={(e) => {
+                if (!e.target.value) return;
+                onApplyTimeBuilder(Number(e.target.value));
+                e.target.value = "";
+              }}
+            >
+              <option value="">Escolher duração...</option>
+              {TIME_BUILDER_OPTIONS.map((mins) => (
+                <option key={mins} value={mins}>
+                  {mins >= 75 ? "60+ min" : `${mins} min`}
+                </option>
+              ))}
+            </select>
+            <span style={{ opacity: 0.8, fontSize: 13 }}>
+              Escolhe quantos exercícios entram no circuito e calcula os rounds pra fechar perto do tempo total (usando
+              a intensidade {presetLabel} atual) — depois ajuste à vontade.
+            </span>
+          </div>
+
+          <div className="tv-duration-row" style={{ marginTop: 8 }}>
+            {circuitDay.exercises.length === 0 ? (
+              <span>⏱ Nenhum exercício marcado ainda — use o botão acima ou marque manualmente na lista abaixo para ver a duração e as calorias estimadas.</span>
+            ) : weight ? (
+              <span>
+                ⏱ Duração estimada: <b>{est.minutes} min</b> ({circuitDay.exercises.length} exercícios × {circuitDay.rounds} rounds × [
+                {circuitDay.workSec}s trabalho + {circuitDay.restSec}s descanso]) · 🔥 Estimativa: <b>{est.kcal} kcal</b>
+              </span>
+            ) : (
+              <span>
+                ⏱ Duração estimada: <b>{est.minutes} min</b> · informe seu peso na seção 0 para ver a estimativa de
+                calorias
+              </span>
+            )}
+          </div>
+        </>
+      )}
+
+      {pool.map((ex, idx) => {
+        const isChecked = circuitDay.exercises.includes(ex.name);
+        const detailsKey = `g::${type}::${ex.name}`;
+        const detailsOpen = !!openDetails[detailsKey];
+        const prevCategoria = idx > 0 ? pool[idx - 1].categoria ?? null : null;
+        const showCategoryHeading = hasCategories && (ex.categoria ?? null) !== prevCategoria;
+        return (
+            <div key={ex.name}>
+              {showCategoryHeading && (
+                <div className="tv-portion-title" style={{ marginTop: 12 }}>
+                  {ex.categoria === "oficial"
+                    ? "🏁 As 8 estações oficiais da prova"
+                    : "🔁 Variações/alternativas para treinar sem o equipamento oficial"}
+                </div>
+              )}
+              <div className="tv-calist-check-row">
+                <input type="checkbox" checked={isChecked} onChange={() => onToggleExercise(ex.name)} />
+                <div className="cc-body">
+                  <div className="cc-name">
+                    {ex.name}{" "}
+                    <span className="cc-toggle" onClick={() => setOpenDetails((prev) => ({ ...prev, [detailsKey]: !prev[detailsKey] }))}>
+                      detalhes
+                    </span>
+                  </div>
+                  <ExerciseDetails ex={ex} open={detailsOpen} />
+                </div>
+              </div>
+            </div>
+          );
+        })}
     </div>
   );
 }

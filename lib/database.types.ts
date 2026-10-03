@@ -162,6 +162,22 @@ export type AvancadoPlanRow = {
   updated_at: string;
 };
 
+// Training-log history backing Avançado's Musculação 1RM/PR/progression/
+// deload/swap feature (see lib/treino-progression.ts). One row per logged
+// set, many per exercise_key (the day-independent exerciseKey()). See
+// supabase/migration_exercise_set_logs.sql.
+export type ExerciseSetLog = {
+  id: string;
+  profile_id: string;
+  exercise_key: string;
+  logged_at: string;
+  weight: number;
+  reps: number;
+  rpe: number | null;
+  pain: boolean;
+  created_at: string;
+};
+
 // Dashboard "Cargas" card — one row per tracked lift. See
 // supabase/migration_dashboard_lifts_cardio.sql.
 export type Lift = {
@@ -289,6 +305,7 @@ export type Database = {
       calendar_days: Table<CalendarDay>;
       workout_log_entries: Table<WorkoutLogEntry>;
       avancado_plans: Table<AvancadoPlanRow>;
+      exercise_set_logs: Table<ExerciseSetLog>;
       lifts: Table<Lift>;
       weekly_cardio: Table<WeeklyCardio>;
       diary_entries: Table<DiaryEntry>;

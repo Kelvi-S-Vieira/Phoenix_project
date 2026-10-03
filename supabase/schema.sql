@@ -332,6 +332,30 @@ create table if not exists public.avancado_plans (
 );
 
 -- -----------------------------------------------------------------------------
+-- exercise_set_logs
+-- Training-log history backing Avançado's Musculação 1RM/PR/progression-
+-- suggestion/deload/swap feature (see lib/treino-progression.ts). One row
+-- per logged set, many dated rows per `exercise_key` (the day-INDEPENDENT
+-- exerciseKey(), not workout_log_entries' day-prefixed exerciseId() — see
+-- that table's header comment above and supabase/migration_exercise_set_logs.sql
+-- for the full rationale).
+-- -----------------------------------------------------------------------------
+create table if not exists public.exercise_set_logs (
+  id uuid primary key default gen_random_uuid(),
+  profile_id uuid not null references public.profiles(id) on delete cascade,
+  exercise_key text not null,
+  logged_at date not null default current_date,
+  weight numeric not null,
+  reps integer not null,
+  rpe numeric,
+  pain boolean not null default false,
+  created_at timestamptz not null default now()
+);
+
+create index if not exists exercise_set_logs_profile_id_exercise_key_idx
+  on public.exercise_set_logs(profile_id, exercise_key);
+
+-- -----------------------------------------------------------------------------
 -- lifts
 -- One row per tracked lift (Dashboard "Cargas" card), ported from the
 -- prototype's localStorage `lifts` array. A profile with zero rows is
@@ -737,6 +761,7 @@ alter table public.custom_plans enable row level security;
 alter table public.calendar_days enable row level security;
 alter table public.workout_log_entries enable row level security;
 alter table public.avancado_plans enable row level security;
+alter table public.exercise_set_logs enable row level security;
 alter table public.lifts enable row level security;
 alter table public.weekly_cardio enable row level security;
 alter table public.diary_entries enable row level security;
@@ -1033,6 +1058,33 @@ create policy "avancado_plans_select_by_personal"
       where p.id = avancado_plans.profile_id and p.linked_personal_id = auth.uid()
     )
   );
+
+-- --- exercise_set_logs -------------------------------------------------------
+create policy "exercise_set_logs_select_own"
+  on public.exercise_set_logs for select
+  using (profile_id = auth.uid());
+
+create policy "exercise_set_logs_select_by_personal"
+  on public.exercise_set_logs for select
+  using (
+    exists (
+      select 1 from public.profiles p
+      where p.id = exercise_set_logs.profile_id and p.linked_personal_id = auth.uid()
+    )
+  );
+
+create policy "exercise_set_logs_insert_own"
+  on public.exercise_set_logs for insert
+  with check (profile_id = auth.uid());
+
+create policy "exercise_set_logs_update_own"
+  on public.exercise_set_logs for update
+  using (profile_id = auth.uid())
+  with check (profile_id = auth.uid());
+
+create policy "exercise_set_logs_delete_own"
+  on public.exercise_set_logs for delete
+  using (profile_id = auth.uid());
 
 -- --- lifts -----------------------------------------------------------------
 create policy "lifts_select_own"

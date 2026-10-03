@@ -34,17 +34,18 @@
  *   would either double-count that portion's volume or require stripping it
  *   out of "costas" — both worse than just not listing it twice). No
  *   `MuscleGroupKey` for "trapezio" exists for the same reason.
- * - The prototype's avançado module also adds a much larger feature set out
- *   of scope for this port: equipment-type/training-level filters, warmup
- *   exercises, a separate cardio modality system (HIIT, Tabata, HYROX,
- *   CrossFit, sports) with its own "WORKOUT_TYPES" concept (training
- *   modalities with MET values, unrelated to musculação/calistenia tabs),
- *   an exercise-substitution-within-portion button, weekly volume-vs-target
- *   tracking, and advanced techniques (dropset/restpause/cluster). None of
- *   that is ported — WORKOUT_TYPES here is reconstructed to match the same
- *   musculacao/calistenia tab shape Básico and Intermediário use, and only
- *   the portions browsing/selection itself was restored, not the rest of
- *   the advanced tooling around it.
+ * - The prototype's avançado module also adds a much larger feature set,
+ *   most of it now ported (see lib/treino-avancado-builder.ts,
+ *   lib/treino-circuitos-data.ts, lib/treino-progression.ts and
+ *   AvancadoBuilder.tsx): equipment-type/training-level filters, warmup
+ *   exercises, a cardio modality system (HIIT, Tabata, HYROX, CrossFit,
+ *   sports) with its own "WORKOUT_TYPES"/circuit-builder concept, weekly
+ *   volume-vs-target tracking, an exercise-swap-within-portion button, and
+ *   per-exercise training-log history (1RM/PR/progression/deload). Still
+ *   NOT ported: the advanced techniques picker (dropset/rest-pause/cluster
+ *   set) — a per-selection "technique" field shown alongside sets/reps in
+ *   the prototype, orthogonal to everything above and out of scope for this
+ *   batch.
  * - CALIST_GROUPS (the "🤸 Calistenia" tab's pool) is organized by movement
  *   pattern — empurrar/puxar/pernas/core — matching the prototype's
  *   CALISTHENICS_GROUPS, and deliberately NOT by the MuscleGroupKey set

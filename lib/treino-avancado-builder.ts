@@ -19,16 +19,10 @@
  *     and its defaults/normalization, used by both the server page and the
  *     client builder.
  *
- * Deliberately NOT ported (documented scope cuts — see the task write-up in
- * the final report, not duplicated here): the full HIIT/Tabata/HYROX/
- * CrossFit curated exercise pools and their circuit-builder (rounds/work/
- * rest presets, random-pick-N, EMOM/Rounds-for-time formats) — those four
- * tabs use one shared, simpler "o que vai treinar + duração + intensidade"
- * free-form entry in this port, same shape as Cardio's entries but without
- * a fixed activity catalog. Also not ported: the per-exercise progression/
- * swap engine (`state.log`, `suggestProgression`, exercise swapping) — the
- * module header comment in treino-avancado-data.ts already flags that as
- * future work needing its own table, independent of this builder.
+ * The HIIT/Tabata/HYROX/CrossFit tabs use the curated exercise pools in
+ * lib/treino-circuitos-data.ts plus the circuit-builder helpers below
+ * (rounds/work/rest presets, random-pick-N, EMOM/Rounds-for-time formats),
+ * ported from the prototype's same-named functions (lines ~9478-9593).
  */
 
 import {
@@ -378,6 +372,162 @@ export const GENERIC_TAB_LABELS: Record<string, string> = {
 export type GenericTypeKey = "hiit" | "tabata" | "hyrox" | "crossfit";
 export const GENERIC_TYPE_KEYS: GenericTypeKey[] = ["hiit", "tabata", "hyrox", "crossfit"];
 
+// ===================== CIRCUITO (HIIT / Tabata / HYROX / CrossFit) =====================
+// Ported from the prototype's WORKOUT_TYPES/CROSSFIT_CIRCUIT_FORMATS/
+// isCircuitFormat/*_INTENSITY_PRESETS/pickRandomExercises/applyCircuitPreset/
+// TIME_BUILDER_OPTIONS/exerciseCountForDuration/applyTimeBuilder/
+// computeCircuitEstimate (projeto_fenix_app_final.html lines 9478-9593).
+// Rewritten as pure functions (no module-level `state`/`saveState()`) since
+// the plan lives in AvancadoBuilder's React state instead.
+export type CrossfitFormat = "amrap" | "emom" | "for_time" | "rounds";
+export const CROSSFIT_FORMATS: { key: CrossfitFormat; label: string }[] = [
+  { key: "amrap", label: "AMRAP" },
+  { key: "emom", label: "EMOM" },
+  { key: "for_time", label: "For Time" },
+  { key: "rounds", label: "Rounds for Time" },
+];
+
+/** metRest = MET during active-recovery rest between circuit exercises/rounds (hyrox has none — never a circuit format). */
+export const CIRCUIT_MET_REST: Partial<Record<GenericTypeKey, number>> = {
+  hiit: 3,
+  tabata: 3,
+  crossfit: 3,
+};
+
+// Formats de CrossFit que funcionam como circuito estruturado (rounds com
+// trabalho/descanso definidos). AMRAP/For Time são esforço contínuo até o
+// tempo/objetivo acabar, sem descanso programado — usam duração × MET direto.
+export const CROSSFIT_CIRCUIT_FORMATS: CrossfitFormat[] = ["emom", "rounds"];
+export function isCircuitFormat(typeKey: GenericTypeKey, day: { format?: CrossfitFormat }): boolean {
+  if (typeKey === "hiit" || typeKey === "tabata") return true;
+  if (typeKey === "crossfit") return !!day.format && CROSSFIT_CIRCUIT_FORMATS.includes(day.format);
+  return false;
+}
+
+export interface CircuitPreset {
+  rounds: number;
+  workSec: number;
+  restSec: number;
+  exerciseCount: number;
+  exerciseRange: string;
+}
+export const CIRCUIT_INTENSITY_PRESETS: Record<Intensity, CircuitPreset> = {
+  leve: { rounds: 3, workSec: 30, restSec: 30, exerciseCount: 4, exerciseRange: "4 a 5" },
+  moderado: { rounds: 4, workSec: 40, restSec: 20, exerciseCount: 5, exerciseRange: "5 a 6" },
+  intenso: { rounds: 5, workSec: 45, restSec: 15, exerciseCount: 6, exerciseRange: "6 a 8" },
+};
+// Tabata tem trabalho/descanso FIXOS por definição (20s/10s) — a intensidade
+// varia só o número de rounds/exercícios encadeados.
+export const TABATA_INTENSITY_PRESETS: Record<Intensity, CircuitPreset> = {
+  leve: { rounds: 8, workSec: 20, restSec: 10, exerciseCount: 4, exerciseRange: "3 a 4" },
+  moderado: { rounds: 8, workSec: 20, restSec: 10, exerciseCount: 6, exerciseRange: "5 a 6" },
+  intenso: { rounds: 8, workSec: 20, restSec: 10, exerciseCount: 9, exerciseRange: "8 a 10" },
+};
+export function getIntensityPresets(typeKey: GenericTypeKey): Record<Intensity, CircuitPreset> {
+  return typeKey === "tabata" ? TABATA_INTENSITY_PRESETS : CIRCUIT_INTENSITY_PRESETS;
+}
+
+/** Sorteia um substituto aleatório dentre os candidatos (usado pela troca de exercício do Musculação). */
+export function pickSwapReplacement<T>(candidates: T[]): T | null {
+  if (candidates.length === 0) return null;
+  return candidates[Math.floor(Math.random() * candidates.length)];
+}
+
+/** Sorteia N nomes de exercícios de um pool, sem repetição. */
+export function pickRandomExercises(exercisePool: { name: string }[], n: number): string[] {
+  const names = exercisePool.map((ex) => ex.name).slice();
+  for (let i = names.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [names[i], names[j]] = [names[j], names[i]];
+  }
+  return names.slice(0, Math.min(n, names.length));
+}
+
+export interface CircuitDayPlan {
+  format?: CrossfitFormat; // crossfit only
+  duration: number; // used when NOT a circuit format (AMRAP/For Time/HYROX)
+  intensity: Intensity;
+  rounds: number;
+  workSec: number;
+  restSec: number;
+  exercises: string[]; // selected exercise names from the pool
+}
+export function emptyCircuitDay(): CircuitDayPlan {
+  return { format: "amrap", duration: 20, intensity: "moderado", rounds: 4, workSec: 40, restSec: 20, exercises: [] };
+}
+
+/** Aplica a sugestão da intensidade: rounds/trabalho/descanso + sorteia os exercícios do circuito. */
+export function applyCircuitPreset(
+  typeKey: GenericTypeKey,
+  day: CircuitDayPlan,
+  intensity: Intensity,
+  exercisePool: { name: string }[]
+): CircuitDayPlan {
+  const presets = getIntensityPresets(typeKey);
+  const preset = presets[intensity] || presets.moderado;
+  return {
+    ...day,
+    intensity,
+    rounds: preset.rounds,
+    workSec: preset.workSec,
+    restSec: preset.restSec,
+    exercises: pickRandomExercises(exercisePool, preset.exerciseCount),
+  };
+}
+
+/** Monta o circuito a partir de uma duração total desejada (10-75+min). */
+export const TIME_BUILDER_OPTIONS = [10, 15, 20, 25, 30, 40, 50, 60, 75];
+export function exerciseCountForDuration(minutes: number): number {
+  if (minutes <= 10) return 3;
+  if (minutes <= 15) return 4;
+  if (minutes <= 20) return 5;
+  if (minutes <= 30) return 6;
+  if (minutes <= 45) return 7;
+  if (minutes <= 60) return 8;
+  return 10;
+}
+export function applyTimeBuilder(
+  typeKey: GenericTypeKey,
+  day: CircuitDayPlan,
+  targetMinutes: number,
+  exercisePool: { name: string }[]
+): CircuitDayPlan {
+  const presets = getIntensityPresets(typeKey);
+  const preset = presets[day.intensity] || presets.moderado;
+  const workSec = day.workSec || preset.workSec;
+  const restSec = day.restSec || preset.restSec;
+  const n = exerciseCountForDuration(targetMinutes);
+  const perRoundSeconds = n * (workSec + restSec);
+  const roundsNeeded = Math.max(1, Math.round((targetMinutes * 60) / perRoundSeconds));
+  return { ...day, exercises: pickRandomExercises(exercisePool, n), workSec, restSec, rounds: roundsNeeded };
+}
+
+export interface CircuitEstimate {
+  minutes: number;
+  kcal: number;
+  totalWorkSec: number;
+  totalRestSec: number;
+}
+/** Estima duração/gasto de um circuito a partir da composição real (exercícios × rounds × [trabalho+descanso]), com MET diferente para trabalho e descanso. */
+export function computeCircuitEstimate(typeKey: GenericTypeKey, day: CircuitDayPlan, weight: number | null): CircuitEstimate {
+  const met = GENERIC_WORKOUT_MET[typeKey];
+  const n = day.exercises.length;
+  if (n === 0) return { minutes: 0, kcal: 0, totalWorkSec: 0, totalRestSec: 0 };
+  const metWork = met[day.intensity] || met.moderado;
+  const metRest = CIRCUIT_MET_REST[typeKey] || 3;
+  const rounds = day.rounds || 1;
+  const workSec = day.workSec || 0;
+  const restSec = day.restSec || 0;
+  const totalWorkSec = n * rounds * workSec;
+  const totalRestSec = n * rounds * restSec;
+  const minutes = Math.round((totalWorkSec + totalRestSec) / 60);
+  let kcal = 0;
+  if (weight) {
+    kcal = Math.round(weight * (metWork * (totalWorkSec / 3600) + metRest * (totalRestSec / 3600)));
+  }
+  return { minutes, kcal, totalWorkSec, totalRestSec };
+}
+
 // ===================== PLAN DATA SHAPE =====================
 export interface PlanSelection {
   sets: number;
@@ -395,12 +545,6 @@ export interface SportEntry {
   activityKey: string;
   minutes: number;
 }
-export interface GenericEntry {
-  id: string;
-  label: string;
-  intensity: Intensity;
-  minutes: number;
-}
 export interface DayPlan {
   groups: MuscleGroupKey[];
   selections: Record<string, PlanSelection>; // key: exerciseKey("musculacao", group, name, portion)
@@ -411,7 +555,7 @@ export interface DayPlan {
   warmupIntensity: Intensity;
   cardio: CardioEntry[];
   sports: SportEntry[];
-  generic: Record<GenericTypeKey, GenericEntry[]>;
+  generic: Record<GenericTypeKey, CircuitDayPlan>;
 }
 export interface AvancadoPlan {
   week: Record<DayKey, DayPlan>;
@@ -431,7 +575,7 @@ export function emptyDayPlan(): DayPlan {
     warmupIntensity: "leve",
     cardio: [],
     sports: [],
-    generic: { hiit: [], tabata: [], hyrox: [], crossfit: [] },
+    generic: { hiit: emptyCircuitDay(), tabata: emptyCircuitDay(), hyrox: emptyCircuitDay(), crossfit: emptyCircuitDay() },
   };
 }
 
@@ -468,11 +612,21 @@ export function normalizePlan(raw: unknown): AvancadoPlan {
   DAYS.forEach((d) => {
     const rd = (r.week as Record<string, Partial<DayPlan>> | undefined)?.[d.key];
     if (rd) {
+      const rdGeneric = (rd.generic || {}) as Partial<Record<GenericTypeKey, Partial<CircuitDayPlan>>>;
+      const generic = {} as Record<GenericTypeKey, CircuitDayPlan>;
+      GENERIC_TYPE_KEYS.forEach((k) => {
+        const rg = rdGeneric[k];
+        generic[k] = {
+          ...emptyCircuitDay(),
+          ...rg,
+          exercises: Array.isArray(rg?.exercises) ? rg!.exercises! : [],
+        };
+      });
       week[d.key] = {
         ...emptyDayPlan(),
         ...rd,
         calistenia: { ...emptyDayPlan().calistenia, ...(rd.calistenia || {}) },
-        generic: { ...emptyDayPlan().generic, ...(rd.generic || {}) },
+        generic,
       };
     }
   });
@@ -503,7 +657,7 @@ export function dayHasAnyActivity(day: DayPlan): boolean {
     day.warmupExercises.length > 0 ||
     day.cardio.length > 0 ||
     day.sports.length > 0 ||
-    GENERIC_TYPE_KEYS.some((k) => day.generic[k].length > 0)
+    GENERIC_TYPE_KEYS.some((k) => day.generic[k].exercises.length > 0)
   );
 }
 
@@ -547,13 +701,20 @@ export function kcalForDay(day: DayPlan, weight: number | null): { total: number
     breakdown.push({ label: `${act.label} (${entry.minutes} min)`, kcal: k });
   });
   GENERIC_TYPE_KEYS.forEach((typeKey) => {
-    day.generic[typeKey].forEach((entry) => {
-      if (!weight) return;
-      const met = GENERIC_WORKOUT_MET[typeKey][entry.intensity] || GENERIC_WORKOUT_MET[typeKey].moderado;
-      const k = calcKcal(met, weight, entry.minutes);
+    const genDay = day.generic[typeKey];
+    if (!weight || genDay.exercises.length === 0) return;
+    if (isCircuitFormat(typeKey, genDay)) {
+      const est = computeCircuitEstimate(typeKey, genDay, weight);
+      if (est.kcal <= 0) return;
+      total += est.kcal;
+      breakdown.push({ label: `${GENERIC_TAB_LABELS[typeKey]} (${est.minutes} min)`, kcal: est.kcal });
+    } else {
+      const met = GENERIC_WORKOUT_MET[typeKey][genDay.intensity] || GENERIC_WORKOUT_MET[typeKey].moderado;
+      const k = calcKcal(met, weight, genDay.duration);
+      if (k <= 0) return;
       total += k;
-      breakdown.push({ label: `${GENERIC_TAB_LABELS[typeKey]} — ${entry.label || "atividade"} (${entry.minutes} min)`, kcal: k });
-    });
+      breakdown.push({ label: `${GENERIC_TAB_LABELS[typeKey]} (${genDay.duration} min)`, kcal: k });
+    }
   });
 
   return { total, breakdown };

@@ -55,18 +55,18 @@ shipped (code merged, build/lint clean) — not when it's merely planned.
 - [x] Calendário: own per-day log (status + note), plan-sized (or rolling 84-day) grid, milestone markers — no hardcoded user data — `app/calendario/page.tsx` + `CalendarGrid.tsx`
 - [x] New table: `calendar_days`; `custom_plans` extended (`updated_at`, diet check constraint); `profiles.calendar_start_date` added — `supabase/migration_plano.sql`
 
-### 6. Avançado — finish the custom builder
-- [ ] Curated HIIT pool (own exercises, not the generic form)
-- [ ] Curated Tabata pool
-- [ ] Curated HYROX pool
-- [ ] Curated CrossFit pool
-- [ ] Training-log history keyed by day-independent `exerciseKey()`
-- [ ] 1RM calculation (Epley formula)
-- [ ] Personal-record (PR) tracking
-- [ ] Automatic progression suggestions
-- [ ] Deload warnings
-- [ ] Exercise swap
-- [ ] New table: `exercise_set_logs`
+### 6. Avançado — finish the custom builder ✅ done
+- [x] Curated HIIT pool (33 exercises, `lib/treino-circuitos-data.ts`)
+- [x] Curated Tabata pool (47 exercises)
+- [x] Curated HYROX pool (22 — 8 official stations + 14 equipment-free alternatives, grouped by sub-heading)
+- [x] Curated CrossFit pool (39 exercises) + format select (AMRAP/EMOM/For Time/Rounds for Time)
+- [x] Full circuit builder: rounds/work/rest, intensity presets ("montar circuito sugerido"), "montar por tempo total", real duration/kcal estimate from exercise×round×work/rest composition — `lib/treino-avancado-builder.ts`
+- [x] Elder/low-impact warning on all 4 tabs when the idoso level filter is active
+- [x] Training-log history keyed by day-independent `exerciseKey()` — `exercise_set_logs` table, one row per logged set
+- [x] 1RM calculation (Epley formula), personal-record (PR) tracking, automatic progression suggestions (reps→carga→volume→rezone→swap ladder), deload warnings, 1RM sparkline — `lib/treino-progression.ts`, wired into `MusculacaoTab`'s exercise rows (collapsed behind the existing "detalhes" toggle)
+- [x] Exercise swap (keeps sets/reps/warmup config, preserves the old exercise's own log history under its own key)
+- [x] New table: `exercise_set_logs` — `supabase/migration_exercise_set_logs.sql`, folded into `schema.sql`
+- Scope note: Calistenia was left on its existing simple checklist (no training-log UI) — the task allowed this ("optionally calistenia, your call"); only Musculação exercises (which already had a stable per-exercise key wired up) got the full log/1RM/PR/progression/swap treatment. The prototype's advanced-technique picker (dropset/rest-pause/cluster set) was not ported — orthogonal to this batch's scope.
 
 ### 7. Terceira Idade, Guia, Backup polish
 - [ ] Terceira Idade: 3 session types (mobilidade/equilíbrio/fortalecimento)

@@ -566,5 +566,29 @@ async function AvancadoTreino({ profileId }: { profileId: string }) {
     };
   }
 
-  return <AvancadoBuilder profileId={profileId} initialPlan={plan} initialBody={body} initialLog={initialLog} />;
+  // Training-log history (1RM/PR/progression) — exercise_set_logs, one row
+  // per logged set, keyed by the day-independent exerciseKey(). Fetched
+  // once here and grouped client-side; see lib/treino-progression.ts.
+  const { data: setLogRows } = await supabase
+    .from("exercise_set_logs")
+    .select("exercise_key, logged_at, weight, reps, rpe, pain")
+    .eq("profile_id", profileId)
+    .order("logged_at", { ascending: true })
+    .order("created_at", { ascending: true });
+
+  const initialSetLogs: Record<string, { date: string; weight: number; reps: number; rpe: number | null; pain: boolean }[]> = {};
+  for (const row of setLogRows ?? []) {
+    const arr = initialSetLogs[row.exercise_key] ?? (initialSetLogs[row.exercise_key] = []);
+    arr.push({ date: row.logged_at, weight: Number(row.weight), reps: Number(row.reps), rpe: row.rpe != null ? Number(row.rpe) : null, pain: row.pain });
+  }
+
+  return (
+    <AvancadoBuilder
+      profileId={profileId}
+      initialPlan={plan}
+      initialBody={body}
+      initialLog={initialLog}
+      initialSetLogs={initialSetLogs}
+    />
+  );
 }

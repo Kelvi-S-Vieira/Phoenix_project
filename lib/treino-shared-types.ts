@@ -15,6 +15,11 @@ export interface Exercise {
   exec: string;
   erro: string;
   gif?: string[];
+  // Only populated for HYROX_STATIONS (lib/treino-circuitos-data.ts): "oficial"
+  // marks the 8 fixed official-format stations, "alternativa" marks the
+  // equipment-free variations that train the same stimulus. Additive/
+  // optional so every other exercise pool is unaffected.
+  categoria?: "oficial" | "alternativa";
 }
 
 export interface MuscleGroupPortion {
