@@ -705,6 +705,12 @@ h1 {
   color: var(--text-muted);
   font-weight: 400;
 }
+.sum-card.red .value {
+  color: var(--plan-red);
+}
+.sum-card.green .value {
+  color: var(--plan-green);
+}
 
 /* --------------------------------------------------------------------------
    Diário (food diary) — ported from the prototype's #page-diario <style>
@@ -3599,3 +3605,343 @@ h1 {
 .rs-card .rs-prep { margin-bottom: 0; }
 .rs-card .rs-prep ol { margin: 0; padding-left: 18px; }
 .rs-card .rs-prep li { border-bottom: none; padding: 2px 0; }
+
+/* -----------------------------------------------------------------------
+   Montar Plano / Plano 17 semanas / Calendário
+   Ported from projeto_fenix_app_final.html's #page-montar-plano,
+   #page-plano17 and #page-calendario <style> blocks (exact values kept;
+   class names prefixed fx-plan-/fx-cal- so they never collide with any
+   other page's generic names, e.g. Fotos' own fx-overlay/fx-photo-tile).
+   ----------------------------------------------------------------------- */
+
+/* Semantic colors for the plan's dual red/green target lines — not part of
+   the accent-color system (they mean "fat loss" / "muscle gain", not brand). */
+:root {
+  --plan-red: #e0645c;
+  --plan-green: #7fb88a;
+}
+
+/* --- Montar Plano setup + progress (mirrors .mp-* in the prototype) --- */
+.fx-plan-desc {
+  font-size: 12px;
+  color: var(--text-muted);
+  margin-top: 6px;
+  line-height: 1.4;
+}
+.fx-plan-summary-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 18px;
+  margin-bottom: 6px;
+}
+.fx-plan-summary-item {
+  min-width: 120px;
+}
+.fx-plan-summary-item b {
+  display: block;
+  font-size: 20px;
+  font-family: var(--font-display);
+  color: var(--ember);
+}
+.fx-plan-summary-item span {
+  font-size: 11px;
+  color: var(--text-muted);
+  text-transform: uppercase;
+}
+.fx-plan-edit-row {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  margin-top: 10px;
+}
+.fx-plan-edit-row input {
+  width: 100px;
+}
+
+/* --- Plano 17 / weekly schedule table (mirrors .week-row/.target-* etc) --- */
+.fx-plan-legend-row {
+  display: flex;
+  gap: 16px;
+  flex-wrap: wrap;
+  margin: 14px 0;
+  font-size: 11px;
+  color: var(--text-muted);
+  font-family: var(--font-mono);
+}
+.fx-plan-legend-row .dot {
+  display: inline-block;
+  width: 10px;
+  height: 3px;
+  margin-right: 5px;
+  vertical-align: middle;
+}
+.fx-plan-week-row {
+  display: grid;
+  grid-template-columns: 110px 90px 90px 1fr 110px;
+  gap: 10px;
+  align-items: center;
+  padding: 12px 14px;
+  border-radius: 10px;
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  margin-bottom: 8px;
+}
+.fx-plan-week-row.header-row {
+  background: transparent;
+  border: none;
+  padding: 0 14px;
+  margin-bottom: 6px;
+}
+.fx-plan-week-row.header-row span {
+  font-family: var(--font-mono);
+  font-size: 9px;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+.fx-plan-week-label {
+  font-family: var(--font-display);
+  font-weight: 600;
+  font-size: 13px;
+}
+.fx-plan-week-date {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  color: var(--text-muted);
+}
+.fx-plan-target-red {
+  font-family: var(--font-mono);
+  font-size: 13px;
+  color: var(--plan-red);
+  font-weight: 600;
+}
+.fx-plan-target-green {
+  font-family: var(--font-mono);
+  font-size: 13px;
+  color: var(--plan-green);
+  font-weight: 600;
+}
+.fx-plan-action-text {
+  font-size: 12px;
+  color: var(--text-muted);
+  line-height: 1.4;
+}
+.fx-plan-actual {
+  font-family: var(--font-mono);
+  font-size: 13px;
+  color: var(--gold);
+  text-align: center;
+}
+@media (max-width: 800px) {
+  .fx-plan-week-row {
+    grid-template-columns: 1fr 1fr;
+  }
+  .fx-plan-week-row.header-row {
+    display: none;
+  }
+}
+
+/* --- Calendário (mirrors .overview/.ov-card/.week-block/.day-cell/etc) --- */
+.fx-cal-overview {
+  display: flex;
+  gap: 14px;
+  flex-wrap: wrap;
+  margin: 22px 0;
+}
+.fx-cal-ov-card {
+  flex: 1;
+  min-width: 130px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  padding: 16px 18px;
+}
+.fx-cal-ov-card .n {
+  font-family: var(--font-display);
+  font-size: 26px;
+  font-weight: 700;
+  color: var(--gold);
+}
+.fx-cal-ov-card .l {
+  font-size: 10px;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+.fx-cal-legend-row {
+  display: flex;
+  gap: 16px;
+  flex-wrap: wrap;
+  margin-bottom: 20px;
+  font-size: 11px;
+  color: var(--text-muted);
+  font-family: var(--font-mono);
+}
+.fx-cal-legend-row .dot {
+  display: inline-block;
+  width: 9px;
+  height: 9px;
+  border-radius: 3px;
+  margin-right: 5px;
+  vertical-align: middle;
+}
+.fx-cal-week-block {
+  margin-bottom: 22px;
+}
+.fx-cal-week-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  margin-bottom: 10px;
+  padding: 0 2px;
+}
+.fx-cal-week-head h3 {
+  font-family: var(--font-display);
+  text-transform: uppercase;
+  font-size: 14px;
+  letter-spacing: 0.05em;
+  color: var(--text);
+  margin: 0;
+}
+.fx-cal-week-head .range {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: var(--text-muted);
+}
+.fx-cal-week-head .wcount {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: var(--gold);
+}
+.fx-cal-days-row {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 6px;
+}
+.fx-cal-day-cell {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 8px 6px;
+  min-height: 64px;
+  cursor: pointer;
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  transition: 0.15s;
+}
+.fx-cal-day-cell:hover {
+  border-color: rgba(255, 107, 53, 0.4);
+}
+.fx-cal-day-cell .dn {
+  font-family: var(--font-mono);
+  font-size: 9px;
+  color: var(--text-muted);
+  text-transform: uppercase;
+}
+.fx-cal-day-cell .num {
+  font-family: var(--font-display);
+  font-size: 17px;
+  font-weight: 600;
+  margin-top: 2px;
+}
+.fx-cal-day-cell .status-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  margin-top: 5px;
+  background: var(--surface-2);
+}
+.fx-cal-day-cell.treino .status-dot { background: var(--ember); }
+.fx-cal-day-cell.treino { background: rgba(255, 107, 53, 0.07); }
+.fx-cal-day-cell.cardio .status-dot { background: var(--good); }
+.fx-cal-day-cell.cardio { background: rgba(127, 184, 138, 0.06); }
+.fx-cal-day-cell.descanso .status-dot { background: var(--rest); }
+.fx-cal-day-cell.descanso { background: rgba(90, 107, 140, 0.06); }
+.fx-cal-day-cell.milestone {
+  border-color: var(--gold);
+  box-shadow: 0 0 0 1px rgba(242, 166, 90, 0.3) inset;
+}
+.fx-cal-day-cell.today {
+  border-color: var(--gold);
+  border-width: 2px;
+}
+
+.fx-cal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.6);
+  display: none;
+  align-items: center;
+  justify-content: center;
+  z-index: 50;
+  padding: 20px;
+}
+.fx-cal-overlay.open {
+  display: flex;
+}
+.fx-cal-modal {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  padding: 24px;
+  max-width: 360px;
+  width: 100%;
+}
+.fx-cal-modal h3 {
+  font-family: var(--font-display);
+  text-transform: uppercase;
+  margin: 0 0 4px;
+  font-size: 16px;
+}
+.fx-cal-modal .day-date {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: var(--text-muted);
+  margin-bottom: 16px;
+}
+.fx-cal-status-options {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-bottom: 16px;
+}
+.fx-cal-status-opt {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 12px;
+  border-radius: 10px;
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  cursor: pointer;
+  font-size: 13px;
+}
+.fx-cal-status-opt .dot {
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+}
+.fx-cal-status-opt.selected {
+  border-color: var(--ember);
+}
+.fx-cal-modal textarea {
+  width: 100%;
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  color: var(--text);
+  font-family: var(--font-sans);
+  font-size: 12px;
+  padding: 8px;
+  min-height: 60px;
+  resize: vertical;
+}
+.fx-cal-modal-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+  margin-top: 14px;
+}

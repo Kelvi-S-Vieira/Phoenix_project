@@ -15,9 +15,10 @@ import type { SidebarNavSection } from "@/components/Sidebar";
 //   - "Progresso": the prototype links a single "/progresso" page; this
 //     port instead has separate "/medidas" and "/fotos" pages, so both are
 //     linked under this section.
-//   - "Guia & Planos": none of "Guia", "Plano 17sem" or "🎯 Montar Plano"
-//     have pages in this port yet (future work per MIGRATION_PLAN.md) — the
-//     whole section is omitted.
+//   - "Guia & Planos": "🎯 Montar Plano" and "Plano 17sem" now have pages
+//     (unified engine, see lib/plan-generation.ts and MIGRATION_PLAN.md) and
+//     are linked below. "Guia" still doesn't exist in this port — not
+//     linked yet.
 export const ALUNO_SIDEBAR_SECTIONS: SidebarNavSection[] = [
   {
     label: "Visão Geral",
@@ -44,6 +45,14 @@ export const ALUNO_SIDEBAR_SECTIONS: SidebarNavSection[] = [
     items: [
       { href: "/medidas", label: "Medidas" },
       { href: "/fotos", label: "Fotos" },
+    ],
+  },
+  {
+    label: "Guia & Planos",
+    items: [
+      { href: "/montar-plano", label: "Montar Plano", icon: "🎯" },
+      { href: "/plano17", label: "Plano 17 semanas" },
+      { href: "/calendario", label: "Calendário" },
     ],
   },
 ];

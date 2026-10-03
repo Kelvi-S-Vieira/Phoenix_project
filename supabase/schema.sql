@@ -83,6 +83,12 @@ create table if not exists public.profiles (
   current_tier training_tier,
   current_split text,
 
+  -- Anchors Calendário's rolling 84-day/12-week window when the profile has
+  -- no active custom_plans row (set once, on first open — see
+  -- app/calendario/page.tsx). Ignored once a Montar Plano exists; that
+  -- plan's own start_date/weeks take over instead.
+  calendar_start_date date,
+
   onboarding_completed boolean not null default false,
   created_at timestamptz not null default now()
 );
@@ -244,14 +250,36 @@ create table if not exists public.custom_plans (
   id uuid primary key default gen_random_uuid(),
   profile_id uuid not null references public.profiles(id) on delete cascade,
   weeks integer not null,
-  diet_choice text,
+  diet_choice text check (diet_choice in ('cutting', 'manutencao', 'bulking_limpo', 'bulking')),
   tier training_tier,
   split text,
   start_date date not null default current_date,
-  created_at timestamptz not null default now()
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now()
 );
 
 create index if not exists custom_plans_profile_id_idx on public.custom_plans(profile_id);
+
+comment on table public.custom_plans is
+  'Backs "Montar Plano": weeks/diet/tier/split setup only. The week-by-week schedule (target weights, action tips) is derived on read by lib/plan-generation.ts from this row + profiles.current_weight/target_weight — see supabase/migration_plano.sql. One active plan per profile is enforced at the app level, not a DB constraint.';
+
+-- -----------------------------------------------------------------------------
+-- calendar_days
+-- One row per (profile, day) the aluno marked something for — backs the
+-- Calendário feature's own simple self-report grid (treino/cardio/descanso +
+-- note), deliberately separate from workout_log_entries (which backs the
+-- detailed Treino logging elsewhere in the app).
+-- -----------------------------------------------------------------------------
+create table if not exists public.calendar_days (
+  profile_id uuid not null references public.profiles(id) on delete cascade,
+  day_date date not null,
+  status text check (status in ('treino', 'cardio', 'descanso')),
+  note text,
+  updated_at timestamptz not null default now(),
+  primary key (profile_id, day_date)
+);
+
+create index if not exists calendar_days_profile_id_idx on public.calendar_days(profile_id);
 
 -- -----------------------------------------------------------------------------
 -- workout_log_entries
@@ -706,6 +734,7 @@ alter table public.chat_messages enable row level security;
 alter table public.activity_days enable row level security;
 alter table public.badges_unlocked enable row level security;
 alter table public.custom_plans enable row level security;
+alter table public.calendar_days enable row level security;
 alter table public.workout_log_entries enable row level security;
 alter table public.avancado_plans enable row level security;
 alter table public.lifts enable row level security;
@@ -922,6 +951,33 @@ create policy "custom_plans_update_own"
 
 create policy "custom_plans_delete_own"
   on public.custom_plans for delete
+  using (profile_id = auth.uid());
+
+-- --- calendar_days -----------------------------------------------------------
+create policy "calendar_days_select_own"
+  on public.calendar_days for select
+  using (profile_id = auth.uid());
+
+create policy "calendar_days_select_by_personal"
+  on public.calendar_days for select
+  using (
+    exists (
+      select 1 from public.profiles p
+      where p.id = calendar_days.profile_id and p.linked_personal_id = auth.uid()
+    )
+  );
+
+create policy "calendar_days_insert_own"
+  on public.calendar_days for insert
+  with check (profile_id = auth.uid());
+
+create policy "calendar_days_update_own"
+  on public.calendar_days for update
+  using (profile_id = auth.uid())
+  with check (profile_id = auth.uid());
+
+create policy "calendar_days_delete_own"
+  on public.calendar_days for delete
   using (profile_id = auth.uid());
 
 -- --- workout_log_entries -----------------------------------------------------

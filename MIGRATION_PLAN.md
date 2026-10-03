@@ -47,13 +47,13 @@ shipped (code merged, build/lint clean) — not when it's merely planned.
 - [x] Receitas Fit: 53 recipes (goal/macros/supplements/steps)
 - [x] New tables: `user_recipes`, `meal_prep_plan`, `shopping_extras`
 
-### 5. Montar Plano + Calendário
-- [ ] Montar Plano setup (weeks/diet/level/split)
-- [ ] Week-by-week generation engine (doesn't exist in either app today)
-- [ ] Montar Plano progress view (edit/delete, one active plan per user)
-- [ ] Plano 17 semanas generalized, reading from the same engine
-- [ ] Calendário: own per-day log (status + note), 12-week grid, milestone markers — no hardcoded user data
-- [ ] New table: `calendar_days`
+### 5. Montar Plano + Calendário ✅ done
+- [x] Montar Plano setup (weeks/diet/level/split) — `app/montar-plano/PlanSetupForm.tsx`
+- [x] Week-by-week generation engine — `lib/plan-generation.ts` (shared by Montar Plano + Plano17)
+- [x] Montar Plano progress view (edit/delete, one active plan per user — enforced app-side) — `app/montar-plano/page.tsx` + `PlanActions.tsx`
+- [x] Plano 17 semanas generalized, reading from the same engine, gated on "has an active plan" instead of account name — `app/plano17/page.tsx`
+- [x] Calendário: own per-day log (status + note), plan-sized (or rolling 84-day) grid, milestone markers — no hardcoded user data — `app/calendario/page.tsx` + `CalendarGrid.tsx`
+- [x] New table: `calendar_days`; `custom_plans` extended (`updated_at`, diet check constraint); `profiles.calendar_start_date` added — `supabase/migration_plano.sql`
 
 ### 6. Avançado — finish the custom builder
 - [ ] Curated HIIT pool (own exercises, not the generic form)

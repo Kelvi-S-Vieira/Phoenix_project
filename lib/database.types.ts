@@ -40,6 +40,9 @@ export type Profile = {
   timeframe_weeks: number | null;
   current_tier: Tier | null;
   current_split: string | null;
+  // Anchors Calendário's rolling window when there's no active custom_plans
+  // row (see supabase/migration_plano.sql).
+  calendar_start_date: string | null;
   onboarding_completed: boolean;
   created_at: string;
 };
@@ -114,6 +117,17 @@ export type CustomPlan = {
   split: string | null;
   start_date: string;
   created_at: string;
+  updated_at: string;
+};
+
+export type CalendarDayStatus = "treino" | "cardio" | "descanso";
+
+export type CalendarDay = {
+  profile_id: string;
+  day_date: string;
+  status: CalendarDayStatus | null;
+  note: string | null;
+  updated_at: string;
 };
 
 export type WorkoutLogEntry = {
@@ -272,6 +286,7 @@ export type Database = {
       activity_days: Table<ActivityDay>;
       badges_unlocked: Table<BadgeUnlocked>;
       custom_plans: Table<CustomPlan>;
+      calendar_days: Table<CalendarDay>;
       workout_log_entries: Table<WorkoutLogEntry>;
       avancado_plans: Table<AvancadoPlanRow>;
       lifts: Table<Lift>;
