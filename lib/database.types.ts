@@ -144,6 +144,36 @@ export type AvancadoPlanRow = {
   updated_at: string;
 };
 
+// Dashboard "Cargas" card — one row per tracked lift. See
+// supabase/migration_dashboard_lifts_cardio.sql.
+export type Lift = {
+  id: string;
+  profile_id: string;
+  name: string;
+  unit: string;
+  start_value: number;
+  current_value: number;
+  goal_value: number | null;
+  sort_order: number;
+  created_at: string;
+  updated_at: string;
+};
+
+// Dashboard "Cardio" card — one row per profile, flat boolean-per-weekday,
+// mirroring the prototype's localStorage array model. See
+// supabase/migration_dashboard_lifts_cardio.sql.
+export type WeeklyCardio = {
+  profile_id: string;
+  mon: boolean;
+  tue: boolean;
+  wed: boolean;
+  thu: boolean;
+  fri: boolean;
+  sat: boolean;
+  sun: boolean;
+  updated_at: string;
+};
+
 // Column-limited view backing invite-code lookup — see
 // supabase/schema.sql's public.personal_lookup. Never query `profiles`
 // directly by `code` from the client.
@@ -180,6 +210,8 @@ export type Database = {
       custom_plans: Table<CustomPlan>;
       workout_log_entries: Table<WorkoutLogEntry>;
       avancado_plans: Table<AvancadoPlanRow>;
+      lifts: Table<Lift>;
+      weekly_cardio: Table<WeeklyCardio>;
     };
     Views: {
       personal_lookup: {

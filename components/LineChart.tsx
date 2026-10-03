@@ -14,12 +14,15 @@ export default function LineChart({
   height = 180,
   color = "var(--ember)",
   emptyMessage = "Ainda sem dados.",
+  valueUnit,
 }: {
   data: LineChartPoint[];
   target?: number | null;
   height?: number;
   color?: string;
   emptyMessage?: string;
+  /** Optional suffix (e.g. "kg", "lb", "cm") appended to each point's hover tooltip. */
+  valueUnit?: string;
 }) {
   if (data.length === 0) {
     return <div className="fx-chart-empty">{emptyMessage}</div>;
@@ -68,7 +71,9 @@ export default function LineChart({
           strokeLinecap="round"
         />
         {data.map((d, i) => (
-          <circle key={d.x} cx={xFor(i)} cy={yFor(d.y)} r={3.5} fill={color} />
+          <circle key={d.x} cx={xFor(i)} cy={yFor(d.y)} r={3.5} fill={color}>
+            <title>{`${d.x}: ${d.y}${valueUnit ? ` ${valueUnit}` : ""}`}</title>
+          </circle>
         ))}
       </svg>
     </div>

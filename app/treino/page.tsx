@@ -1,3 +1,4 @@
+import type { ReactNode } from "react";
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { todayBR, weekRangeBR, weekdayIndexBR } from "@/lib/date-br";
@@ -14,6 +15,7 @@ import type { Tier } from "@/lib/database.types";
 import { TIER_LABELS } from "@/lib/fenix-domain";
 import AvancadoBuilder from "./avancado/AvancadoBuilder";
 import { defaultPlan, normalizePlan, type AvancadoPlan } from "@/lib/treino-avancado-builder";
+import { getServerWeightUnit } from "@/lib/weight-unit-server";
 
 // Each tier's own data module keeps its own stricter MuscleGroupKey/SplitKey
 // unions; this lookup only needs the generic (string-keyed) shape so the
@@ -57,6 +59,7 @@ export default async function TreinoPage() {
   if (profile.role === "personal") redirect("/personal");
   if (!profile.onboarding_completed) redirect("/onboarding");
 
+  const unit = await getServerWeightUnit();
   const tierData = profile.current_tier ? TIER_DATA[profile.current_tier as Tier] : null;
 
   return (
@@ -67,6 +70,7 @@ export default async function TreinoPage() {
         currentWeight={profile.current_weight}
         targetWeight={profile.target_weight}
         sections={ALUNO_SIDEBAR_SECTIONS}
+        unit={unit}
       />
       <main className="main-content">
       <div className="fx-app">
@@ -111,12 +115,136 @@ export default async function TreinoPage() {
   );
 }
 
-// Per-tier wording for section 1's heading (Básico/Intermediário only —
-// Avançado never reaches this: see the early return in TreinoTierPage).
-const SPLIT_SECTION_TITLE: Record<Tier, string> = {
-  "treino-basico": "1. Escolha sua frequência semanal",
-  "treino-intermediario": "1. Escolha sua divisão",
-  "treino-avancado": "1. Escolha sua divisão",
+// Per-tier page shell — hero header, intro card and each numbered section's
+// heading/tag/lead copy, ported verbatim from the prototype's
+// #page-treino-basico / #page-treino-intermediario markup (Básico/
+// Intermediário only — Avançado never reads this: see the early return in
+// TreinoTierPage; its entry below exists only so the Record stays total).
+interface TierContent {
+  headerClass: "tb-header" | "ti-header";
+  sectionClass: "tb-section" | "ti-section";
+  leadClass: "tb-lead" | "ti-lead";
+  noteClass: "tb-note" | "ti-note";
+  introCardClass: "tb-intro-card" | "ti-intro-card";
+  headerEmoji: string;
+  title: string;
+  subtitle: string;
+  introEmoji: string;
+  introHeading: string;
+  introTag: string;
+  introParagraphs: ReactNode[];
+  splitSectionTitle: string;
+  splitTag: string;
+  splitLead: string;
+  weekLead: string;
+  summaryNote: string;
+}
+
+const TIER_CONTENT: Record<Tier, TierContent> = {
+  "treino-basico": {
+    headerClass: "tb-header",
+    sectionClass: "tb-section",
+    leadClass: "tb-lead",
+    noteClass: "tb-note",
+    introCardClass: "tb-intro-card",
+    headerEmoji: "🌱",
+    title: "Treino Básico — Projeto Fênix",
+    subtitle: "O primeiro passo, sem complicação: menos escolhas, mais consistência.",
+    introEmoji: "🔰",
+    introHeading: "Começando do zero",
+    introTag: "leia antes de treinar",
+    introParagraphs: [
+      <>
+        Esse módulo é para quem nunca treinou ou está voltando depois de
+        muito tempo parado. Aqui você não vai encontrar divisões complicadas
+        nem dezenas de exercícios avançados — só o essencial para aprender o
+        movimento com segurança e criar o hábito de treinar.
+      </>,
+      <>
+        <b>Comece leve.</b> Nas primeiras semanas, o objetivo não é levantar
+        muito peso — é aprender a fazer cada exercício corretamente.
+        Progredir devagar (um pouquinho de carga a mais a cada semana ou
+        duas) é exatamente o jeito certo de fazer, não um sinal de que você
+        está indo devagar demais.
+      </>,
+      <>
+        Depois de algumas semanas treinando com consistência e já se
+        sentindo confortável com os movimentos, você pode &quot;se
+        formar&quot; para o <b>Treino Intermediário</b> — não tem pressa nem
+        obrigação, isso é só uma sugestão para quando você sentir que está
+        pronto.
+      </>,
+    ],
+    splitSectionTitle: "1. Escolha sua frequência semanal",
+    splitTag: "comece simples",
+    splitLead: "Só duas opções — o suficiente para começar bem. Você pode trocar quando quiser.",
+    weekLead: "Assim ficam distribuídos os grupos musculares nos dias de treino, com descanso nos outros dias.",
+    summaryNote: "Este resumo é simples de propósito: o que mais importa nesta fase é criar o hábito de aparecer para treinar, não o volume total.",
+  },
+  "treino-intermediario": {
+    headerClass: "ti-header",
+    sectionClass: "ti-section",
+    leadClass: "ti-lead",
+    noteClass: "ti-note",
+    introCardClass: "ti-intro-card",
+    headerEmoji: "⚔️",
+    title: "Treino Intermediário — Projeto Fênix",
+    subtitle: "Mais volume, mais variedade, mais técnica — para quem já tem a base construída.",
+    introEmoji: "🧭",
+    introHeading: "Para quem é este nível",
+    introTag: "leia antes de treinar",
+    introParagraphs: [
+      <>
+        O Treino Intermediário é para quem já tem entre{" "}
+        <b>6 e 18 meses de treino consistente</b>, está confortável com os
+        movimentos básicos e quer mais variedade de exercícios, mais volume
+        e um pouco mais de peso livre (barra e halteres) no programa.
+      </>,
+      <>
+        Aqui a explicação de cada exercício é mais direta — assume-se que
+        você já sabe montar num aparelho, aquecer e ajustar carga. O foco
+        passa a ser <b>refinar a execução</b>: controlar a fase excêntrica,
+        manter a conexão mente-músculo e evitar erros clássicos de quem já
+        pegou confiança, como usar carga alta demais em prejuízo da forma
+        (&quot;ego lifting&quot;) ou fazer o movimento no automático sem
+        sentir o músculo trabalhando.
+      </>,
+      <>
+        Depois de alguns meses treinando as três divisões deste módulo com
+        boa consistência e progressão de carga, você pode &quot;se
+        formar&quot; para o <b>Treino Avançado</b>, com divisões mais
+        elaboradas e técnicas de intensidade. E se a consistência ou a
+        técnica derem uma cambaleada — voltar para o{" "}
+        <b>Treino Básico</b> por um tempo não é retrocesso, é só reforçar a
+        base antes de seguir em frente.
+      </>,
+    ],
+    splitSectionTitle: "1. Escolha sua divisão",
+    splitTag: "3 opções",
+    splitLead: "Mais opções que o Treino Básico, ainda sem a complexidade total do Avançado. Troque quando quiser.",
+    weekLead: "Grupos musculares distribuídos ao longo dos dias conforme a divisão escolhida.",
+    summaryNote: "O volume total é uma estimativa simples (séries × repetições) para acompanhar a tendência — não é uma métrica científica de carga de treino.",
+  },
+  // Unused — Avançado branches away in TreinoTierPage before this is read.
+  "treino-avancado": {
+    headerClass: "tb-header",
+    sectionClass: "tb-section",
+    leadClass: "tb-lead",
+    noteClass: "tb-note",
+    introCardClass: "tb-intro-card",
+    headerEmoji: "",
+    title: "",
+    subtitle: "",
+    introEmoji: "",
+    introHeading: "",
+    introTag: "",
+    introParagraphs: [],
+    splitSectionTitle: "1. Escolha sua divisão",
+    splitTag: "",
+    splitLead: "",
+    weekLead: "",
+    summaryNote: "",
+  },
 };
 
 async function TreinoTierPage({
@@ -157,22 +285,41 @@ async function TreinoTierPage({
     );
   }
 
+  const content = TIER_CONTENT[tier];
+
   return (
     <>
-      <div className="card">
+      <header className={content.headerClass}>
+        <h1>
+          {content.headerEmoji} {content.title}
+        </h1>
+        <p>{content.subtitle}</p>
+      </header>
+
+      <details className="fx-change-plan" style={{ marginBottom: 18 }}>
+        <summary>⚙️ Trocar nível</summary>
+        <div style={{ marginTop: 16 }}>
+          <TierPicker profileId={profileId} />
+        </div>
+      </details>
+
+      <div className={content.sectionClass}>
         <h2>
-          {TIER_LABELS[tier]} — Treino
+          {content.introEmoji} {content.introHeading}{" "}
+          <span className="tag">{content.introTag}</span>
         </h2>
-        <details className="fx-change-plan" style={{ marginTop: 4 }}>
-          <summary>⚙️ Trocar nível</summary>
-          <div style={{ marginTop: 16 }}>
-            <TierPicker profileId={profileId} />
-          </div>
-        </details>
+        <div className={content.introCardClass}>
+          {content.introParagraphs.map((p, i) => (
+            <p key={i}>{p}</p>
+          ))}
+        </div>
       </div>
 
-      <div className="card">
-        <h2>{SPLIT_SECTION_TITLE[tier]}</h2>
+      <div className={content.sectionClass}>
+        <h2>
+          {content.splitSectionTitle} <span className="tag">{content.splitTag}</span>
+        </h2>
+        <p className={content.leadClass}>{content.splitLead}</p>
         <SplitPicker
           profileId={profileId}
           splits={tierData.SPLITS}
@@ -182,19 +329,19 @@ async function TreinoTierPage({
 
       {!split ? (
         <>
-          <div className="card">
+          <div className={content.sectionClass}>
             <h2>2. Sua semana</h2>
             <div className="fx-empty-state">
               Escolha uma divisão acima para ver sua semana.
             </div>
           </div>
-          <div className="card">
+          <div className={content.sectionClass}>
             <h2>3. Treino do dia</h2>
             <div className="fx-empty-state">
               Escolha uma divisão acima para ver os exercícios.
             </div>
           </div>
-          <div className="card">
+          <div className={content.sectionClass}>
             <h2>4. Resumo da semana</h2>
             <div className="fx-empty-state">
               Escolha uma divisão acima para ver seu resumo.
@@ -202,7 +349,7 @@ async function TreinoTierPage({
           </div>
         </>
       ) : (
-        <TreinoContent profileId={profileId} split={split} tierData={tierData} tier={tier} />
+        <TreinoContent profileId={profileId} split={split} tierData={tierData} tier={tier} content={content} />
       )}
     </>
   );
@@ -213,11 +360,13 @@ async function TreinoContent({
   split,
   tierData,
   tier,
+  content,
 }: {
   profileId: string;
   split: Split;
   tierData: TierWorkoutData;
   tier: Tier;
+  content: TierContent;
 }) {
   const supabase = await createClient();
   const today = todayBR();
@@ -319,9 +468,12 @@ async function TreinoContent({
         muscleGroups={tierData.MUSCLE_GROUPS}
         initialLog={initialLog}
         defaultDay={defaultDay}
+        sectionClass={content.sectionClass}
+        leadClass={content.leadClass}
+        weekLead={content.weekLead}
       />
 
-      <div className="card">
+      <div className={content.sectionClass}>
         <h2>4. Resumo da semana</h2>
         <div className="summary-grid">
           <div className="sum-card">
@@ -344,6 +496,7 @@ async function TreinoContent({
             próximo nível — sem pressa, no seu tempo.
           </div>
         )}
+        <p className={content.noteClass}>{content.summaryNote}</p>
       </div>
     </>
   );

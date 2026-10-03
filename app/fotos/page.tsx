@@ -4,6 +4,7 @@ import Sidebar from "@/components/Sidebar";
 import { ALUNO_SIDEBAR_SECTIONS } from "@/lib/sidebar-nav";
 import FotosTabs from "./FotosTabs";
 import type { Pose } from "@/lib/database.types";
+import { getServerWeightUnit } from "@/lib/weight-unit-server";
 
 const SIGNED_URL_EXPIRES_IN = 3600; // seconds
 
@@ -32,6 +33,8 @@ export default async function FotosPage() {
   if (!profile?.role) redirect("/complete-profile");
   if (profile.role === "personal") redirect("/personal");
   if (!profile.onboarding_completed) redirect("/onboarding");
+
+  const unit = await getServerWeightUnit();
 
   const { data: photos } = await supabase
     .from("progress_photos")
@@ -70,6 +73,7 @@ export default async function FotosPage() {
         currentWeight={profile.current_weight}
         targetWeight={profile.target_weight}
         sections={ALUNO_SIDEBAR_SECTIONS}
+        unit={unit}
       />
       <main className="main-content">
       <div className="fx-app">
@@ -79,7 +83,7 @@ export default async function FotosPage() {
           <div className="sub">O espelho engana no dia a dia — as fotos lado a lado não.</div>
         </div>
 
-        <FotosTabs profileId={user.id} fotos={fotos} />
+        <FotosTabs profileId={user.id} fotos={fotos} unit={unit} />
 
         <div className="footer-note">
           PROJETO FÊNIX — o espelho engana no dia a dia, as fotos lado a lado não.

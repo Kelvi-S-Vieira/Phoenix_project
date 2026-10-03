@@ -5,6 +5,8 @@ import Sidebar from "@/components/Sidebar";
 import { PERSONAL_SIDEBAR_SECTIONS } from "@/lib/sidebar-nav";
 import { TIER_LABELS } from "@/lib/fenix-domain";
 import TemplateLibrary from "./TemplateLibrary";
+import { getServerWeightUnit } from "@/lib/weight-unit-server";
+import { formatWeight } from "@/lib/weight-unit";
 
 export default async function PersonalRosterPage() {
   const supabase = await createClient();
@@ -27,6 +29,8 @@ export default async function PersonalRosterPage() {
     .select("id, name, current_weight, target_weight, current_tier, goal")
     .eq("linked_personal_id", user.id)
     .order("name", { ascending: true });
+
+  const unit = await getServerWeightUnit();
 
   const { data: templates } = await supabase
     .from("workout_templates")
@@ -70,7 +74,7 @@ export default async function PersonalRosterPage() {
                   </div>
                 </div>
                 <div className="stat">
-                  {a.current_weight != null ? `${a.current_weight} kg` : "—"}
+                  {a.current_weight != null ? formatWeight(a.current_weight, unit) : "—"}
                 </div>
               </Link>
             ))

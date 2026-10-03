@@ -10,6 +10,7 @@ import {
   computeTargets,
 } from "@/lib/fenix-domain";
 import type { ActivityLevel, Goal } from "@/lib/database.types";
+import { getWeightUnit, toDisplayWeight, fromDisplayWeight } from "@/lib/weight-unit";
 
 const TOTAL_STEPS = 5;
 
@@ -24,21 +25,49 @@ interface WizardState {
   timeframeWeeks: string;
 }
 
-export default function OnboardingWizard() {
+/** Profile fields this wizard reads/writes, as loaded from Supabase for edit mode. */
+export interface OnboardingInitialProfile {
+  sex: "M" | "F" | null;
+  age: number | null;
+  height: number | null;
+  weight: number | null;
+  activity: ActivityLevel | null;
+  goal: Goal | null;
+  targetWeight: number | null;
+}
+
+function stateFromProfile(p?: OnboardingInitialProfile): WizardState {
+  return {
+    sex: p?.sex ?? "",
+    age: p?.age != null ? String(p.age) : "",
+    height: p?.height != null ? String(p.height) : "",
+    weight: p?.weight != null ? String(p.weight) : "",
+    activity: p?.activity ?? "",
+    goal: p?.goal ?? "",
+    targetWeight: p?.targetWeight != null ? String(p.targetWeight) : "",
+    // Not a stored profile column (only ever used to shape the deficit %
+    // during this session) — always starts blank, even in edit mode.
+    timeframeWeeks: "",
+  };
+}
+
+export default function OnboardingWizard({
+  mode = "setup",
+  initialProfile,
+}: {
+  /** "setup": first-time flow (blank form, step 1). "edit": reopened from the sidebar, pre-filled from the saved profile. */
+  mode?: "setup" | "edit";
+  initialProfile?: OnboardingInitialProfile;
+}) {
   const router = useRouter();
+  const isEdit = mode === "edit";
   const [step, setStep] = useState(1);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [state, setState] = useState<WizardState>({
-    sex: "",
-    age: "",
-    height: "",
-    weight: "",
-    activity: "",
-    goal: "",
-    targetWeight: "",
-    timeframeWeeks: "",
-  });
+  const [state, setState] = useState<WizardState>(() => stateFromProfile(initialProfile));
+  // Weight is always stored/kept in kg (used directly below in the BMR
+  // formula) — `unit` only controls what the two weight inputs show/accept.
+  const [unit] = useState(getWeightUnit);
 
   function update<K extends keyof WizardState>(key: K, value: WizardState[K]) {
     setState((s) => ({ ...s, [key]: value }));
@@ -110,11 +139,17 @@ export default function OnboardingWizard() {
       return;
     }
 
-    await supabase.from("weight_logs").insert({
-      profile_id: user.id,
-      weight: parseFloat(state.weight),
-      logged_at: today,
-    });
+    // upsert (not insert): editing an already-onboarded profile can run this
+    // more than once on the same day, and weight_logs has a unique
+    // (profile_id, logged_at) constraint — same pattern as QuickAddWeight.
+    await supabase.from("weight_logs").upsert(
+      {
+        profile_id: user.id,
+        weight: parseFloat(state.weight),
+        logged_at: today,
+      },
+      { onConflict: "profile_id,logged_at" }
+    );
     await supabase.from("activity_days").upsert(
       { profile_id: user.id, activity_date: today },
       { onConflict: "profile_id,activity_date" }
@@ -128,7 +163,7 @@ export default function OnboardingWizard() {
   return (
     <>
       <div className="fx-top">
-        <div className="eyebrow">Fênix · Definir objetivo</div>
+        <div className="eyebrow">{isEdit ? "Fênix · Meu Perfil" : "Fênix · Definir objetivo"}</div>
         <h1>
           {step === 1 && "Dados básicos"}
           {step === 2 && "Nível de atividade"}
@@ -136,7 +171,11 @@ export default function OnboardingWizard() {
           {step === 4 && "Sua meta"}
           {step === 5 && "Seu plano calculado"}
         </h1>
-        <div className="sub">5 passos rápidos pra calcular sua meta calórica, proteína e ritmo.</div>
+        <div className="sub">
+          {isEdit
+            ? "Revise ou ajuste seus dados — suas metas de calorias e proteína são recalculadas na hora."
+            : "5 passos rápidos pra calcular sua meta calórica, proteína e ritmo."}
+        </div>
       </div>
 
       <div className="progress-steps">
@@ -192,12 +231,17 @@ export default function OnboardingWizard() {
               </div>
             </div>
             <div className="field">
-              <label>Peso atual (kg)</label>
+              <label>Peso atual ({unit})</label>
               <input
                 type="number"
                 step="0.1"
-                value={state.weight}
-                onChange={(e) => update("weight", e.target.value)}
+                value={state.weight ? (toDisplayWeight(parseFloat(state.weight), unit) ?? "") : ""}
+                onChange={(e) =>
+                  update(
+                    "weight",
+                    e.target.value === "" ? "" : String(fromDisplayWeight(e.target.value, unit))
+                  )
+                }
               />
             </div>
           </>
@@ -251,12 +295,19 @@ export default function OnboardingWizard() {
                 : "Isso define o ritmo do seu plano."}
             </div>
             <div className="field">
-              <label>Peso alvo (kg)</label>
+              <label>Peso alvo ({unit})</label>
               <input
                 type="number"
                 step="0.1"
-                value={state.targetWeight}
-                onChange={(e) => update("targetWeight", e.target.value)}
+                value={
+                  state.targetWeight ? (toDisplayWeight(parseFloat(state.targetWeight), unit) ?? "") : ""
+                }
+                onChange={(e) =>
+                  update(
+                    "targetWeight",
+                    e.target.value === "" ? "" : String(fromDisplayWeight(e.target.value, unit))
+                  )
+                }
               />
             </div>
             <div className="field">
@@ -341,7 +392,7 @@ export default function OnboardingWizard() {
           </button>
         ) : (
           <button className="btn" disabled={saving} onClick={handleSave}>
-            {saving ? "Salvando..." : "Salvar perfil"}
+            {saving ? "Salvando..." : isEdit ? "Salvar alterações" : "Salvar perfil"}
           </button>
         )}
       </div>

@@ -3,6 +3,7 @@ import { createClient } from "@/lib/supabase/server";
 import Sidebar from "@/components/Sidebar";
 import { ALUNO_SIDEBAR_SECTIONS } from "@/lib/sidebar-nav";
 import VincularPersonalForm from "./VincularPersonalForm";
+import { getServerWeightUnit } from "@/lib/weight-unit-server";
 
 export default async function VincularPersonalPage() {
   const supabase = await createClient();
@@ -19,6 +20,8 @@ export default async function VincularPersonalPage() {
 
   if (!profile?.role) redirect("/complete-profile");
   if (profile.role === "personal") redirect("/personal");
+
+  const unit = await getServerWeightUnit();
 
   let currentPersonalName: string | null = null;
   if (profile.linked_personal_id) {
@@ -38,6 +41,7 @@ export default async function VincularPersonalPage() {
         currentWeight={profile.current_weight}
         targetWeight={profile.target_weight}
         sections={ALUNO_SIDEBAR_SECTIONS}
+        unit={unit}
       />
       <main className="main-content">
       <div className="fx-app">

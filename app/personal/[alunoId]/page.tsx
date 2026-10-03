@@ -6,6 +6,8 @@ import WeightChart from "@/components/WeightChart";
 import ChatThread from "@/components/ChatThread";
 import { GOAL_LABELS, TIER_LABELS, SPLIT_OPTIONS } from "@/lib/fenix-domain";
 import ApplyTemplate from "./ApplyTemplate";
+import { getServerWeightUnit } from "@/lib/weight-unit-server";
+import { toDisplayWeight } from "@/lib/weight-unit";
 
 export default async function AlunoDetailPage({
   params,
@@ -34,6 +36,8 @@ export default async function AlunoDetailPage({
 
   if (!aluno) notFound();
 
+  const unit = await getServerWeightUnit();
+
   const { data: weightLogs } = await supabase
     .from("weight_logs")
     .select("logged_at, weight")
@@ -48,7 +52,10 @@ export default async function AlunoDetailPage({
 
   const first = weightLogs?.[0]?.weight ?? null;
   const latest = weightLogs?.[weightLogs.length - 1]?.weight ?? aluno.current_weight;
-  const totalChange = first != null && latest != null ? +(latest - first).toFixed(1) : null;
+  const firstDisplay = toDisplayWeight(first, unit);
+  const latestDisplay = toDisplayWeight(latest, unit);
+  const totalChange =
+    firstDisplay != null && latestDisplay != null ? +(latestDisplay - firstDisplay).toFixed(1) : null;
 
   return (
     <div className="app-shell">
@@ -69,21 +76,21 @@ export default async function AlunoDetailPage({
           <div className="sum-card">
             <div className="label">Peso atual</div>
             <div className="value">
-              {latest != null ? latest : "—"}
-              <span className="unit"> kg</span>
+              {latestDisplay != null ? latestDisplay : "—"}
+              <span className="unit"> {unit}</span>
             </div>
           </div>
           <div className="sum-card">
             <div className="label">Meta</div>
             <div className="value">
-              {aluno.target_weight != null ? aluno.target_weight : "—"}
-              <span className="unit"> kg</span>
+              {aluno.target_weight != null ? toDisplayWeight(aluno.target_weight, unit) : "—"}
+              <span className="unit"> {unit}</span>
             </div>
           </div>
           <div className="sum-card">
             <div className="label">Variação total</div>
             <div className="value" style={{ fontSize: 20 }}>
-              {totalChange != null ? `${totalChange > 0 ? "+" : ""}${totalChange} kg` : "—"}
+              {totalChange != null ? `${totalChange > 0 ? "+" : ""}${totalChange} ${unit}` : "—"}
             </div>
           </div>
           <div className="sum-card">
@@ -107,7 +114,7 @@ export default async function AlunoDetailPage({
 
         <div className="card">
           <h2>Evolução do peso</h2>
-          <WeightChart data={weightLogs ?? []} target={aluno.target_weight} />
+          <WeightChart data={weightLogs ?? []} target={aluno.target_weight} unit={unit} />
         </div>
 
         <div className="card">

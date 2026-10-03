@@ -31,6 +31,9 @@ export default function TreinoBoard({
   muscleGroups,
   initialLog,
   defaultDay,
+  sectionClass,
+  leadClass,
+  weekLead,
 }: {
   profileId: string;
   split: Split;
@@ -38,6 +41,13 @@ export default function TreinoBoard({
   muscleGroups: Record<string, MuscleGroup>;
   initialLog: Record<string, LogEntry>;
   defaultDay: DayKey | null;
+  // Tier-specific section wrapper/lead classes ("tb-section"/"tb-lead" or
+  // "ti-section"/"ti-lead") and the "2. Sua semana" lead paragraph text,
+  // ported from the prototype's #page-treino-basico/#page-treino-intermediario
+  // markup — see app/treino/page.tsx's TIER_CONTENT.
+  sectionClass: string;
+  leadClass: string;
+  weekLead: string;
 }) {
   const [selectedDay, setSelectedDay] = useState<DayKey | null>(defaultDay);
   const [activeTab, setActiveTab] = useState<WorkoutTypeKey>("musculacao");
@@ -170,10 +180,13 @@ export default function TreinoBoard({
     );
   }
 
+  const selectedDayInfo = selectedDay ? DAYS.find((d) => d.key === selectedDay) : null;
+
   return (
     <>
-      <div className="card">
+      <div className={sectionClass}>
         <h2>2. Sua semana</h2>
+        <p className={leadClass}>{weekLead}</p>
         <div className="fx-day-strip">
         {DAYS.map((d) => {
           const dayGroups = split.week[d.key];
@@ -200,8 +213,13 @@ export default function TreinoBoard({
         </div>
       </div>
 
-      <div className="card">
-        <h2>3. Treino do dia</h2>
+      <div className={sectionClass}>
+        <h2>
+          3. Treino do dia{" "}
+          {selectedDayInfo && (
+            <span className="day-label">— {selectedDayInfo.label}</span>
+          )}
+        </h2>
       {!selectedDay && (
         <div className="fx-empty-state">
           Selecione um dia da semana acima para ver os exercícios.

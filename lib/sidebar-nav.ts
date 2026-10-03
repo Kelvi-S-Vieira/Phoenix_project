@@ -20,7 +20,10 @@ import type { SidebarNavSection } from "@/components/Sidebar";
 export const ALUNO_SIDEBAR_SECTIONS: SidebarNavSection[] = [
   {
     label: "Visão Geral",
-    items: [{ href: "/dashboard", label: "Dashboard" }],
+    items: [
+      { href: "/dashboard", label: "Dashboard" },
+      { href: "/onboarding", label: "Meu Perfil" },
+    ],
   },
   {
     label: "Treino",

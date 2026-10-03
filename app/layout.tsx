@@ -13,7 +13,7 @@ const themeInitScript = `
   try{
     var theme = localStorage.getItem('fenix_theme');
     document.documentElement.setAttribute('data-theme', theme === 'light' ? 'light' : 'dark');
-    var accent = localStorage.getItem('fenix_accent');
+    var accent = localStorage.getItem('fenix_login_accent');
     if(accent === 'aco' || accent === 'verde'){
       document.documentElement.setAttribute('data-accent', accent);
     }

@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/client";
 import type { Role } from "@/lib/database.types";
+import AuthAccentPicker from "@/components/AuthAccentPicker";
 
 export default function SignupPage() {
   const router = useRouter();
@@ -103,6 +104,8 @@ export default function SignupPage() {
           <div className="brand-eyebrow">Projeto Fênix</div>
           <div className="brand-title">Criar conta</div>
         </div>
+
+        <AuthAccentPicker />
 
         <div className="fx-auth-card">
           {notice ? (

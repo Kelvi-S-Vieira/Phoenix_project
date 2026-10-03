@@ -4,6 +4,7 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import type { FotoWithUrl } from "./page";
+import { formatWeight, type WeightUnit } from "@/lib/weight-unit";
 
 const POSE_LABELS: Record<string, string> = {
   frente: "Frente",
@@ -15,7 +16,13 @@ function formatDate(iso: string) {
   return new Date(iso + "T00:00:00").toLocaleDateString("pt-BR");
 }
 
-export default function Gallery({ fotos }: { fotos: FotoWithUrl[] }) {
+export default function Gallery({
+  fotos,
+  unit = "kg",
+}: {
+  fotos: FotoWithUrl[];
+  unit?: WeightUnit;
+}) {
   const router = useRouter();
   const [lightbox, setLightbox] = useState<FotoWithUrl | null>(null);
   const [deletingId, setDeletingId] = useState<string | null>(null);
@@ -68,7 +75,7 @@ export default function Gallery({ fotos }: { fotos: FotoWithUrl[] }) {
               <div>{formatDate(foto.taken_at)}</div>
               <div>
                 <span className="pose">{foto.pose ? POSE_LABELS[foto.pose] : "—"}</span>
-                {foto.weight_at_photo != null ? ` · ${foto.weight_at_photo}kg` : ""}
+                {foto.weight_at_photo != null ? ` · ${formatWeight(foto.weight_at_photo, unit)}` : ""}
               </div>
             </div>
           </div>
@@ -93,7 +100,7 @@ export default function Gallery({ fotos }: { fotos: FotoWithUrl[] }) {
             <div className="fx-overlay-info">
               {formatDate(lightbox.taken_at)}
               {lightbox.pose ? ` · ${POSE_LABELS[lightbox.pose]}` : ""}
-              {lightbox.weight_at_photo != null ? ` · ${lightbox.weight_at_photo}kg` : ""}
+              {lightbox.weight_at_photo != null ? ` · ${formatWeight(lightbox.weight_at_photo, unit)}` : ""}
             </div>
           </div>
         )}

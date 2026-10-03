@@ -4,8 +4,16 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import { todayBR } from "@/lib/date-br";
+import { fromDisplayWeight, type WeightUnit } from "@/lib/weight-unit";
 
-export default function QuickAddWeight({ profileId }: { profileId: string }) {
+export default function QuickAddWeight({
+  profileId,
+  unit = "kg",
+}: {
+  profileId: string;
+  /** Weight is always stored in kg — this only affects the label and how the typed value is interpreted. */
+  unit?: WeightUnit;
+}) {
   const router = useRouter();
   const [weight, setWeight] = useState("");
   const [saving, setSaving] = useState(false);
@@ -13,11 +21,12 @@ export default function QuickAddWeight({ profileId }: { profileId: string }) {
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
-    const value = parseFloat(weight.replace(",", "."));
-    if (!value || value <= 0) {
+    const displayValue = parseFloat(weight.replace(",", "."));
+    if (!displayValue || displayValue <= 0) {
       setError("Informe um peso válido.");
       return;
     }
+    const value = fromDisplayWeight(displayValue, unit);
     setSaving(true);
     setError(null);
     const supabase = createClient();
@@ -54,13 +63,13 @@ export default function QuickAddWeight({ profileId }: { profileId: string }) {
   return (
     <form onSubmit={handleSubmit} className="row2" style={{ alignItems: "end" }}>
       <div className="field" style={{ marginBottom: 0 }}>
-        <label>Registrar peso hoje (kg)</label>
+        <label>Registrar peso hoje ({unit})</label>
         <input
           type="number"
           step="0.1"
           value={weight}
           onChange={(e) => setWeight(e.target.value)}
-          placeholder="Ex: 78.4"
+          placeholder={unit === "lb" ? "Ex: 172.8" : "Ex: 78.4"}
         />
       </div>
       <button className="btn" type="submit" disabled={saving}>

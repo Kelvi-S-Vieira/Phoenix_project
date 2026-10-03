@@ -5,23 +5,79 @@ import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import { todayBR } from "@/lib/date-br";
 import type { Pose } from "@/lib/database.types";
+import { fromDisplayWeight, type WeightUnit } from "@/lib/weight-unit";
 
-function extensionFor(file: File): string {
-  const fromName = file.name.split(".").pop();
-  if (fromName && fromName.length <= 5 && /^[a-zA-Z0-9]+$/.test(fromName)) {
-    return fromName.toLowerCase();
-  }
-  const fromType = file.type.split("/").pop();
-  return fromType || "jpg";
+const MAX_DIM = 900; // px, longest side after resize
+const JPEG_QUALITY = 0.78;
+
+// Resizes the given image file client-side: draws it onto an off-screen
+// canvas scaled down so the longest side is capped at MAX_DIM (never
+// upscaled), then re-encodes it as JPEG. Always returns a .jpg, regardless
+// of the original file's format, so the caller's extension/filename stays
+// consistent with the actual uploaded bytes.
+function resizeImageToJpeg(file: File): Promise<Blob> {
+  return new Promise((resolve, reject) => {
+    const objectUrl = URL.createObjectURL(file);
+    const img = new Image();
+    img.onload = () => {
+      let w = img.naturalWidth;
+      let h = img.naturalHeight;
+      if (w > MAX_DIM || h > MAX_DIM) {
+        if (w >= h) {
+          h = Math.round(h * (MAX_DIM / w));
+          w = MAX_DIM;
+        } else {
+          w = Math.round(w * (MAX_DIM / h));
+          h = MAX_DIM;
+        }
+      }
+
+      const canvas = document.createElement("canvas");
+      canvas.width = w;
+      canvas.height = h;
+      const ctx = canvas.getContext("2d");
+      if (!ctx) {
+        URL.revokeObjectURL(objectUrl);
+        reject(new Error("Canvas 2D context indisponível."));
+        return;
+      }
+      ctx.drawImage(img, 0, 0, w, h);
+
+      canvas.toBlob(
+        (blob) => {
+          URL.revokeObjectURL(objectUrl);
+          if (!blob) {
+            reject(new Error("Falha ao gerar imagem redimensionada."));
+            return;
+          }
+          resolve(blob);
+        },
+        "image/jpeg",
+        JPEG_QUALITY
+      );
+    };
+    img.onerror = () => {
+      URL.revokeObjectURL(objectUrl);
+      reject(new Error("Falha ao carregar a imagem."));
+    };
+    img.src = objectUrl;
+  });
 }
 
-export default function UploadPhoto({ profileId }: { profileId: string }) {
+export default function UploadPhoto({
+  profileId,
+  unit = "kg",
+}: {
+  profileId: string;
+  unit?: WeightUnit;
+}) {
   const router = useRouter();
   const [date, setDate] = useState(() => todayBR());
   const [pose, setPose] = useState<Pose>("frente");
   const [weight, setWeight] = useState("");
   const [file, setFile] = useState<File | null>(null);
   const [saving, setSaving] = useState(false);
+  const [optimizing, setOptimizing] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   async function handleSubmit(e: React.FormEvent) {
@@ -39,20 +95,33 @@ export default function UploadPhoto({ profileId }: { profileId: string }) {
         setError("Peso inválido.");
         return;
       }
-      weightValue = num;
+      weightValue = fromDisplayWeight(num, unit);
     }
 
     setSaving(true);
     setError(null);
     const supabase = createClient();
 
-    const ext = extensionFor(file);
+    setOptimizing(true);
+    let resized: Blob;
+    try {
+      resized = await resizeImageToJpeg(file);
+    } catch (err) {
+      setOptimizing(false);
+      setSaving(false);
+      setError(err instanceof Error ? err.message : "Falha ao processar a imagem.");
+      return;
+    }
+    setOptimizing(false);
+
+    // Resizing always re-encodes to JPEG, regardless of the original
+    // format, so the stored filename reflects the actual uploaded bytes.
     const suffix = crypto.randomUUID().slice(0, 8);
-    const path = `${profileId}/${date}-${pose}-${suffix}.${ext}`;
+    const path = `${profileId}/${date}-${pose}-${suffix}.jpg`;
 
     const { error: uploadError } = await supabase.storage
       .from("progress-photos")
-      .upload(path, file);
+      .upload(path, resized, { contentType: "image/jpeg" });
 
     if (uploadError) {
       setSaving(false);
@@ -101,13 +170,13 @@ export default function UploadPhoto({ profileId }: { profileId: string }) {
         </select>
       </div>
       <div className="field">
-        <label>Peso no dia (opcional, kg)</label>
+        <label>Peso no dia (opcional, {unit})</label>
         <input
           type="number"
           step="0.1"
           value={weight}
           onChange={(e) => setWeight(e.target.value)}
-          placeholder="Ex: 78.4"
+          placeholder={unit === "lb" ? "Ex: 172.8" : "Ex: 78.4"}
         />
       </div>
       <div className="field full">
@@ -126,7 +195,7 @@ export default function UploadPhoto({ profileId }: { profileId: string }) {
       )}
       <div className="field full">
         <button className="btn" type="submit" disabled={saving}>
-          {saving ? "Enviando..." : "+ Adicionar foto"}
+          {optimizing ? "Otimizando imagem..." : saving ? "Enviando..." : "+ Adicionar foto"}
         </button>
       </div>
     </form>

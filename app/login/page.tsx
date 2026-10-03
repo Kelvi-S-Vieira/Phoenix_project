@@ -4,6 +4,7 @@ import { Suspense, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/client";
+import AuthAccentPicker from "@/components/AuthAccentPicker";
 
 export default function LoginPage() {
   return (
@@ -59,6 +60,8 @@ function LoginForm() {
           <div className="brand-eyebrow">Projeto Fênix</div>
           <div className="brand-title">Entrar</div>
         </div>
+
+        <AuthAccentPicker />
 
         <div className="fx-auth-card">
           <form onSubmit={handleSubmit}>

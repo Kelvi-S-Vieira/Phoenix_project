@@ -5,6 +5,7 @@ import Sidebar from "@/components/Sidebar";
 import { ALUNO_SIDEBAR_SECTIONS } from "@/lib/sidebar-nav";
 import LineChart from "@/components/LineChart";
 import QuickAddMeasurements from "./QuickAddMeasurements";
+import { getServerWeightUnit } from "@/lib/weight-unit-server";
 
 export default async function MedidasPage() {
   const supabase = await createClient();
@@ -22,6 +23,8 @@ export default async function MedidasPage() {
   if (!profile?.role) redirect("/complete-profile");
   if (profile.role === "personal") redirect("/personal");
   if (!profile.onboarding_completed) redirect("/onboarding");
+
+  const unit = await getServerWeightUnit();
 
   const { data: measurements } = await supabase
     .from("measurements")
@@ -47,6 +50,7 @@ export default async function MedidasPage() {
         currentWeight={profile.current_weight}
         targetWeight={profile.target_weight}
         sections={ALUNO_SIDEBAR_SECTIONS}
+        unit={unit}
       />
       <main className="main-content">
       <div className="fx-app">
@@ -78,7 +82,7 @@ export default async function MedidasPage() {
                   <div className="fx-measure-card-title">
                     {field.label} <span className="unit">({field.unit})</span>
                   </div>
-                  <LineChart data={points} height={140} color="var(--gold)" />
+                  <LineChart data={points} height={140} color="var(--gold)" valueUnit={field.unit} />
                 </div>
               ))}
             </div>

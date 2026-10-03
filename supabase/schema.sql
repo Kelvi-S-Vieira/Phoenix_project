@@ -297,6 +297,48 @@ create table if not exists public.avancado_plans (
   updated_at timestamptz not null default now()
 );
 
+-- -----------------------------------------------------------------------------
+-- lifts
+-- One row per tracked lift (Dashboard "Cargas" card), ported from the
+-- prototype's localStorage `lifts` array. A profile with zero rows is
+-- seeded client-side with the 3 prototype defaults (Supino/Hack/Leg Press)
+-- the first time the Dashboard loads — see app/dashboard/page.tsx.
+-- -----------------------------------------------------------------------------
+create table if not exists public.lifts (
+  id uuid primary key default gen_random_uuid(),
+  profile_id uuid not null references public.profiles(id) on delete cascade,
+  name text not null,
+  unit text not null default 'kg',
+  start_value numeric(7,2) not null,
+  current_value numeric(7,2) not null,
+  goal_value numeric(7,2),
+  sort_order int not null default 0,
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now()
+);
+
+create index if not exists lifts_profile_id_sort_order_idx
+  on public.lifts(profile_id, sort_order);
+
+-- -----------------------------------------------------------------------------
+-- weekly_cardio
+-- One row per profile (Dashboard "Cardio" card). Flat boolean-per-weekday
+-- model ported verbatim from the prototype's localStorage `cardio` 7-item
+-- array — "resets" only when the user manually unchecks a day, there is no
+-- automatic weekly reset in the prototype or here.
+-- -----------------------------------------------------------------------------
+create table if not exists public.weekly_cardio (
+  profile_id uuid primary key references public.profiles(id) on delete cascade,
+  mon boolean not null default false,
+  tue boolean not null default false,
+  wed boolean not null default false,
+  thu boolean not null default false,
+  fri boolean not null default false,
+  sat boolean not null default false,
+  sun boolean not null default false,
+  updated_at timestamptz not null default now()
+);
+
 -- =============================================================================
 -- Auto-create a profiles row whenever a new auth.users row appears
 -- (standard Supabase recipe: a trigger function on auth.users insert).
@@ -574,6 +616,8 @@ alter table public.badges_unlocked enable row level security;
 alter table public.custom_plans enable row level security;
 alter table public.workout_log_entries enable row level security;
 alter table public.avancado_plans enable row level security;
+alter table public.lifts enable row level security;
+alter table public.weekly_cardio enable row level security;
 
 -- --- profiles -----------------------------------------------------------
 -- Everyone can read their own profile; a personal can also read the
@@ -837,6 +881,56 @@ create policy "avancado_plans_select_by_personal"
       where p.id = avancado_plans.profile_id and p.linked_personal_id = auth.uid()
     )
   );
+
+-- --- lifts -----------------------------------------------------------------
+create policy "lifts_select_own"
+  on public.lifts for select
+  using (profile_id = auth.uid());
+
+create policy "lifts_select_by_personal"
+  on public.lifts for select
+  using (
+    exists (
+      select 1 from public.profiles p
+      where p.id = lifts.profile_id and p.linked_personal_id = auth.uid()
+    )
+  );
+
+create policy "lifts_insert_own"
+  on public.lifts for insert
+  with check (profile_id = auth.uid());
+
+create policy "lifts_update_own"
+  on public.lifts for update
+  using (profile_id = auth.uid())
+  with check (profile_id = auth.uid());
+
+create policy "lifts_delete_own"
+  on public.lifts for delete
+  using (profile_id = auth.uid());
+
+-- --- weekly_cardio -----------------------------------------------------------
+create policy "weekly_cardio_select_own"
+  on public.weekly_cardio for select
+  using (profile_id = auth.uid());
+
+create policy "weekly_cardio_select_by_personal"
+  on public.weekly_cardio for select
+  using (
+    exists (
+      select 1 from public.profiles p
+      where p.id = weekly_cardio.profile_id and p.linked_personal_id = auth.uid()
+    )
+  );
+
+create policy "weekly_cardio_insert_own"
+  on public.weekly_cardio for insert
+  with check (profile_id = auth.uid());
+
+create policy "weekly_cardio_update_own"
+  on public.weekly_cardio for update
+  using (profile_id = auth.uid())
+  with check (profile_id = auth.uid());
 
 -- --- personal write access for workout application --------------------------
 -- A personal applying a saved workout template to one of their alunos needs
