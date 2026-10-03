@@ -379,6 +379,58 @@ create index if not exists diary_entries_profile_id_logged_at_idx
 -- supabase/migration_diary.sql run once in the SQL editor (it also adds the
 -- profiles.carb_target/fat_target/timeframe_weeks columns above).
 
+-- -----------------------------------------------------------------------------
+-- user_recipes / meal_prep_plan / shopping_extras
+-- Alimentação / Marmitas (see app/alimentacao/marmitas). `ingredients` is a
+-- jsonb array of {name, qty, unit} — variable-length and never queried
+-- into, so jsonb is appropriate here (unlike diary_entries' flat columns,
+-- which the app does aggregate/filter on). SUGGESTED_RECIPES (meal-prep
+-- ideas), SUPPLEMENTS and SUPPLEMENT_RECIPES are pure reference content
+-- with no per-user state, so they stay static TS data (lib/marmita-
+-- suggestions.ts, lib/supplements.ts, lib/supplement-recipes.ts) and need
+-- no tables.
+-- -----------------------------------------------------------------------------
+create table if not exists public.user_recipes (
+  id uuid primary key default gen_random_uuid(),
+  profile_id uuid not null references public.profiles(id) on delete cascade,
+  name text not null,
+  yield_count integer not null default 1,
+  ingredients jsonb not null default '[]'::jsonb,
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now()
+);
+
+create index if not exists user_recipes_profile_id_idx
+  on public.user_recipes(profile_id);
+
+-- One row per (user, recipe) with a nonzero desired marmita count for the
+-- week; rows are upserted/deleted as counts change rather than keeping
+-- zero-count rows around.
+create table if not exists public.meal_prep_plan (
+  profile_id uuid not null references public.profiles(id) on delete cascade,
+  user_recipe_id uuid not null references public.user_recipes(id) on delete cascade,
+  desired_count integer not null default 0,
+  updated_at timestamptz not null default now(),
+  primary key (profile_id, user_recipe_id)
+);
+
+-- Free-form shopping-list items ("Outros itens"), with a per-item checked
+-- state.
+create table if not exists public.shopping_extras (
+  id uuid primary key default gen_random_uuid(),
+  profile_id uuid not null references public.profiles(id) on delete cascade,
+  name text not null,
+  checked boolean not null default false,
+  created_at timestamptz not null default now()
+);
+
+create index if not exists shopping_extras_profile_id_idx
+  on public.shopping_extras(profile_id);
+
+-- NOTE: `create table if not exists` above won't alter an already-created
+-- table, so an existing deployment also needs the standalone
+-- supabase/migration_alimentacao.sql run once in the SQL editor.
+
 -- =============================================================================
 -- Auto-create a profiles row whenever a new auth.users row appears
 -- (standard Supabase recipe: a trigger function on auth.users insert).
@@ -659,6 +711,9 @@ alter table public.avancado_plans enable row level security;
 alter table public.lifts enable row level security;
 alter table public.weekly_cardio enable row level security;
 alter table public.diary_entries enable row level security;
+alter table public.user_recipes enable row level security;
+alter table public.meal_prep_plan enable row level security;
+alter table public.shopping_extras enable row level security;
 
 -- --- profiles -----------------------------------------------------------
 -- Everyone can read their own profile; a personal can also read the
@@ -998,6 +1053,78 @@ create policy "diary_entries_update_own"
 
 create policy "diary_entries_delete_own"
   on public.diary_entries for delete
+  using (profile_id = auth.uid());
+
+-- --- user_recipes -------------------------------------------------------------
+create policy "user_recipes_select_own"
+  on public.user_recipes for select
+  using (profile_id = auth.uid());
+
+create policy "user_recipes_select_by_personal"
+  on public.user_recipes for select
+  using (
+    exists (
+      select 1 from public.profiles p
+      where p.id = user_recipes.profile_id and p.linked_personal_id = auth.uid()
+    )
+  );
+
+create policy "user_recipes_insert_own"
+  on public.user_recipes for insert
+  with check (profile_id = auth.uid());
+
+create policy "user_recipes_update_own"
+  on public.user_recipes for update
+  using (profile_id = auth.uid())
+  with check (profile_id = auth.uid());
+
+create policy "user_recipes_delete_own"
+  on public.user_recipes for delete
+  using (profile_id = auth.uid());
+
+-- --- meal_prep_plan ------------------------------------------------------------
+create policy "meal_prep_plan_select_own"
+  on public.meal_prep_plan for select
+  using (profile_id = auth.uid());
+
+create policy "meal_prep_plan_select_by_personal"
+  on public.meal_prep_plan for select
+  using (
+    exists (
+      select 1 from public.profiles p
+      where p.id = meal_prep_plan.profile_id and p.linked_personal_id = auth.uid()
+    )
+  );
+
+create policy "meal_prep_plan_insert_own"
+  on public.meal_prep_plan for insert
+  with check (profile_id = auth.uid());
+
+create policy "meal_prep_plan_update_own"
+  on public.meal_prep_plan for update
+  using (profile_id = auth.uid())
+  with check (profile_id = auth.uid());
+
+create policy "meal_prep_plan_delete_own"
+  on public.meal_prep_plan for delete
+  using (profile_id = auth.uid());
+
+-- --- shopping_extras ------------------------------------------------------------
+create policy "shopping_extras_select_own"
+  on public.shopping_extras for select
+  using (profile_id = auth.uid());
+
+create policy "shopping_extras_insert_own"
+  on public.shopping_extras for insert
+  with check (profile_id = auth.uid());
+
+create policy "shopping_extras_update_own"
+  on public.shopping_extras for update
+  using (profile_id = auth.uid())
+  with check (profile_id = auth.uid());
+
+create policy "shopping_extras_delete_own"
+  on public.shopping_extras for delete
   using (profile_id = auth.uid());
 
 -- --- personal write access for workout application --------------------------

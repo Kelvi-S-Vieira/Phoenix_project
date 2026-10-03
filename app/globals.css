@@ -3128,3 +3128,474 @@ h1 {
   border-top: 1px solid var(--border);
   margin: 6px 0;
 }
+
+/* ===== Alimentação: Marmitas / Suplementação / Receitas Fit =====
+   Ported from projeto_fenix_app_final.html's MARMITAS/SUPLEMENTAÇÃO/
+   RECEITAS COM SUPLEMENTOS style blocks (~lines 595-765). Tab classes
+   reuse the existing .fx-tabs/.fx-tab-btn (ported for /fotos) rather than
+   the prototype's .tabs/.tab-btn, which don't exist elsewhere in this app. */
+
+.view { display: none; }
+.view.active { display: block; }
+
+.io-row {
+  display: flex;
+  gap: 10px;
+  margin-top: 12px;
+  justify-content: center;
+}
+
+.empty-note {
+  color: var(--text-muted);
+  font-size: 12px;
+  text-align: center;
+  padding: 20px 0;
+}
+
+/* ---- receitas (CRUD) ---- */
+.recipe-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 14px;
+}
+.recipe-head input[type="text"] {
+  background: transparent;
+  border: none;
+  border-bottom: 1px solid var(--border);
+  font-family: "Oswald", sans-serif;
+  font-size: 18px;
+  color: var(--text);
+  padding: 4px 2px;
+  flex: 1;
+  text-transform: uppercase;
+  letter-spacing: 0.02em;
+}
+.recipe-head input:focus {
+  outline: none;
+  border-bottom-color: var(--ember);
+}
+.rend {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-family: "JetBrains Mono", monospace;
+  font-size: 11px;
+  color: var(--text-muted);
+  white-space: nowrap;
+}
+.rend input {
+  width: 50px;
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  color: var(--gold);
+  font-family: "JetBrains Mono", monospace;
+  font-size: 12px;
+  padding: 5px 6px;
+  text-align: center;
+}
+
+.ing-header {
+  display: grid;
+  grid-template-columns: 1.8fr 0.7fr 0.7fr 24px;
+  gap: 8px;
+  padding: 0 4px;
+  margin-bottom: 4px;
+}
+.ing-header span {
+  font-size: 9px;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  font-family: "JetBrains Mono", monospace;
+}
+.ing-row {
+  display: grid;
+  grid-template-columns: 1.8fr 0.7fr 0.7fr 24px;
+  gap: 8px;
+  align-items: center;
+  margin-bottom: 6px;
+}
+.ing-row input {
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  border-radius: 7px;
+  color: var(--text);
+  font-family: "Inter", sans-serif;
+  font-size: 12px;
+  padding: 7px 9px;
+  width: 100%;
+}
+.ing-row input[data-field="qty"] {
+  font-family: "JetBrains Mono", monospace;
+}
+.ing-row input:focus {
+  outline: none;
+  border-color: var(--ember);
+}
+.ing-list .rm,
+.shop-item .rm {
+  background: none;
+  border: none;
+  color: var(--text-muted);
+  cursor: pointer;
+  font-size: 16px;
+}
+.ing-list .rm:hover,
+.shop-item .rm:hover {
+  color: var(--ember);
+}
+
+.card-foot {
+  display: flex;
+  justify-content: space-between;
+  margin-top: 12px;
+  padding-top: 12px;
+  border-top: 1px solid var(--border);
+}
+
+/* ---- planejador semanal ---- */
+.plan-row {
+  display: grid;
+  grid-template-columns: 1.6fr 0.8fr 0.8fr;
+  gap: 10px;
+  align-items: center;
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 12px 14px;
+  margin-bottom: 8px;
+}
+.plan-row .rname {
+  font-size: 13px;
+  font-weight: 600;
+}
+.plan-row .ryield {
+  font-size: 11px;
+  color: var(--text-muted);
+  font-family: "JetBrains Mono", monospace;
+}
+.plan-row input {
+  width: 70px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  color: var(--gold);
+  font-family: "JetBrains Mono", monospace;
+  font-size: 13px;
+  padding: 6px 8px;
+  text-align: center;
+}
+
+/* ---- lista de compras ---- */
+.shop-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 12px;
+  border-radius: 10px;
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  margin-bottom: 6px;
+  cursor: pointer;
+}
+.shop-item.checked { opacity: 0.4; }
+.shop-item.checked .iname { text-decoration: line-through; }
+.shop-item .check {
+  width: 18px;
+  height: 18px;
+  border-radius: 5px;
+  border: 1px solid var(--border);
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 12px;
+  color: var(--good);
+}
+.shop-item .check.on {
+  background: var(--good);
+  border-color: var(--good);
+  color: var(--bg);
+}
+.shop-item .iname { flex: 1; font-size: 13px; }
+.shop-item .iqty {
+  font-family: "JetBrains Mono", monospace;
+  font-size: 12px;
+  color: var(--gold);
+}
+
+.extra-add {
+  display: flex;
+  gap: 8px;
+  margin-top: 14px;
+}
+.extra-add input {
+  flex: 1;
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  color: var(--text);
+  font-family: "Inter", sans-serif;
+  font-size: 13px;
+  padding: 9px 12px;
+}
+
+/* ---- sugestões / suplementação / receitas fit: shared filter+grid chrome ---- */
+.suggestions-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+  gap: 14px;
+}
+.sugg-filters {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 16px;
+  flex-wrap: wrap;
+}
+.sugg-filter {
+  padding: 7px 14px;
+  border-radius: 20px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  color: var(--text-muted);
+  font-family: "JetBrains Mono", monospace;
+  font-size: 11px;
+  cursor: pointer;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+}
+.sugg-filter.active {
+  background: linear-gradient(90deg, var(--ember-deep), var(--ember));
+  color: #fff;
+  border-color: transparent;
+}
+.sugg-fast-toggle-wrap { margin: -8px 0 16px; }
+.sugg-fast-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 7px 14px;
+  border-radius: 20px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  color: var(--text-muted);
+  font-family: "JetBrains Mono", monospace;
+  font-size: 11px;
+  cursor: pointer;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+}
+.sugg-fast-toggle.active {
+  background: rgba(242, 166, 90, 0.15);
+  color: var(--gold);
+  border-color: var(--gold);
+}
+
+/* ---- Marmitas: card de sugestão ---- */
+.sugg-card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  padding: 18px;
+  display: flex;
+  flex-direction: column;
+}
+.sugg-card h4 {
+  font-family: "Oswald", sans-serif;
+  text-transform: uppercase;
+  font-size: 14px;
+  margin: 0 0 4px;
+  letter-spacing: 0.02em;
+}
+.sugg-card .sugg-yield {
+  font-family: "JetBrains Mono", monospace;
+  font-size: 10px;
+  color: var(--gold);
+  margin-bottom: 10px;
+  text-transform: uppercase;
+}
+.sugg-card ul { list-style: none; margin: 0 0 14px; padding: 0; flex: 1; }
+.sugg-card li {
+  font-size: 12px;
+  color: var(--text-muted);
+  padding: 3px 0;
+  border-bottom: 1px dashed var(--border);
+}
+.sugg-card li:last-child { border-bottom: none; }
+.sugg-card li b { color: var(--text); font-weight: 500; }
+.sugg-card .btn { align-self: flex-start; }
+.sugg-card-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 8px;
+  margin-bottom: 4px;
+}
+.sugg-card-head h4 { margin: 0; }
+.sugg-macro {
+  font-family: "JetBrains Mono", monospace;
+  font-size: 12px;
+  color: var(--gold);
+  margin-bottom: 12px;
+  background: rgba(242, 166, 90, 0.08);
+  border: 1px solid rgba(242, 166, 90, 0.2);
+  border-radius: 8px;
+  padding: 6px 10px;
+  display: inline-block;
+}
+.sugg-macro span { color: var(--text-muted); font-size: 10px; }
+.sugg-prep { margin-bottom: 14px; }
+.prep-label {
+  font-family: "JetBrains Mono", monospace;
+  font-size: 10px;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  display: block;
+  margin-bottom: 6px;
+}
+.sugg-prep ol { margin: 0; padding-left: 18px; }
+.sugg-prep li { font-size: 12px; color: var(--text-muted); padding: 2px 0; line-height: 1.5; }
+.sugg-vegan-badge {
+  font-family: "JetBrains Mono", monospace;
+  font-size: 9px;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--good);
+  background: rgba(127, 184, 138, 0.12);
+  border: 1px solid rgba(127, 184, 138, 0.35);
+  border-radius: 20px;
+  padding: 3px 8px;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+.sugg-fast-badge {
+  font-family: "JetBrains Mono", monospace;
+  font-size: 9px;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--gold);
+  background: rgba(242, 166, 90, 0.12);
+  border: 1px solid rgba(242, 166, 90, 0.35);
+  border-radius: 20px;
+  padding: 3px 8px;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+/* ---- Suplementação ---- */
+.sup-disclaimer {
+  background: rgba(242, 166, 90, 0.08);
+  border: 1px solid rgba(242, 166, 90, 0.25);
+  border-radius: 10px;
+  padding: 10px 14px;
+  font-size: 12px;
+  color: var(--text-muted);
+  margin-bottom: 18px;
+  line-height: 1.5;
+}
+.sup-grid { /* uses .suggestions-grid's grid-template-columns via shared class on the wrapper */ }
+.sup-card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  padding: 18px;
+  display: flex;
+  flex-direction: column;
+}
+.sup-card h4 {
+  font-family: "Oswald", sans-serif;
+  text-transform: uppercase;
+  font-size: 14px;
+  margin: 0 0 6px;
+  letter-spacing: 0.02em;
+}
+.sup-card .sup-tags { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 10px; }
+.sup-card .sup-tag {
+  font-family: "JetBrains Mono", monospace;
+  font-size: 9px;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  color: var(--gold);
+  background: rgba(242, 166, 90, 0.08);
+  border: 1px solid rgba(242, 166, 90, 0.2);
+  border-radius: 20px;
+  padding: 3px 8px;
+}
+.sup-card p.sup-desc {
+  font-size: 12px;
+  color: var(--text-muted);
+  line-height: 1.5;
+  margin: 0 0 12px;
+  flex: 1;
+}
+.sup-card .sup-dose {
+  font-family: "JetBrains Mono", monospace;
+  font-size: 11px;
+  color: var(--gold);
+  background: rgba(242, 166, 90, 0.06);
+  border: 1px solid rgba(242, 166, 90, 0.15);
+  border-radius: 8px;
+  padding: 8px 10px;
+}
+.sup-card .sup-dose b {
+  display: block;
+  font-size: 9px;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  margin-bottom: 3px;
+  color: var(--text-muted);
+}
+
+/* ---- Receitas Fit c/ Suplementos ---- */
+.rs-grid { /* uses .suggestions-grid's grid-template-columns via shared class on the wrapper */ }
+.rs-card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  padding: 18px;
+  display: flex;
+  flex-direction: column;
+}
+.rs-card h4 {
+  font-family: "Oswald", sans-serif;
+  text-transform: uppercase;
+  font-size: 14px;
+  margin: 0 0 4px;
+  letter-spacing: 0.02em;
+}
+.rs-card .rs-yield {
+  font-family: "JetBrains Mono", monospace;
+  font-size: 10px;
+  color: var(--gold);
+  margin-bottom: 10px;
+  text-transform: uppercase;
+}
+.rs-card .rs-macro {
+  font-family: "JetBrains Mono", monospace;
+  font-size: 12px;
+  color: var(--gold);
+  margin-bottom: 10px;
+  background: rgba(242, 166, 90, 0.08);
+  border: 1px solid rgba(242, 166, 90, 0.2);
+  border-radius: 8px;
+  padding: 6px 10px;
+  display: inline-block;
+}
+.rs-card .rs-supps { font-size: 11px; color: var(--text-muted); margin-bottom: 12px; }
+.rs-card .rs-supps b { color: var(--text); font-weight: 500; }
+.rs-card ul { list-style: none; margin: 0 0 14px; padding: 0; flex: 1; }
+.rs-card li {
+  font-size: 12px;
+  color: var(--text-muted);
+  padding: 3px 0;
+  border-bottom: 1px dashed var(--border);
+}
+.rs-card li:last-child { border-bottom: none; }
+.rs-card li b { color: var(--text); font-weight: 500; }
+.rs-card .rs-prep { margin-bottom: 0; }
+.rs-card .rs-prep ol { margin: 0; padding-left: 18px; }
+.rs-card .rs-prep li { border-bottom: none; padding: 2px 0; }

@@ -199,6 +199,45 @@ export type DiaryEntry = {
   updated_at: string;
 };
 
+// Alimentação / Marmitas — a user's own meal-prep recipes. `ingredients` is
+// a jsonb array of {name, qty, unit} (variable-length, never queried into,
+// so jsonb is appropriate here unlike diary_entries' flat columns). See
+// app/alimentacao/marmitas and supabase/migration_alimentacao.sql.
+export type UserRecipeIngredient = {
+  name: string;
+  qty: number;
+  unit: string;
+};
+
+export type UserRecipe = {
+  id: string;
+  profile_id: string;
+  name: string;
+  yield_count: number;
+  ingredients: UserRecipeIngredient[];
+  created_at: string;
+  updated_at: string;
+};
+
+// One row per (user, recipe) the user has planned for the week, with a
+// desired marmita count. Rows are upserted/deleted as counts change (no
+// zero-count rows kept around) — see PlanTab.tsx.
+export type MealPrepPlan = {
+  profile_id: string;
+  user_recipe_id: string;
+  desired_count: number;
+  updated_at: string;
+};
+
+// Free-form shopping-list items (not tied to any recipe/ingredient).
+export type ShoppingExtra = {
+  id: string;
+  profile_id: string;
+  name: string;
+  checked: boolean;
+  created_at: string;
+};
+
 // Column-limited view backing invite-code lookup — see
 // supabase/schema.sql's public.personal_lookup. Never query `profiles`
 // directly by `code` from the client.
@@ -238,6 +277,9 @@ export type Database = {
       lifts: Table<Lift>;
       weekly_cardio: Table<WeeklyCardio>;
       diary_entries: Table<DiaryEntry>;
+      user_recipes: Table<UserRecipe>;
+      meal_prep_plan: Table<MealPrepPlan>;
+      shopping_extras: Table<ShoppingExtra>;
     };
     Views: {
       personal_lookup: {
