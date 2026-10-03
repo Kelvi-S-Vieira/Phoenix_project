@@ -27,24 +27,23 @@ export default function ForgotPasswordPage() {
   }
 
   return (
-    <div className="fx-auth-wrap">
-      <div className="fx-auth-card">
-        <div className="fx-top" style={{ textAlign: "center" }}>
-          <div className="eyebrow">🔥 Projeto Fênix</div>
-          <h1>Esqueci minha senha</h1>
-          <div className="sub">Vamos enviar um link de redefinição pro seu e-mail.</div>
+    <div className="fx-auth-gate">
+      <div className="fx-auth-box">
+        <div className="fx-auth-brand">
+          <div className="brand-eyebrow">Projeto Fênix</div>
+          <div className="brand-title">Esqueci minha senha</div>
         </div>
 
-        <div className="card">
-          {error && <div className="form-error">{error}</div>}
+        <div className="fx-auth-card">
           {sent ? (
-            <div className="form-success">
+            <div className="fx-auth-hint" style={{ textAlign: "center" }}>
               Se esse e-mail existir na nossa base, você vai receber um link
               para redefinir a senha em instantes.
             </div>
           ) : (
             <form onSubmit={handleSubmit}>
-              <div className="field">
+              <div className="fx-auth-hint">Vamos enviar um link de redefinição pro seu e-mail.</div>
+              <div className="fx-auth-field">
                 <label>E-mail</label>
                 <input
                   type="email"
@@ -54,15 +53,18 @@ export default function ForgotPasswordPage() {
                   autoComplete="email"
                 />
               </div>
-              <button className="btn" type="submit" disabled={loading}>
+
+              {error && <div className="fx-auth-error show">{error}</div>}
+
+              <button className="fx-auth-submit" type="submit" disabled={loading}>
                 {loading ? "Enviando..." : "Enviar link de redefinição"}
               </button>
             </form>
           )}
-        </div>
 
-        <div className="fx-auth-links">
-          <Link href="/login">Voltar para o login</Link>
+          <div className="fx-auth-switcher">
+            <Link href="/login">Voltar para o login</Link>
+          </div>
         </div>
       </div>
     </div>

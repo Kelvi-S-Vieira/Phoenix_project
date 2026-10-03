@@ -59,58 +59,56 @@ export default function CompleteProfilePage() {
   }
 
   return (
-    <div className="fx-auth-wrap">
-      <div className="fx-auth-card">
-        <div className="fx-top" style={{ textAlign: "center" }}>
-          <div className="eyebrow">🔥 Projeto Fênix</div>
-          <h1>Só mais um passo</h1>
-          <div className="sub">Conte pra gente quem é você.</div>
+    <div className="fx-auth-gate">
+      <div className="fx-auth-box">
+        <div className="fx-auth-brand">
+          <div className="brand-eyebrow">Projeto Fênix</div>
+          <div className="brand-title">Só mais um passo</div>
         </div>
 
-        <div className="card">
-          {error && <div className="form-error">{error}</div>}
+        <div className="fx-auth-card">
           <form onSubmit={handleSubmit}>
-            <div className="field">
-              <label>Você é...</label>
-              <div className="choice-grid cols2">
-                <div
-                  className={"choice-card" + (role === "aluno" ? " selected" : "")}
-                  onClick={() => setRole("aluno")}
-                >
-                  <div className="cc-title">🏃 Aluno</div>
-                  <div className="cc-desc">Quero acompanhar meu treino e evolução</div>
-                </div>
-                <div
-                  className={"choice-card" + (role === "personal" ? " selected" : "")}
-                  onClick={() => setRole("personal")}
-                >
-                  <div className="cc-title">🧑‍🏫 Personal</div>
-                  <div className="cc-desc">Acompanho e monto treinos pros meus alunos</div>
-                </div>
+            <div className="fx-auth-hint">Conte pra gente quem é você.</div>
+            <div className="fx-role-grid">
+              <div
+                className={"fx-role-card" + (role === "aluno" ? " selected" : "")}
+                onClick={() => setRole("aluno")}
+              >
+                <div className="fx-role-icon">🏃</div>
+                <div className="fx-role-title">Sou aluno</div>
+                <div className="fx-role-desc">Quero acompanhar meu treino e evolução.</div>
+              </div>
+              <div
+                className={"fx-role-card" + (role === "personal" ? " selected" : "")}
+                onClick={() => setRole("personal")}
+              >
+                <div className="fx-role-icon">📋</div>
+                <div className="fx-role-title">Sou personal</div>
+                <div className="fx-role-desc">Acompanho e monto treinos pros meus alunos.</div>
               </div>
             </div>
 
-            <div className="field">
-              <label>Nome</label>
+            <div className="fx-auth-field">
+              <label>Seu nome</label>
               <input
                 type="text"
                 value={name}
                 onChange={(e) => setName(e.target.value)}
-                placeholder="Seu nome"
+                placeholder="Como podemos te chamar?"
               />
             </div>
 
             {role === "aluno" && (
-              <div className="field">
-                {!showInvite ? (
-                  <span
-                    className="fx-collapsible-toggle"
-                    onClick={() => setShowInvite(true)}
-                  >
-                    + Tenho um código de convite do meu personal (opcional)
-                  </span>
-                ) : (
-                  <>
+              <>
+                <div
+                  className="fx-auth-optional-toggle"
+                  onClick={() => setShowInvite(true)}
+                  style={{ display: showInvite ? "none" : "inline-block" }}
+                >
+                  + Tenho um código de convite do meu personal <span>(opcional)</span>
+                </div>
+                {showInvite && (
+                  <div className="fx-auth-field">
                     <label>Código de convite do personal</label>
                     <input
                       type="text"
@@ -119,12 +117,14 @@ export default function CompleteProfilePage() {
                       placeholder="Ex: A3F9K2"
                       maxLength={6}
                     />
-                  </>
+                  </div>
                 )}
-              </div>
+              </>
             )}
 
-            <button className="btn" type="submit" disabled={loading}>
+            {error && <div className="fx-auth-error show">{error}</div>}
+
+            <button className="fx-auth-submit" type="submit" disabled={loading}>
               {loading ? "Salvando..." : "Continuar"}
             </button>
           </form>

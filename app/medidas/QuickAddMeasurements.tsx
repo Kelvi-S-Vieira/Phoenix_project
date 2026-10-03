@@ -85,27 +85,31 @@ export default function QuickAddMeasurements({ profileId }: { profileId: string 
   }
 
   return (
-    <form onSubmit={handleSubmit}>
-      <div className="row2">
-        {MEASUREMENT_FIELDS.map((field) => (
-          <div className="field" key={field.key}>
-            <label>
-              {field.label} ({field.unit})
-            </label>
-            <input
-              type="number"
-              step="0.1"
-              value={values[field.key] ?? ""}
-              onChange={(e) => handleChange(field.key, e.target.value)}
-              placeholder="Ex: 82.5"
-            />
-          </div>
-        ))}
+    <form className="entry-form" onSubmit={handleSubmit}>
+      {MEASUREMENT_FIELDS.map((field) => (
+        <div className="field" key={field.key}>
+          <label>
+            {field.label} ({field.unit})
+          </label>
+          <input
+            type="number"
+            step="0.1"
+            value={values[field.key] ?? ""}
+            onChange={(e) => handleChange(field.key, e.target.value)}
+            placeholder="Ex: 82.5"
+          />
+        </div>
+      ))}
+      {error && (
+        <div className="form-error" style={{ gridColumn: "1 / -1" }}>
+          {error}
+        </div>
+      )}
+      <div className="form-foot">
+        <button className="btn" type="submit" disabled={saving}>
+          {saving ? "Salvando..." : "+ Registrar medidas"}
+        </button>
       </div>
-      {error && <div className="form-error">{error}</div>}
-      <button className="btn" type="submit" disabled={saving}>
-        {saving ? "Salvando..." : "Registrar medidas de hoje"}
-      </button>
     </form>
   );
 }

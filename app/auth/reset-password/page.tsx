@@ -31,19 +31,20 @@ export default function ResetPasswordPage() {
   }
 
   return (
-    <div className="fx-auth-wrap">
-      <div className="fx-auth-card">
-        <div className="fx-top" style={{ textAlign: "center" }}>
-          <div className="eyebrow">🔥 Projeto Fênix</div>
-          <h1>Nova senha</h1>
+    <div className="fx-auth-gate">
+      <div className="fx-auth-box">
+        <div className="fx-auth-brand">
+          <div className="brand-eyebrow">Projeto Fênix</div>
+          <div className="brand-title">Nova senha</div>
         </div>
-        <div className="card">
-          {error && <div className="form-error">{error}</div>}
+        <div className="fx-auth-card">
           {done ? (
-            <div className="form-success">Senha atualizada! Redirecionando...</div>
+            <div className="fx-auth-hint" style={{ textAlign: "center" }}>
+              Senha atualizada! Redirecionando...
+            </div>
           ) : (
             <form onSubmit={handleSubmit}>
-              <div className="field">
+              <div className="fx-auth-field">
                 <label>Nova senha</label>
                 <input
                   type="password"
@@ -54,7 +55,10 @@ export default function ResetPasswordPage() {
                   autoComplete="new-password"
                 />
               </div>
-              <button className="btn" type="submit" disabled={loading}>
+
+              {error && <div className="fx-auth-error show">{error}</div>}
+
+              <button className="fx-auth-submit" type="submit" disabled={loading}>
                 {loading ? "Salvando..." : "Salvar nova senha"}
               </button>
             </form>

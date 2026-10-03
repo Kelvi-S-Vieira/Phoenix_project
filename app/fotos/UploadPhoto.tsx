@@ -82,49 +82,53 @@ export default function UploadPhoto({ profileId }: { profileId: string }) {
   }
 
   return (
-    <form onSubmit={handleSubmit}>
-      <div className="row2">
-        <div className="field">
-          <label>Data</label>
-          <input
-            type="date"
-            value={date}
-            onChange={(e) => setDate(e.target.value)}
-            required
-          />
-        </div>
-        <div className="field">
-          <label>Ângulo</label>
-          <select value={pose} onChange={(e) => setPose(e.target.value as Pose)}>
-            <option value="frente">Frente</option>
-            <option value="lado">Lado</option>
-            <option value="costas">Costas</option>
-          </select>
-        </div>
-        <div className="field">
-          <label>Peso no dia (opcional, kg)</label>
-          <input
-            type="number"
-            step="0.1"
-            value={weight}
-            onChange={(e) => setWeight(e.target.value)}
-            placeholder="Ex: 78.4"
-          />
-        </div>
-        <div className="field">
-          <label>Foto</label>
-          <input
-            type="file"
-            accept="image/*"
-            onChange={(e) => setFile(e.target.files?.[0] ?? null)}
-            required
-          />
-        </div>
+    <form className="upload-form" onSubmit={handleSubmit}>
+      <div className="field">
+        <label>Data</label>
+        <input
+          type="date"
+          value={date}
+          onChange={(e) => setDate(e.target.value)}
+          required
+        />
       </div>
-      {error && <div className="form-error">{error}</div>}
-      <button className="btn" type="submit" disabled={saving}>
-        {saving ? "Enviando..." : "+ Adicionar foto"}
-      </button>
+      <div className="field">
+        <label>Ângulo</label>
+        <select value={pose} onChange={(e) => setPose(e.target.value as Pose)}>
+          <option value="frente">Frente</option>
+          <option value="lado">Lado</option>
+          <option value="costas">Costas</option>
+        </select>
+      </div>
+      <div className="field">
+        <label>Peso no dia (opcional, kg)</label>
+        <input
+          type="number"
+          step="0.1"
+          value={weight}
+          onChange={(e) => setWeight(e.target.value)}
+          placeholder="Ex: 78.4"
+        />
+      </div>
+      <div className="field full">
+        <label>Foto</label>
+        <input
+          type="file"
+          accept="image/*"
+          onChange={(e) => setFile(e.target.files?.[0] ?? null)}
+          required
+        />
+      </div>
+      {error && (
+        <div className="form-error" style={{ gridColumn: "1 / -1" }}>
+          {error}
+        </div>
+      )}
+      <div className="field full">
+        <button className="btn" type="submit" disabled={saving}>
+          {saving ? "Enviando..." : "+ Adicionar foto"}
+        </button>
+      </div>
     </form>
   );
 }

@@ -97,114 +97,112 @@ export default function SignupPage() {
   }
 
   return (
-    <div className="fx-auth-wrap">
-      <div className="fx-auth-card">
-        <div className="fx-top" style={{ textAlign: "center" }}>
-          <div className="eyebrow">🔥 Projeto Fênix</div>
-          <h1>Criar conta</h1>
-          <div className="sub">O plano começa por entender pra onde você quer ir.</div>
+    <div className="fx-auth-gate">
+      <div className="fx-auth-box">
+        <div className="fx-auth-brand">
+          <div className="brand-eyebrow">Projeto Fênix</div>
+          <div className="brand-title">Criar conta</div>
         </div>
 
-        <div className="card">
-          {error && <div className="form-error">{error}</div>}
-          {notice && <div className="form-success">{notice}</div>}
-
-          {!notice && (
-            <form onSubmit={handleSubmit}>
-              <div className="field">
-                <label>Você é...</label>
-                <div className="choice-grid cols2">
-                  <div
-                    className={"choice-card" + (role === "aluno" ? " selected" : "")}
-                    onClick={() => setRole("aluno")}
-                  >
-                    <div className="cc-title">🏃 Aluno</div>
-                    <div className="cc-desc">Quero acompanhar meu treino e evolução</div>
-                  </div>
-                  <div
-                    className={"choice-card" + (role === "personal" ? " selected" : "")}
-                    onClick={() => setRole("personal")}
-                  >
-                    <div className="cc-title">🧑‍🏫 Personal</div>
-                    <div className="cc-desc">Acompanho e monto treinos pros meus alunos</div>
-                  </div>
-                </div>
-              </div>
-
-              <div className="field">
-                <label>Nome</label>
-                <input
-                  type="text"
-                  value={name}
-                  onChange={(e) => setName(e.target.value)}
-                  placeholder="Seu nome"
-                />
-              </div>
-
-              {role === "aluno" && (
-                <div className="field">
-                  {!showInvite ? (
-                    <span
-                      className="fx-collapsible-toggle"
-                      onClick={() => setShowInvite(true)}
-                    >
-                      + Tenho um código de convite do meu personal (opcional)
-                    </span>
-                  ) : (
-                    <>
-                      <label>Código de convite do personal</label>
-                      <input
-                        type="text"
-                        value={inviteCode}
-                        onChange={(e) => setInviteCode(e.target.value.toUpperCase())}
-                        placeholder="Ex: A3F9K2"
-                        maxLength={6}
-                      />
-                    </>
-                  )}
-                </div>
-              )}
-
-              <div className="field">
-                <label>E-mail</label>
-                <input
-                  type="email"
-                  required
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  autoComplete="email"
-                />
-              </div>
-              <div className="field">
-                <label>Senha</label>
-                <input
-                  type="password"
-                  required
-                  minLength={6}
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  autoComplete="new-password"
-                />
-              </div>
-
-              <button className="btn" type="submit" disabled={loading}>
-                {loading ? "Criando conta..." : "Criar conta"}
-              </button>
-            </form>
-          )}
-
-          {!notice && (
+        <div className="fx-auth-card">
+          {notice ? (
+            <div className="fx-auth-hint" style={{ textAlign: "center" }}>{notice}</div>
+          ) : (
             <>
-              <div className="fx-divider">ou</div>
-              <button className="btn google" type="button" onClick={handleGoogle}>
+              <button className="fx-google-btn" type="button" onClick={handleGoogle}>
                 Continuar com Google
               </button>
+
+              <div className="fx-auth-divider"><span>ou</span></div>
+
+              <form onSubmit={handleSubmit}>
+                <div className="fx-role-grid">
+                  <div
+                    className={"fx-role-card" + (role === "aluno" ? " selected" : "")}
+                    onClick={() => setRole("aluno")}
+                  >
+                    <div className="fx-role-icon">🏃</div>
+                    <div className="fx-role-title">Sou aluno</div>
+                    <div className="fx-role-desc">Quero acompanhar meu treino e evolução.</div>
+                  </div>
+                  <div
+                    className={"fx-role-card" + (role === "personal" ? " selected" : "")}
+                    onClick={() => setRole("personal")}
+                  >
+                    <div className="fx-role-icon">📋</div>
+                    <div className="fx-role-title">Sou personal</div>
+                    <div className="fx-role-desc">Acompanho e monto treinos pros meus alunos.</div>
+                  </div>
+                </div>
+
+                <div className="fx-auth-field">
+                  <label>Seu nome</label>
+                  <input
+                    type="text"
+                    value={name}
+                    onChange={(e) => setName(e.target.value)}
+                    placeholder="Como podemos te chamar?"
+                  />
+                </div>
+
+                {role === "aluno" && (
+                  <>
+                    <div
+                      className="fx-auth-optional-toggle"
+                      onClick={() => setShowInvite(true)}
+                      style={{ display: showInvite ? "none" : "inline-block" }}
+                    >
+                      + Tenho um código de convite do meu personal <span>(opcional)</span>
+                    </div>
+                    {showInvite && (
+                      <div className="fx-auth-field">
+                        <label>Código de convite do personal</label>
+                        <input
+                          type="text"
+                          value={inviteCode}
+                          onChange={(e) => setInviteCode(e.target.value.toUpperCase())}
+                          placeholder="Ex: A3F9K2"
+                          maxLength={6}
+                        />
+                      </div>
+                    )}
+                  </>
+                )}
+
+                <div className="fx-auth-field">
+                  <label>E-mail</label>
+                  <input
+                    type="email"
+                    required
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
+                    autoComplete="email"
+                  />
+                </div>
+                <div className="fx-auth-field">
+                  <label>Senha</label>
+                  <input
+                    type="password"
+                    required
+                    minLength={6}
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                    autoComplete="new-password"
+                  />
+                </div>
+
+                {error && <div className="fx-auth-error show">{error}</div>}
+
+                <button className="fx-auth-submit" type="submit" disabled={loading}>
+                  {loading ? "Criando conta..." : "Criar conta e entrar"}
+                </button>
+              </form>
             </>
           )}
-        </div>
 
-        <div className="fx-auth-links">
-          Já tem conta? <Link href="/login">Entrar</Link>
+          <div className="fx-auth-switcher">
+            Já tem conta? <Link href="/login">Entrar</Link>
+          </div>
         </div>
       </div>
     </div>

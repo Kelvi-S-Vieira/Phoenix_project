@@ -76,6 +76,11 @@ export default async function DashboardPage() {
       />
       <main className="main-content">
       <div className="fx-app">
+        <div className="top">
+          <div className="eyebrow">Projeto Fênix</div>
+          <h1>Painel de evolução</h1>
+        </div>
+
         {personal ? (
           <div className="card">
             <h2>💬 Conversa com seu personal{personal.name ? ` (${personal.name})` : ""}</h2>

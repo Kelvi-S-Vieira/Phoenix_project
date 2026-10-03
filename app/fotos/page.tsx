@@ -73,6 +73,12 @@ export default async function FotosPage() {
       />
       <main className="main-content">
       <div className="fx-app">
+        <div className="top">
+          <div className="eyebrow">Projeto Fênix · Volume 6</div>
+          <h1>Fotos de evolução</h1>
+          <div className="sub">O espelho engana no dia a dia — as fotos lado a lado não.</div>
+        </div>
+
         <FotosTabs profileId={user.id} fotos={fotos} />
 
         <div className="footer-note">

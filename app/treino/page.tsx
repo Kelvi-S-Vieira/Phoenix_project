@@ -70,6 +70,14 @@ export default async function TreinoPage() {
       />
       <main className="main-content">
       <div className="fx-app">
+        <div className="top">
+          <div className="eyebrow">Projeto Fênix · Treino</div>
+          <h1>Ficha de treino</h1>
+          <div className="sub">
+            Registro manual de séries, carga e progressão — acompanhe seu nível e sua semana abaixo.
+          </div>
+        </div>
+
         {!profile.current_tier || !tierData ? (
           profile.linked_personal_id ? (
             <div className="card">

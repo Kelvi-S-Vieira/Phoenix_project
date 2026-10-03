@@ -53,19 +53,16 @@ function LoginForm() {
   }
 
   return (
-    <div className="fx-auth-wrap">
-      <div className="fx-auth-card">
-        <div className="fx-top" style={{ textAlign: "center" }}>
-          <div className="eyebrow">🔥 Projeto Fênix</div>
-          <h1>Entrar</h1>
-          <div className="sub">Continue de onde parou.</div>
+    <div className="fx-auth-gate">
+      <div className="fx-auth-box">
+        <div className="fx-auth-brand">
+          <div className="brand-eyebrow">Projeto Fênix</div>
+          <div className="brand-title">Entrar</div>
         </div>
 
-        <div className="card">
-          {error && <div className="form-error">{error}</div>}
-
+        <div className="fx-auth-card">
           <form onSubmit={handleSubmit}>
-            <div className="field">
+            <div className="fx-auth-field">
               <label>E-mail</label>
               <input
                 type="email"
@@ -75,7 +72,7 @@ function LoginForm() {
                 autoComplete="email"
               />
             </div>
-            <div className="field">
+            <div className="fx-auth-field">
               <label>Senha</label>
               <input
                 type="password"
@@ -85,24 +82,27 @@ function LoginForm() {
                 autoComplete="current-password"
               />
             </div>
-            <button className="btn" type="submit" disabled={loading}>
+
+            {error && <div className="fx-auth-error show">{error}</div>}
+
+            <button className="fx-auth-submit" type="submit" disabled={loading}>
               {loading ? "Entrando..." : "Entrar"}
             </button>
           </form>
 
-          <div className="fx-divider">ou</div>
+          <div className="fx-auth-hint" style={{ textAlign: "center", marginTop: 10 }}>
+            <Link href="/forgot-password">Esqueci minha senha</Link>
+          </div>
 
-          <button className="btn google" type="button" onClick={handleGoogle}>
+          <div className="fx-auth-divider"><span>ou</span></div>
+
+          <button className="fx-google-btn" type="button" onClick={handleGoogle}>
             Continuar com Google
           </button>
 
-          <div className="fx-auth-links">
-            <Link href="/forgot-password">Esqueci minha senha</Link>
+          <div className="fx-auth-switcher">
+            Ainda não tem conta? <Link href="/signup">Criar conta</Link>
           </div>
-        </div>
-
-        <div className="fx-auth-links">
-          Ainda não tem conta? <Link href="/signup">Criar conta</Link>
         </div>
       </div>
     </div>

@@ -7,12 +7,6 @@
    design (matches the rest of the codebase).
    ============================================================================= */
 
-@font-face {
-  font-family: "JetBrains Mono";
-  src: local("JetBrains Mono");
-  font-display: swap;
-}
-
 :root {
   --bg: #14110f;
   --surface: #1e1a17;
@@ -32,7 +26,8 @@
 
   --radius: 14px;
   --radius-sm: 9px;
-  --font-sans: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  --font-sans: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  --font-display: "Oswald", sans-serif;
   --font-mono: "JetBrains Mono", ui-monospace, SFMono-Regular, Menlo, monospace;
 }
 
@@ -109,6 +104,14 @@ h2,
 h3,
 p {
   margin: 0;
+}
+
+h1 {
+  font-family: var(--font-display);
+  font-weight: 700;
+  font-size: 30px;
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
 }
 
 ::-webkit-scrollbar {
@@ -325,41 +328,50 @@ p {
 }
 
 .eyebrow {
+  font-family: var(--font-mono);
   color: var(--gold);
   font-size: 12px;
-  font-weight: 700;
   text-transform: uppercase;
-  letter-spacing: 0.08em;
+  letter-spacing: 0.14em;
   margin-bottom: 6px;
+}
+
+/* Page header block (ported from the prototype's repeated ".top" rule:
+   eyebrow + h1 + .sub, at the top of every page's .app wrapper). */
+.top {
+  margin-bottom: 22px;
+}
+.top .sub,
+.sub {
+  color: var(--text-muted);
+  font-size: 13px;
 }
 
 .fx-top {
   margin-bottom: 22px;
 }
-.fx-top h1 {
-  font-size: 26px;
-  font-weight: 800;
-  color: var(--text);
-}
 .fx-top .sub {
   color: var(--text-muted);
-  font-size: 14px;
-  margin-top: 6px;
+  font-size: 13px;
+  margin-top: 0;
 }
 
 .card {
   background: var(--surface);
   border: 1px solid var(--border);
-  border-radius: var(--radius);
+  border-radius: 16px;
   padding: 22px;
   margin-bottom: 18px;
 }
 
 .card h2 {
+  font-family: var(--font-display);
+  text-transform: uppercase;
   font-size: 15px;
   font-weight: 700;
-  margin-bottom: 14px;
-  color: var(--text);
+  letter-spacing: 0.05em;
+  margin: 0 0 16px;
+  color: var(--text-muted);
 }
 
 .footer-note {
@@ -420,43 +432,45 @@ p {
   align-items: center;
   justify-content: center;
   gap: 8px;
-  background: linear-gradient(135deg, var(--ember-deep), var(--ember));
+  background: linear-gradient(90deg, var(--ember-deep), var(--ember));
   color: #fff;
   border: none;
-  border-radius: var(--radius-sm);
-  padding: 12px 20px;
-  font-size: 14.5px;
-  font-weight: 700;
+  border-radius: 8px;
+  padding: 10px 18px;
+  font-size: 13px;
+  font-weight: 600;
   cursor: pointer;
-  transition: transform 0.15s ease, opacity 0.15s ease;
-  width: 100%;
+  transition: filter 0.15s ease;
 }
 .btn:hover {
-  transform: translateY(-1px);
+  filter: brightness(1.1);
 }
 .btn:disabled {
   opacity: 0.55;
   cursor: not-allowed;
-  transform: none;
+  filter: none;
 }
 .btn.ghost {
   background: transparent;
   border: 1px solid var(--border);
-  color: var(--text);
+  color: var(--text-muted);
 }
 .btn.secondary {
   background: var(--surface-2);
   color: var(--text);
 }
 .btn.small {
-  width: auto;
-  padding: 8px 14px;
-  font-size: 13px;
+  padding: 6px 12px;
+  font-size: 11px;
 }
 .btn.google {
   background: #fff;
   color: #1f1f1f;
   border: 1px solid var(--border);
+}
+/* Full-width submit buttons (auth forms etc.) opt in explicitly. */
+.btn.full {
+  width: 100%;
 }
 
 .step-nav {
@@ -503,7 +517,7 @@ p {
 .choice-card {
   background: var(--surface-2);
   border: 1.5px solid var(--border);
-  border-radius: var(--radius-sm);
+  border-radius: 12px;
   padding: 14px 16px;
   cursor: pointer;
   transition: border-color 0.15s ease, background 0.15s ease;
@@ -528,21 +542,23 @@ p {
 
 .progress-steps {
   display: flex;
-  gap: 8px;
-  justify-content: center;
-  margin-bottom: 18px;
+  gap: 6px;
+  margin: 22px 0;
 }
 .step-dot {
-  width: 34px;
-  height: 5px;
-  border-radius: 3px;
-  background: var(--border);
-}
-.step-dot.current {
-  background: var(--ember);
+  flex: 1;
+  height: 4px;
+  border-radius: 4px;
+  background: var(--surface-2);
+  border: 1px solid var(--border);
 }
 .step-dot.done {
+  background: linear-gradient(90deg, var(--ember-deep), var(--ember));
+  border-color: transparent;
+}
+.step-dot.current {
   background: var(--gold);
+  border-color: transparent;
 }
 
 /* --------------------------------------------------------------------------
@@ -550,34 +566,36 @@ p {
    -------------------------------------------------------------------------- */
 .summary-grid {
   display: grid;
-  grid-template-columns: repeat(2, 1fr);
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
   gap: 12px;
   margin-bottom: 18px;
 }
 .sum-card {
   background: var(--surface);
   border: 1px solid var(--border);
-  border-radius: var(--radius);
-  padding: 16px;
+  border-radius: 14px;
+  padding: 16px 18px;
 }
 .sum-card .label,
 .sc-label {
-  font-size: 12px;
+  font-family: var(--font-mono);
+  font-size: 10px;
   color: var(--text-muted);
-  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
 }
 .sum-card .value,
 .sc-value {
-  font-size: 26px;
-  font-weight: 800;
+  font-family: var(--font-display);
+  font-size: 24px;
+  font-weight: 700;
   color: var(--text);
-  font-family: var(--font-mono);
-  margin-top: 4px;
+  margin: 4px 0 2px;
 }
 .sum-card .value .unit {
   font-size: 13px;
   color: var(--text-muted);
-  font-weight: 500;
+  font-weight: 400;
 }
 
 .fx-streak-pill {
@@ -792,45 +810,279 @@ p {
   display: inline-block;
 }
 
-.fx-auth-wrap {
+/* ===================== AUTH GATE (login/cadastro) =====================
+   Ported from the prototype's .fx-auth-* rules (lines ~3170-3267). Next.js
+   uses separate routed pages instead of the prototype's single tabbed
+   gate, but each page reuses these exact classes/values for the card. */
+.fx-auth-gate {
   min-height: 100vh;
   display: flex;
   align-items: center;
   justify-content: center;
   padding: 24px;
+  position: relative;
+  overflow: hidden;
+  background: linear-gradient(180deg, rgba(10, 8, 7, 0.55) 0%, rgba(10, 8, 7, 0.8) 55%, #0a0807 100%),
+    url("https://images.unsplash.com/photo-1545346315-f4c47e3e1b55?fm=jpg&q=70&w=1800&auto=format&fit=crop&ixlib=rb-4.1.0")
+      center 18% / cover no-repeat,
+    #0a0807;
+}
+.fx-auth-box {
+  width: 100%;
+  max-width: 440px;
+  position: relative;
+  z-index: 1;
+}
+.fx-auth-brand {
+  text-align: center;
+  margin-bottom: 22px;
+}
+.fx-auth-brand .brand-eyebrow {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: var(--gold);
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+  margin-bottom: 6px;
+}
+.fx-auth-brand .brand-title {
+  font-family: var(--font-display);
+  font-weight: 700;
+  font-size: 26px;
+  text-transform: uppercase;
+  letter-spacing: 0.02em;
 }
 .fx-auth-card {
-  width: 100%;
-  max-width: 420px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  padding: 26px;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.35);
 }
-.fx-auth-card .card {
-  margin-bottom: 0;
+.fx-role-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+  margin-bottom: 18px;
 }
-.fx-auth-links {
+.fx-role-card {
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 16px 12px;
   text-align: center;
+  cursor: pointer;
+  transition: 0.18s ease;
+}
+.fx-role-card:hover {
+  border-color: var(--ember);
+  transform: translateY(-2px);
+}
+.fx-role-card.selected {
+  border-color: var(--ember);
+  background: color-mix(in srgb, var(--ember) 10%, transparent);
+  transform: translateY(-1px);
+}
+.fx-role-card .fx-role-icon {
+  font-size: 26px;
+  margin-bottom: 6px;
+}
+.fx-role-card .fx-role-title {
+  font-weight: 600;
+  font-size: 14px;
+}
+.fx-role-card .fx-role-desc {
+  font-size: 11px;
+  color: var(--text-muted);
+  margin-top: 3px;
+  line-height: 1.4;
+}
+.fx-auth-field {
+  margin-bottom: 14px;
+}
+.fx-auth-field label {
+  display: block;
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--text-muted);
+  margin-bottom: 6px;
+}
+.fx-auth-field input {
+  width: 100%;
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  color: var(--text);
+  font-family: var(--font-sans);
+  font-size: 14px;
+  padding: 11px 13px;
+  transition: 0.18s ease;
+}
+.fx-auth-field input:focus {
+  outline: none;
+  border-color: var(--ember);
+  box-shadow: 0 0 0 3px rgba(255, 107, 53, 0.15);
+}
+.fx-auth-hint {
+  font-size: 11px;
+  color: var(--text-muted);
+  margin-top: -6px;
+  margin-bottom: 14px;
+  line-height: 1.5;
+}
+.fx-auth-error {
+  color: var(--ember);
+  font-size: 12px;
+  margin-bottom: 12px;
+}
+.fx-auth-submit {
+  width: 100%;
+  background: linear-gradient(90deg, var(--ember-deep), var(--ember));
+  color: #fff;
+  border: none;
+  padding: 13px;
+  border-radius: 10px;
+  font-weight: 600;
+  font-size: 14px;
+  cursor: pointer;
+  transition: 0.18s ease;
+}
+.fx-auth-submit:hover {
+  filter: brightness(1.08);
+  transform: translateY(-1px);
+  box-shadow: 0 8px 20px rgba(255, 107, 53, 0.25);
+}
+.fx-auth-submit:active {
+  transform: translateY(0);
+}
+.fx-auth-submit:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+  transform: none;
+}
+.fx-auth-switcher {
   margin-top: 16px;
-  font-size: 13.5px;
+  text-align: center;
+  font-size: 13px;
   color: var(--text-muted);
 }
-.fx-auth-links a {
+.fx-auth-switcher a {
   color: var(--gold);
   font-weight: 600;
 }
-
-.fx-divider {
+.fx-google-btn {
+  width: 100%;
   display: flex;
   align-items: center;
+  justify-content: center;
   gap: 10px;
-  color: var(--text-muted);
-  font-size: 12px;
-  margin: 16px 0;
+  background: #fff;
+  color: #3c4043;
+  border: 1px solid #dadce0;
+  border-radius: 10px;
+  padding: 11px;
+  font-family: var(--font-sans);
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: 0.15s;
 }
-.fx-divider::before,
-.fx-divider::after {
+.fx-google-btn:hover {
+  box-shadow: 0 1px 6px rgba(0, 0, 0, 0.25);
+}
+.fx-auth-divider {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin: 18px 0;
+  color: var(--text-muted);
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+.fx-auth-divider::before,
+.fx-auth-divider::after {
   content: "";
   flex: 1;
   height: 1px;
   background: var(--border);
+}
+.fx-auth-optional-toggle {
+  font-size: 12px;
+  color: var(--text-muted);
+  cursor: pointer;
+  margin: -8px 0 16px;
+  display: inline-block;
+}
+.fx-auth-optional-toggle:hover {
+  color: var(--ember);
+}
+.fx-auth-optional-toggle span {
+  opacity: 0.75;
+}
+
+/* Fotos — upload form (ported from the prototype's .upload-form, line ~925) */
+.upload-form {
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr;
+  gap: 12px;
+  align-items: end;
+}
+.upload-form .field {
+  margin-bottom: 0;
+}
+.upload-form .field.full {
+  grid-column: 1 / -1;
+}
+@media (max-width: 640px) {
+  .upload-form {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* --------------------------------------------------------------------------
+   Medidas — entry form (ported from the prototype's .entry-form, line ~834)
+   -------------------------------------------------------------------------- */
+.entry-form {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
+  gap: 10px;
+}
+.entry-form .field {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin-bottom: 0;
+}
+.entry-form label {
+  font-size: 10px;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  font-family: var(--font-mono);
+}
+.entry-form input {
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  color: var(--text);
+  font-family: var(--font-mono);
+  font-size: 13px;
+  padding: 9px 10px;
+  width: 100%;
+}
+.entry-form input:focus {
+  outline: none;
+  border-color: var(--ember);
+}
+.entry-form .field.date-field {
+  grid-column: span 2;
+}
+.form-foot {
+  display: flex;
+  justify-content: flex-end;
+  margin-top: 16px;
+  grid-column: 1 / -1;
 }
 
 /* --------------------------------------------------------------------------
@@ -1041,39 +1293,40 @@ p {
    -------------------------------------------------------------------------- */
 .fx-tabs {
   display: flex;
-  gap: 6px;
-  margin-bottom: 18px;
-  border-bottom: 1px solid var(--border);
+  gap: 8px;
+  margin: 20px 0;
 }
 .fx-tab-btn {
-  background: none;
-  border: none;
-  padding: 10px 16px;
-  font-size: 13.5px;
-  font-weight: 700;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 10px 18px;
+  font-family: var(--font-mono);
+  font-size: 12px;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  font-weight: 400;
   color: var(--text-muted);
   cursor: pointer;
-  border-bottom: 2px solid transparent;
-  margin-bottom: -1px;
-  font-family: inherit;
 }
 .fx-tab-btn:hover {
   color: var(--text);
 }
 .fx-tab-btn.active {
-  color: var(--ember);
-  border-bottom-color: var(--ember);
+  background: linear-gradient(90deg, var(--ember-deep), var(--ember));
+  color: #fff;
+  border-color: transparent;
 }
 
 .fx-gallery-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+  grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
   gap: 12px;
 }
 
 .fx-photo-tile {
   position: relative;
-  border-radius: var(--radius-sm);
+  border-radius: 12px;
   overflow: hidden;
   background: var(--surface-2);
   border: 1px solid var(--border);
@@ -1087,13 +1340,16 @@ p {
 }
 .fx-photo-tile .fx-photo-meta {
   padding: 8px 10px;
-  font-size: 11.5px;
-  color: var(--text-muted);
+}
+.fx-photo-tile .fx-photo-meta > div:first-child {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: var(--gold);
 }
 .fx-photo-tile .fx-photo-meta .pose {
-  color: var(--text);
-  font-weight: 600;
-  text-transform: capitalize;
+  font-size: 10px;
+  color: var(--text-muted);
+  text-transform: uppercase;
 }
 .fx-photo-tile .fx-photo-del {
   position: absolute;
@@ -1167,7 +1423,8 @@ p {
 }
 .fx-compare-col .fx-compare-label {
   text-align: center;
-  font-size: 12px;
+  font-family: var(--font-mono);
+  font-size: 11px;
   color: var(--text-muted);
   margin-top: 6px;
 }

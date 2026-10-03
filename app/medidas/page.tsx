@@ -50,6 +50,12 @@ export default async function MedidasPage() {
       />
       <main className="main-content">
       <div className="fx-app">
+        <div className="top">
+          <div className="eyebrow">Projeto Fênix · Volume 4</div>
+          <h1>Medidas corporais</h1>
+          <div className="sub">Fita métrica não mente — acompanhe o que a balança sozinha não mostra.</div>
+        </div>
+
         <div className="card">
           <h2>Registrar medidas de hoje</h2>
           <QuickAddMeasurements profileId={user.id} />
