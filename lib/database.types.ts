@@ -125,6 +125,25 @@ export type WorkoutLogEntry = {
   updated_at: string;
 };
 
+// Plan for the Avançado tier's full custom training builder
+// (app/treino/avancado/AvancadoBuilder.tsx). `week` is the whole
+// AvancadoPlan blob (see lib/treino-avancado-builder.ts) — day->groups/
+// selections/calistenia/warmup/cardio/sports/generic-entries, plus the
+// equipment/level filters and the last-used template key — not just a
+// day->group-keys map, despite the column name (kept short/stable; see the
+// migration's comment for why one jsonb blob is appropriate here).
+export type AvancadoPlanRow = {
+  id: string;
+  profile_id: string;
+  body_weight: number | null;
+  body_age: number | null;
+  body_height: number | null;
+  body_sex: "masculino" | "feminino" | null;
+  week: Record<string, unknown>;
+  created_at: string;
+  updated_at: string;
+};
+
 // Column-limited view backing invite-code lookup — see
 // supabase/schema.sql's public.personal_lookup. Never query `profiles`
 // directly by `code` from the client.
@@ -160,6 +179,7 @@ export type Database = {
       badges_unlocked: Table<BadgeUnlocked>;
       custom_plans: Table<CustomPlan>;
       workout_log_entries: Table<WorkoutLogEntry>;
+      avancado_plans: Table<AvancadoPlanRow>;
     };
     Views: {
       personal_lookup: {

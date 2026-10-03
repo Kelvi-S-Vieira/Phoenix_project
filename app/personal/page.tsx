@@ -1,7 +1,8 @@
 import { redirect } from "next/navigation";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
-import TopBar from "@/components/TopBar";
+import Sidebar from "@/components/Sidebar";
+import { PERSONAL_SIDEBAR_SECTIONS } from "@/lib/sidebar-nav";
 import { TIER_LABELS } from "@/lib/fenix-domain";
 import TemplateLibrary from "./TemplateLibrary";
 
@@ -34,8 +35,13 @@ export default async function PersonalRosterPage() {
     .order("created_at", { ascending: false });
 
   return (
-    <>
-      <TopBar title="Meus alunos" />
+    <div className="app-shell">
+      <Sidebar
+        variant="personal"
+        accountName={`${profile.name ?? "Personal"} · Personal`}
+        sections={PERSONAL_SIDEBAR_SECTIONS}
+      />
+      <main className="main-content">
       <div className="fx-app">
         <div className="fx-top">
           <div className="eyebrow">Projeto Fênix · Personal</div>
@@ -76,6 +82,7 @@ export default async function PersonalRosterPage() {
           <TemplateLibrary personalId={user.id} templates={templates ?? []} />
         </div>
       </div>
-    </>
+      </main>
+    </div>
   );
 }

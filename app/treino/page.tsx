@@ -1,7 +1,8 @@
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { todayBR, weekRangeBR, weekdayIndexBR } from "@/lib/date-br";
-import TopBar from "@/components/TopBar";
+import Sidebar from "@/components/Sidebar";
+import { ALUNO_SIDEBAR_SECTIONS } from "@/lib/sidebar-nav";
 import SplitPicker from "./SplitPicker";
 import TierPicker from "./TierPicker";
 import TreinoBoard from "./TreinoBoard";
@@ -11,6 +12,8 @@ import * as treinoIntermediario from "@/lib/treino-intermediario-data";
 import * as treinoAvancado from "@/lib/treino-avancado-data";
 import type { Tier } from "@/lib/database.types";
 import { TIER_LABELS } from "@/lib/fenix-domain";
+import AvancadoBuilder from "./avancado/AvancadoBuilder";
+import { defaultPlan, normalizePlan, type AvancadoPlan } from "@/lib/treino-avancado-builder";
 
 // Each tier's own data module keeps its own stricter MuscleGroupKey/SplitKey
 // unions; this lookup only needs the generic (string-keyed) shape so the
@@ -57,16 +60,15 @@ export default async function TreinoPage() {
   const tierData = profile.current_tier ? TIER_DATA[profile.current_tier as Tier] : null;
 
   return (
-    <>
-      <TopBar
-        title="Treino"
-        nav={[
-          { href: "/dashboard", label: "Dashboard" },
-          { href: "/medidas", label: "Medidas" },
-          { href: "/treino", label: "Treino" },
-          { href: "/fotos", label: "Fotos" },
-        ]}
+    <div className="app-shell">
+      <Sidebar
+        variant="aluno"
+        accountName={`${profile.name ?? "Aluno"} · Aluno`}
+        currentWeight={profile.current_weight}
+        targetWeight={profile.target_weight}
+        sections={ALUNO_SIDEBAR_SECTIONS}
       />
+      <main className="main-content">
       <div className="fx-app">
         {!profile.current_tier || !tierData ? (
           profile.linked_personal_id ? (
@@ -96,17 +98,13 @@ export default async function TreinoPage() {
           />
         )}
       </div>
-    </>
+      </main>
+    </div>
   );
 }
 
-// Per-tier wording for section 1's heading — the prototype calls it
-// "frequência semanal" in Básico and "divisão" in Intermediário/Avançado.
-// (Avançado's prototype section 1 is actually "Ponto de partida (opcional)"
-// feeding a fully-custom day builder, which is out of scope here — a prior
-// migration pass already simplified Avançado to the same muscle-group-
-// browsing UI as the other two tiers, so it reuses the simpler "divisão"
-// wording rather than the custom-builder copy.)
+// Per-tier wording for section 1's heading (Básico/Intermediário only —
+// Avançado never reaches this: see the early return in TreinoTierPage).
 const SPLIT_SECTION_TITLE: Record<Tier, string> = {
   "treino-basico": "1. Escolha sua frequência semanal",
   "treino-intermediario": "1. Escolha sua divisão",
@@ -126,6 +124,30 @@ async function TreinoTierPage({
 }) {
   const splitKey = profile.current_split;
   const split = splitKey ? tierData.SPLITS[splitKey] : null;
+
+  // Avançado doesn't use the shared split-picker + muscle-group-browsing
+  // flow at all — it has its own full custom day-by-day builder (section 0
+  // body info, section 1 optional templates, section 2 fully-editable week,
+  // section 3 per-day multi-group/multi-modality builder, section 4
+  // summary), self-contained in AvancadoBuilder. See
+  // app/treino/avancado/AvancadoBuilder.tsx and
+  // lib/treino-avancado-builder.ts.
+  if (tier === "treino-avancado") {
+    return (
+      <>
+        <div className="card">
+          <h2>{TIER_LABELS[tier]} — Treino</h2>
+          <details className="fx-change-plan" style={{ marginTop: 4 }}>
+            <summary>⚙️ Trocar nível</summary>
+            <div style={{ marginTop: 16 }}>
+              <TierPicker profileId={profileId} />
+            </div>
+          </details>
+        </div>
+        <AvancadoTreino profileId={profileId} />
+      </>
+    );
+  }
 
   return (
     <>
@@ -317,4 +339,71 @@ async function TreinoContent({
       </div>
     </>
   );
+}
+
+// =============================================================================
+// Avançado's custom builder — loads/creates the profile's `avancado_plans`
+// row (one per profile, holding body info + the whole editable-week plan as
+// jsonb) and this week's `workout_log_entries` rows (the "feito hoje"
+// checkbox state for musculação/calistenia/aquecimento exercises — keyed by
+// the day-INDEPENDENT `exerciseKey()`, unlike Básico/Intermediário's
+// day-prefixed `exerciseId()`, so a plan item's done-history can span
+// weekdays; see lib/treino-shared-types.ts and lib/treino-avancado-builder.ts
+// for why plan vs. log are kept separate here).
+// =============================================================================
+async function AvancadoTreino({ profileId }: { profileId: string }) {
+  const supabase = await createClient();
+
+  const { data: planRow } = await supabase
+    .from("avancado_plans")
+    .select("*")
+    .eq("profile_id", profileId)
+    .maybeSingle();
+
+  let row = planRow;
+  if (!row) {
+    const fresh = defaultPlan();
+    const { data: inserted } = await supabase
+      .from("avancado_plans")
+      .insert({ profile_id: profileId, week: fresh as unknown as Record<string, unknown> })
+      .select("*")
+      .single();
+    row = inserted ?? null;
+  }
+
+  const plan: AvancadoPlan = normalizePlan(row?.week);
+  const body = {
+    weight: row?.body_weight ?? null,
+    age: row?.body_age ?? null,
+    height: row?.body_height ?? null,
+    sex: row?.body_sex ?? null,
+  };
+
+  const { weekStart, weekEnd } = weekRangeBR();
+  const today = todayBR();
+  const { data: entries } = await supabase
+    .from("workout_log_entries")
+    .select("exercise_id, logged_at, checked, sets, reps, load")
+    .eq("profile_id", profileId)
+    .gte("logged_at", weekStart)
+    .lte("logged_at", weekEnd);
+
+  const initialLog: Record<string, { checked: boolean; sets: string; reps: string; load: string }> = {};
+  const byExercise = new Map<string, NonNullable<typeof entries>>();
+  for (const e of entries ?? []) {
+    const arr = byExercise.get(e.exercise_id) ?? [];
+    arr.push(e);
+    byExercise.set(e.exercise_id, arr);
+  }
+  for (const [id, rows] of byExercise) {
+    const todayRow = rows.find((r) => r.logged_at === today);
+    initialLog[id] = {
+      checked: todayRow?.checked ?? false,
+      sets: todayRow?.sets != null ? String(todayRow.sets) : "",
+      reps: todayRow?.reps != null ? String(todayRow.reps) : "",
+      load: todayRow?.load != null ? String(todayRow.load) : "",
+    };
+  }
+
+  return <AvancadoBuilder profileId={profileId} initialPlan={plan} initialBody={body} initialLog={initialLog} />;
 }

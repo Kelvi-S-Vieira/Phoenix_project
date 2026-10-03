@@ -1,6 +1,7 @@
 import { redirect, notFound } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
-import TopBar from "@/components/TopBar";
+import Sidebar from "@/components/Sidebar";
+import { PERSONAL_SIDEBAR_SECTIONS } from "@/lib/sidebar-nav";
 import WeightChart from "@/components/WeightChart";
 import ChatThread from "@/components/ChatThread";
 import { GOAL_LABELS, TIER_LABELS, SPLIT_OPTIONS } from "@/lib/fenix-domain";
@@ -17,6 +18,12 @@ export default async function AlunoDetailPage({
     data: { user },
   } = await supabase.auth.getUser();
   if (!user) redirect("/login");
+
+  const { data: personalProfile } = await supabase
+    .from("profiles")
+    .select("name")
+    .eq("id", user.id)
+    .single();
 
   const { data: aluno } = await supabase
     .from("profiles")
@@ -44,11 +51,13 @@ export default async function AlunoDetailPage({
   const totalChange = first != null && latest != null ? +(latest - first).toFixed(1) : null;
 
   return (
-    <>
-      <TopBar
-        title={aluno.name || "Aluno"}
-        nav={[{ href: "/personal", label: "← Meus alunos" }]}
+    <div className="app-shell">
+      <Sidebar
+        variant="personal"
+        accountName={`${personalProfile?.name ?? "Personal"} · Personal`}
+        sections={PERSONAL_SIDEBAR_SECTIONS}
       />
+      <main className="main-content">
       <div className="fx-app">
         <div className="fx-top">
           <div className="eyebrow">Projeto Fênix · Relatório de evolução</div>
@@ -106,6 +115,7 @@ export default async function AlunoDetailPage({
           <ChatThread alunoId={aluno.id} personalId={user.id} senderRole="personal" />
         </div>
       </div>
-    </>
+      </main>
+    </div>
   );
 }

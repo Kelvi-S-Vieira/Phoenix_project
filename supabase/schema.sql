@@ -272,6 +272,31 @@ create table if not exists public.workout_log_entries (
 create index if not exists workout_log_entries_profile_id_logged_at_idx
   on public.workout_log_entries(profile_id, logged_at);
 
+-- -----------------------------------------------------------------------------
+-- avancado_plans
+-- One row per profile for the "treino-avancado" tier's full custom training
+-- builder (see lib/treino-avancado-builder.ts). `week` is the ENTIRE
+-- editable plan as jsonb (day -> groups/selections/calistenia/warmup/
+-- cardio/sports/generic entries, plus the equipment/level filters and last
+-- template key) — a single flexible document, not normalized relational
+-- data, by design: see supabase/migration_avancado_builder.sql for the full
+-- rationale. The daily "feito hoje" checkbox for musculação/calistenia/
+-- aquecimento exercises reuses workout_log_entries above (keyed by the
+-- day-independent exerciseKey() instead of Básico/Intermediário's
+-- day-prefixed exerciseId()) rather than a new table.
+-- -----------------------------------------------------------------------------
+create table if not exists public.avancado_plans (
+  id uuid primary key default gen_random_uuid(),
+  profile_id uuid not null unique references public.profiles(id) on delete cascade,
+  body_weight numeric(5,1),
+  body_age int,
+  body_height numeric(5,1),
+  body_sex text check (body_sex in ('masculino', 'feminino')),
+  week jsonb not null default '{}'::jsonb,
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now()
+);
+
 -- =============================================================================
 -- Auto-create a profiles row whenever a new auth.users row appears
 -- (standard Supabase recipe: a trigger function on auth.users insert).
@@ -548,6 +573,7 @@ alter table public.activity_days enable row level security;
 alter table public.badges_unlocked enable row level security;
 alter table public.custom_plans enable row level security;
 alter table public.workout_log_entries enable row level security;
+alter table public.avancado_plans enable row level security;
 
 -- --- profiles -----------------------------------------------------------
 -- Everyone can read their own profile; a personal can also read the
@@ -784,6 +810,33 @@ create policy "workout_log_entries_select_by_personal"
 create policy "workout_log_entries_delete_own"
   on public.workout_log_entries for delete
   using (profile_id = auth.uid());
+
+-- --- avancado_plans -----------------------------------------------------------
+create policy "avancado_plans_select_own"
+  on public.avancado_plans for select
+  using (profile_id = auth.uid());
+
+create policy "avancado_plans_insert_own"
+  on public.avancado_plans for insert
+  with check (profile_id = auth.uid());
+
+create policy "avancado_plans_update_own"
+  on public.avancado_plans for update
+  using (profile_id = auth.uid())
+  with check (profile_id = auth.uid());
+
+create policy "avancado_plans_delete_own"
+  on public.avancado_plans for delete
+  using (profile_id = auth.uid());
+
+create policy "avancado_plans_select_by_personal"
+  on public.avancado_plans for select
+  using (
+    exists (
+      select 1 from public.profiles p
+      where p.id = avancado_plans.profile_id and p.linked_personal_id = auth.uid()
+    )
+  );
 
 -- --- personal write access for workout application --------------------------
 -- A personal applying a saved workout template to one of their alunos needs

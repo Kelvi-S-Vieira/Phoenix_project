@@ -4,10 +4,11 @@ import { computeStreak } from "@/lib/streak";
 import { TIER_LABELS, BADGES } from "@/lib/fenix-domain";
 import { checkAndUnlockBadges } from "@/lib/badges";
 import Link from "next/link";
-import TopBar from "@/components/TopBar";
+import Sidebar from "@/components/Sidebar";
 import WeightChart from "@/components/WeightChart";
 import ChatThread from "@/components/ChatThread";
 import QuickAddWeight from "./QuickAddWeight";
+import { ALUNO_SIDEBAR_SECTIONS } from "@/lib/sidebar-nav";
 
 export default async function DashboardPage() {
   const supabase = await createClient();
@@ -65,16 +66,15 @@ export default async function DashboardPage() {
       : null;
 
   return (
-    <>
-      <TopBar
-        title="Painel de evolução"
-        nav={[
-          { href: "/dashboard", label: "Dashboard" },
-          { href: "/medidas", label: "Medidas" },
-          { href: "/treino", label: "Treino" },
-          { href: "/fotos", label: "Fotos" },
-        ]}
+    <div className="app-shell">
+      <Sidebar
+        variant="aluno"
+        accountName={`${profile.name ?? "Aluno"} · Aluno`}
+        currentWeight={currentWeight}
+        targetWeight={targetWeight}
+        sections={ALUNO_SIDEBAR_SECTIONS}
       />
+      <main className="main-content">
       <div className="fx-app">
         {personal ? (
           <div className="card">
@@ -183,6 +183,7 @@ export default async function DashboardPage() {
           PROJETO FÊNIX — cada registro é um dado a mais, não um julgamento.
         </div>
       </div>
-    </>
+      </main>
+    </div>
   );
 }

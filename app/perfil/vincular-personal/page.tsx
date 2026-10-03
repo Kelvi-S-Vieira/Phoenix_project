@@ -1,6 +1,7 @@
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
-import TopBar from "@/components/TopBar";
+import Sidebar from "@/components/Sidebar";
+import { ALUNO_SIDEBAR_SECTIONS } from "@/lib/sidebar-nav";
 import VincularPersonalForm from "./VincularPersonalForm";
 
 export default async function VincularPersonalPage() {
@@ -12,7 +13,7 @@ export default async function VincularPersonalPage() {
 
   const { data: profile } = await supabase
     .from("profiles")
-    .select("role, linked_personal_id")
+    .select("role, linked_personal_id, name, current_weight, target_weight")
     .eq("id", user.id)
     .single();
 
@@ -30,16 +31,15 @@ export default async function VincularPersonalPage() {
   }
 
   return (
-    <>
-      <TopBar
-        title="Vincular ao personal"
-        nav={[
-          { href: "/dashboard", label: "Dashboard" },
-          { href: "/medidas", label: "Medidas" },
-          { href: "/treino", label: "Treino" },
-          { href: "/fotos", label: "Fotos" },
-        ]}
+    <div className="app-shell">
+      <Sidebar
+        variant="aluno"
+        accountName={`${profile.name ?? "Aluno"} · Aluno`}
+        currentWeight={profile.current_weight}
+        targetWeight={profile.target_weight}
+        sections={ALUNO_SIDEBAR_SECTIONS}
       />
+      <main className="main-content">
       <div className="fx-app">
         <div className="card">
           <h2>Código de convite do personal</h2>
@@ -58,6 +58,7 @@ export default async function VincularPersonalPage() {
           <VincularPersonalForm />
         </div>
       </div>
-    </>
+      </main>
+    </div>
   );
 }

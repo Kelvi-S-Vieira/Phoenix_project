@@ -1,7 +1,8 @@
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { MEASUREMENT_FIELDS } from "@/lib/fenix-domain";
-import TopBar from "@/components/TopBar";
+import Sidebar from "@/components/Sidebar";
+import { ALUNO_SIDEBAR_SECTIONS } from "@/lib/sidebar-nav";
 import LineChart from "@/components/LineChart";
 import QuickAddMeasurements from "./QuickAddMeasurements";
 
@@ -39,16 +40,15 @@ export default async function MedidasPage() {
   })).filter((f) => f.points.length > 0);
 
   return (
-    <>
-      <TopBar
-        title="Medidas corporais"
-        nav={[
-          { href: "/dashboard", label: "Dashboard" },
-          { href: "/medidas", label: "Medidas" },
-          { href: "/treino", label: "Treino" },
-          { href: "/fotos", label: "Fotos" },
-        ]}
+    <div className="app-shell">
+      <Sidebar
+        variant="aluno"
+        accountName={`${profile.name ?? "Aluno"} · Aluno`}
+        currentWeight={profile.current_weight}
+        targetWeight={profile.target_weight}
+        sections={ALUNO_SIDEBAR_SECTIONS}
       />
+      <main className="main-content">
       <div className="fx-app">
         <div className="card">
           <h2>Registrar medidas de hoje</h2>
@@ -83,6 +83,7 @@ export default async function MedidasPage() {
           PROJETO FÊNIX — cada registro é um dado a mais, não um julgamento.
         </div>
       </div>
-    </>
+      </main>
+    </div>
   );
 }

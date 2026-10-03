@@ -1,6 +1,7 @@
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
-import TopBar from "@/components/TopBar";
+import Sidebar from "@/components/Sidebar";
+import { ALUNO_SIDEBAR_SECTIONS } from "@/lib/sidebar-nav";
 import FotosTabs from "./FotosTabs";
 import type { Pose } from "@/lib/database.types";
 
@@ -62,16 +63,15 @@ export default async function FotosPage() {
   }
 
   return (
-    <>
-      <TopBar
-        title="Fotos de evolução"
-        nav={[
-          { href: "/dashboard", label: "Dashboard" },
-          { href: "/medidas", label: "Medidas" },
-          { href: "/treino", label: "Treino" },
-          { href: "/fotos", label: "Fotos" },
-        ]}
+    <div className="app-shell">
+      <Sidebar
+        variant="aluno"
+        accountName={`${profile.name ?? "Aluno"} · Aluno`}
+        currentWeight={profile.current_weight}
+        targetWeight={profile.target_weight}
+        sections={ALUNO_SIDEBAR_SECTIONS}
       />
+      <main className="main-content">
       <div className="fx-app">
         <FotosTabs profileId={user.id} fotos={fotos} />
 
@@ -79,6 +79,7 @@ export default async function FotosPage() {
           PROJETO FÊNIX — o espelho engana no dia a dia, as fotos lado a lado não.
         </div>
       </div>
-    </>
+      </main>
+    </div>
   );
 }
