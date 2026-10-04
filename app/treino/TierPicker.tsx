@@ -6,7 +6,12 @@ import { createClient } from "@/lib/supabase/client";
 import { TIER_LABELS } from "@/lib/fenix-domain";
 import type { Tier } from "@/lib/database.types";
 
-const TIER_ORDER: Tier[] = ["treino-basico", "treino-intermediario", "treino-avancado"];
+const TIER_ORDER: Tier[] = [
+  "treino-basico",
+  "treino-intermediario",
+  "treino-avancado",
+  "treino-terceira-idade",
+];
 
 export default function TierPicker({ profileId }: { profileId: string }) {
   const router = useRouter();

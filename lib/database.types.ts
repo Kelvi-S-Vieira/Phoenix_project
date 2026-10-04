@@ -17,7 +17,11 @@ export type ActivityLevel =
   | "intenso"
   | "atleta";
 
-export type Tier = "treino-basico" | "treino-intermediario" | "treino-avancado";
+export type Tier =
+  | "treino-basico"
+  | "treino-intermediario"
+  | "treino-avancado"
+  | "treino-terceira-idade";
 
 export type Profile = {
   id: string;
@@ -40,6 +44,10 @@ export type Profile = {
   timeframe_weeks: number | null;
   current_tier: Tier | null;
   current_split: string | null;
+  // Weekly session-frequency goal for the Terceira Idade tier (2/3/4/5x) —
+  // kept directly on profiles like other per-user prefs, see
+  // supabase/migration_terceira_idade.sql.
+  senior_freq_goal: number;
   // Anchors Calendário's rolling window when there's no active custom_plans
   // row (see supabase/migration_plano.sql).
   calendar_start_date: string | null;
@@ -268,6 +276,36 @@ export type ShoppingExtra = {
   created_at: string;
 };
 
+// Terceira Idade — session types the tier offers (see
+// lib/terceira-idade-data.ts for the exercise content itself).
+export type SeniorSessionType = "mobilidade" | "equilibrio" | "fortalecimento";
+
+// Terceira Idade — checked/unchecked state per (profile, session, exercise)
+// for the CURRENT completion cycle, so progress persists across reloads.
+// Cleared (all rows deleted for that session) once it's logged fully done
+// and the user starts over — see app/treino/terceira-idade/TerceiraIdadeBoard.tsx.
+export type SeniorSessionChecklistRow = {
+  profile_id: string;
+  session_type: SeniorSessionType;
+  exercise_idx: number;
+  checked: boolean;
+  updated_at: string;
+};
+
+// Terceira Idade — one row logged each time a session is fully completed
+// (mirrors the prototype's `weeklyLog` push). What "sessões concluídas esta
+// semana" counts against `profiles.senior_freq_goal`. Deliberately NOT
+// activity_days — this tier keeps its own weekly completion tracking and
+// does not feed the main dashboard streak.
+export type SeniorSessionCompletion = {
+  id: string;
+  profile_id: string;
+  session_type: SeniorSessionType;
+  completed_at: string;
+  feeling: "otima" | "ok" | "dificil" | null;
+  created_at: string;
+};
+
 // Column-limited view backing invite-code lookup — see
 // supabase/schema.sql's public.personal_lookup. Never query `profiles`
 // directly by `code` from the client.
@@ -312,6 +350,8 @@ export type Database = {
       user_recipes: Table<UserRecipe>;
       meal_prep_plan: Table<MealPrepPlan>;
       shopping_extras: Table<ShoppingExtra>;
+      senior_session_checklist: Table<SeniorSessionChecklistRow>;
+      senior_session_completions: Table<SeniorSessionCompletion>;
     };
     Views: {
       personal_lookup: {

@@ -9,6 +9,7 @@ export const TIER_LABELS: Record<Tier, string> = {
   "treino-basico": "🌱 Básico",
   "treino-intermediario": "⚔️ Intermediário",
   "treino-avancado": "🔥 Avançado",
+  "treino-terceira-idade": "🕊️ Terceira Idade",
 };
 
 export interface SplitOption {
@@ -36,6 +37,10 @@ export const SPLIT_OPTIONS: Record<Tier, SplitOption[]> = {
     { key: "abcde", label: "ABCDE (5 dias seguidos)" },
     { key: "ppl", label: "Push / Pull / Legs (6 dias)" },
   ],
+  // Terceira Idade has no splits — it's session-based (mobilidade/
+  // equilíbrio/fortalecimento), not a weekly muscle-group division. See
+  // lib/terceira-idade-data.ts.
+  "treino-terceira-idade": [],
 };
 
 export const GOAL_LABELS: Record<Goal, string> = {

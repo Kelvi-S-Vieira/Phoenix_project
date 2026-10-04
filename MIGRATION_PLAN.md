@@ -36,7 +36,7 @@ shipped (code merged, build/lint clean) — not when it's merely planned.
 - [x] Onboarding: pace-suggestion cards, end-date hint, risk feedback (step 4); protein/kg, pace card, formula breakdown (step 5)
 - [x] Diário (food diary): day nav, 4 macro cards, meal tabs, food search (204 items) + manual entry
 
-## Still open, in build order
+## Build-order items (all shipped)
 
 ### 4. Alimentação — Marmitas, Suplementação, Receitas Fit ✅ done
 - [x] Marmitas: 145 suggested recipes (category + fast/vegan filters)
@@ -68,12 +68,13 @@ shipped (code merged, build/lint clean) — not when it's merely planned.
 - [x] New table: `exercise_set_logs` — `supabase/migration_exercise_set_logs.sql`, folded into `schema.sql`
 - Scope note: Calistenia was left on its existing simple checklist (no training-log UI) — the task allowed this ("optionally calistenia, your call"); only Musculação exercises (which already had a stable per-exercise key wired up) got the full log/1RM/PR/progression/swap treatment. The prototype's advanced-technique picker (dropset/rest-pause/cluster set) was not ported — orthogonal to this batch's scope.
 
-### 7. Terceira Idade, Guia, Backup polish
-- [ ] Terceira Idade: 3 session types (mobilidade/equilíbrio/fortalecimento)
-- [ ] Terceira Idade: own weekly completion tracking (doesn't feed main streak)
-- [ ] New table: `senior_sessions`
-- [ ] Guia: generic reference content (per product decision above)
-- [ ] Backup/PDF: already has a basic version (Dashboard) — revisit only if more is wanted
+### 7. Terceira Idade, Guia, Backup polish ✅ done
+- [x] Terceira Idade: 3 session types (mobilidade/equilíbrio/fortalecimento), new tier `treino-terceira-idade`, own data module `lib/terceira-idade-data.ts`
+- [x] Terceira Idade: weekly frequency goal (2/3/4/5x), per-exercise checklist, weekly summary with 3-tier encouragement message, per-session "feeling" tag (private, non-comparative) — `app/treino/terceira-idade/TerceiraIdadeBoard.tsx`
+- [x] Own weekly completion tracking — does NOT write to `activity_days` (main streak is untouched by this tier)
+- [x] New tables: `senior_session_checklist`, `senior_session_completions`; `profiles.senior_freq_goal` added; `training_tier` enum extended with `treino-terceira-idade` — `supabase/migration_terceira_idade.sql`, folded into `schema.sql`
+- [x] Guia: generic reference content (per product decision above) — `app/guia/page.tsx`, all of the owner's personal clinical data (specific T value/weight/re-test plan) stripped and replaced with genuinely generic educational content, added to the sidebar nav
+- [x] Backup/PDF: reviewed the existing Dashboard export (JSON backup + print summary) — already covers the meaningful tables and renders correctly; nothing broken, left as-is
 
 ---
 

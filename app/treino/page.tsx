@@ -16,6 +16,8 @@ import { TIER_LABELS } from "@/lib/fenix-domain";
 import AvancadoBuilder from "./avancado/AvancadoBuilder";
 import { defaultPlan, normalizePlan, type AvancadoPlan } from "@/lib/treino-avancado-builder";
 import { getServerWeightUnit } from "@/lib/weight-unit-server";
+import TerceiraIdadeBoard from "./terceira-idade/TerceiraIdadeBoard";
+import type { SeniorSessionTypeId } from "@/lib/terceira-idade-data";
 
 // Each tier's own data module keeps its own stricter MuscleGroupKey/SplitKey
 // unions; this lookup only needs the generic (string-keyed) shape so the
@@ -35,6 +37,17 @@ const TIER_DATA: Record<Tier, TierWorkoutData> = {
     MUSCLE_GROUPS: treinoAvancado.MUSCLE_GROUPS,
     WORKOUT_TYPES: treinoAvancado.WORKOUT_TYPES,
     SPLITS: treinoAvancado.SPLITS,
+  },
+  // Unused — Terceira Idade branches away in TreinoTierPage before this is
+  // read (it has no muscle groups/splits at all, see
+  // lib/terceira-idade-data.ts). Present only so the Record stays total.
+  "treino-terceira-idade": {
+    MUSCLE_GROUPS: {},
+    WORKOUT_TYPES: {
+      musculacao: { key: "musculacao", label: "", groups: {} },
+      calistenia: { key: "calistenia", label: "", groups: {} },
+    },
+    SPLITS: {},
   },
 };
 
@@ -245,6 +258,27 @@ const TIER_CONTENT: Record<Tier, TierContent> = {
     weekLead: "",
     summaryNote: "",
   },
+  // Unused — Terceira Idade also branches away in TreinoTierPage before
+  // this is read (see the if (tier === "treino-terceira-idade") block).
+  "treino-terceira-idade": {
+    headerClass: "tb-header",
+    sectionClass: "tb-section",
+    leadClass: "tb-lead",
+    noteClass: "tb-note",
+    introCardClass: "tb-intro-card",
+    headerEmoji: "",
+    title: "",
+    subtitle: "",
+    introEmoji: "",
+    introHeading: "",
+    introTag: "",
+    introParagraphs: [],
+    splitSectionTitle: "1. Escolha sua divisão",
+    splitTag: "",
+    splitLead: "",
+    weekLead: "",
+    summaryNote: "",
+  },
 };
 
 async function TreinoTierPage({
@@ -254,7 +288,7 @@ async function TreinoTierPage({
   tierData,
 }: {
   profileId: string;
-  profile: { current_split: string | null };
+  profile: { current_split: string | null; senior_freq_goal: number };
   tier: Tier;
   tierData: TierWorkoutData;
 }) {
@@ -281,6 +315,32 @@ async function TreinoTierPage({
           </details>
         </div>
         <AvancadoTreino profileId={profileId} />
+      </>
+    );
+  }
+
+  // Terceira Idade is a complete module of its own, structurally nothing
+  // like Básico/Intermediário/Avançado (no muscle groups/sets/reps — gentle
+  // session-based checklists). Same self-contained-tier pattern as Avançado
+  // above: fetch/seed state server-side here, pass as props to the client
+  // board. See lib/terceira-idade-data.ts and
+  // app/treino/terceira-idade/TerceiraIdadeBoard.tsx.
+  if (tier === "treino-terceira-idade") {
+    return (
+      <>
+        <div className="card">
+          <h2>{TIER_LABELS[tier]} — Treino</h2>
+          <p className="sub" style={{ marginTop: 4 }}>
+            Sessões leves e seguras, no seu ritmo — sem recordes, sem comparação.
+          </p>
+          <details className="fx-change-plan" style={{ marginTop: 4 }}>
+            <summary>⚙️ Trocar nível</summary>
+            <div style={{ marginTop: 16 }}>
+              <TierPicker profileId={profileId} />
+            </div>
+          </details>
+        </div>
+        <TerceiraIdadeTreino profileId={profileId} freqGoal={profile.senior_freq_goal} />
       </>
     );
   }
@@ -589,6 +649,52 @@ async function AvancadoTreino({ profileId }: { profileId: string }) {
       initialBody={body}
       initialLog={initialLog}
       initialSetLogs={initialSetLogs}
+    />
+  );
+}
+
+// =============================================================================
+// Terceira Idade — loads the current completion-cycle checklist state (one
+// row per checked exercise) and this week's completion count against the
+// profile's senior_freq_goal. Deliberately NOT reading/writing
+// activity_days — this tier keeps its own weekly completion tracking and
+// doesn't feed the main dashboard streak. See
+// supabase/migration_terceira_idade.sql and
+// app/treino/terceira-idade/TerceiraIdadeBoard.tsx.
+// =============================================================================
+async function TerceiraIdadeTreino({ profileId, freqGoal }: { profileId: string; freqGoal: number }) {
+  const supabase = await createClient();
+
+  const { data: checklistRows } = await supabase
+    .from("senior_session_checklist")
+    .select("session_type, exercise_idx, checked")
+    .eq("profile_id", profileId);
+
+  const initialChecklist: Record<SeniorSessionTypeId, Record<number, boolean>> = {
+    mobilidade: {},
+    equilibrio: {},
+    fortalecimento: {},
+  };
+  for (const row of checklistRows ?? []) {
+    if (row.checked) {
+      initialChecklist[row.session_type as SeniorSessionTypeId][row.exercise_idx] = true;
+    }
+  }
+
+  const { weekStart, weekEnd } = weekRangeBR();
+  const { count: weekCompletedCount } = await supabase
+    .from("senior_session_completions")
+    .select("id", { count: "exact", head: true })
+    .eq("profile_id", profileId)
+    .gte("completed_at", weekStart)
+    .lte("completed_at", weekEnd);
+
+  return (
+    <TerceiraIdadeBoard
+      profileId={profileId}
+      initialFreqGoal={freqGoal}
+      initialChecklist={initialChecklist}
+      initialWeekCompletedCount={weekCompletedCount ?? 0}
     />
   );
 }

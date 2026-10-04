@@ -695,6 +695,7 @@ export default function AvancadoBuilder({
                   onToggleExercise={(name) => toggleCircuitExercise(selectedDay, activeTab as GenericTypeKey, name)}
                   onApplyPreset={(intensity) => applyCircuitPresetToDay(selectedDay, activeTab as GenericTypeKey, intensity)}
                   onApplyTimeBuilder={(minutes) => applyTimeBuilderToDay(selectedDay, activeTab as GenericTypeKey, minutes)}
+                  onClearExercises={() => updateCircuitDay(selectedDay, activeTab as GenericTypeKey, { exercises: [] }, true)}
                   onBlurPersist={() => scheduleSave(true)}
                 />
               )}
@@ -1740,6 +1741,7 @@ function CircuitTab({
   onToggleExercise,
   onApplyPreset,
   onApplyTimeBuilder,
+  onClearExercises,
   onBlurPersist,
 }: {
   type: GenericTypeKey;
@@ -1752,6 +1754,7 @@ function CircuitTab({
   onToggleExercise: (name: string) => void;
   onApplyPreset: (intensity: Intensity) => void;
   onApplyTimeBuilder: (minutes: number) => void;
+  onClearExercises: () => void;
   onBlurPersist: () => void;
 }) {
   const circuitDay = day.generic[type];
@@ -1770,6 +1773,19 @@ function CircuitTab({
         <span className="tv-kcal-tag">
           {circuitDay.exercises.length}/{pool.length} selecionados
         </span>
+        {circuitDay.exercises.length > 0 && (
+          <span
+            className="tv-clear-day"
+            role="button"
+            onClick={() => {
+              if (window.confirm(`Desmarcar todos os ${circuitDay.exercises.length} exercícios selecionados em ${GENERIC_TAB_LABELS[type]}?`)) {
+                onClearExercises();
+              }
+            }}
+          >
+            limpar seleção
+          </span>
+        )}
       </div>
 
       {levelFilter.idoso !== false && (

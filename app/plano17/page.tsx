@@ -80,9 +80,10 @@ export default async function Plano17Page() {
         <div className="fx-app">
           <div className="top">
             <div className="eyebrow">Projeto Fênix · Plano semanal</div>
-            <h1>Plano 17 semanas</h1>
+            <h1>{plan ? `Seu plano · ${plan.weeks} semanas` : "Seu plano semanal"}</h1>
             <div className="sub">
               Duas metas por semana — só gordura vs. cenário real com ganho de massa — e o que você de fato registrou.
+              A duração abaixo é a que você escolheu em Montar Plano, não um número fixo.
             </div>
           </div>
 

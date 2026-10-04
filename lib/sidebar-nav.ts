@@ -6,19 +6,20 @@ import type { SidebarNavSection } from "@/components/Sidebar";
 //   - "Visão Geral": the prototype also has "Meu Perfil" (data-page="perfil")
 //     — now linked here. "Diário" (data-page="diario") is linked under
 //     "Nutrição" below, now that /diario exists in this port.
-//   - "Treino": "🕊️ Terceira Idade" isn't built yet, and "🔥 Jovem" was
-//     dropped from scope entirely (2026-10-01 product decision) — only
-//     "🏋️ Treino" is linked. "Calendário" has no page in this port either.
+//   - "Treino": "🔥 Jovem" was dropped from scope entirely (2026-10-01
+//     product decision, LGPD). Terceira Idade is reached by picking it as a
+//     tier inside "🏋️ Treino" (TierPicker), same as Básico/Intermediário/
+//     Avançado — it does not get its own sidebar item.
 //   - "Nutrição": "🍽️ Alimentação" is now linked, as 3 separate pages
 //     (Marmitas, Suplementação, Receitas Fit) rather than the prototype's
 //     single page with an internal sub-nav.
 //   - "Progresso": the prototype links a single "/progresso" page; this
 //     port instead has separate "/medidas" and "/fotos" pages, so both are
 //     linked under this section.
-//   - "Guia & Planos": "🎯 Montar Plano" and "Plano 17sem" now have pages
-//     (unified engine, see lib/plan-generation.ts and MIGRATION_PLAN.md) and
-//     are linked below. "Guia" still doesn't exist in this port — not
-//     linked yet.
+//   - "Guia & Planos": "🎯 Montar Plano", "Plano 17sem" and "Calendário" now
+//     have pages (unified engine, see lib/plan-generation.ts and
+//     MIGRATION_PLAN.md). "Guia" is now linked too, as a generic reference
+//     page (no owner-specific clinical data — see app/guia/page.tsx).
 export const ALUNO_SIDEBAR_SECTIONS: SidebarNavSection[] = [
   {
     label: "Visão Geral",
@@ -51,8 +52,9 @@ export const ALUNO_SIDEBAR_SECTIONS: SidebarNavSection[] = [
     label: "Guia & Planos",
     items: [
       { href: "/montar-plano", label: "Montar Plano", icon: "🎯" },
-      { href: "/plano17", label: "Plano 17 semanas" },
+      { href: "/plano17", label: "Plano semanal" },
       { href: "/calendario", label: "Calendário" },
+      { href: "/guia", label: "Guia" },
     ],
   },
 ];

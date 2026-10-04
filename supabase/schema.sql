@@ -32,7 +32,7 @@ do $$ begin
 exception when duplicate_object then null; end $$;
 
 do $$ begin
-  create type training_tier as enum ('treino-basico', 'treino-intermediario', 'treino-avancado');
+  create type training_tier as enum ('treino-basico', 'treino-intermediario', 'treino-avancado', 'treino-terceira-idade');
 exception when duplicate_object then null; end $$;
 
 do $$ begin
@@ -82,6 +82,10 @@ create table if not exists public.profiles (
   -- personal.
   current_tier training_tier,
   current_split text,
+  -- Weekly session-frequency goal (2/3/4/5x) for the Terceira Idade tier —
+  -- see senior_session_checklist/senior_session_completions below and
+  -- supabase/migration_terceira_idade.sql.
+  senior_freq_goal integer not null default 3,
 
   -- Anchors Calendário's rolling 84-day/12-week window when the profile has
   -- no active custom_plans row (set once, on first open — see
@@ -483,6 +487,44 @@ create index if not exists shopping_extras_profile_id_idx
 -- table, so an existing deployment also needs the standalone
 -- supabase/migration_alimentacao.sql run once in the SQL editor.
 
+-- -----------------------------------------------------------------------------
+-- senior_session_checklist / senior_session_completions
+-- Terceira Idade tier (see lib/terceira-idade-data.ts,
+-- app/treino/terceira-idade/TerceiraIdadeBoard.tsx). Ported from the
+-- prototype's localStorage `fenix_terceira_idade` state — see
+-- supabase/migration_terceira_idade.sql for the full rationale. The weekly
+-- frequency goal lives directly on profiles (profiles.senior_freq_goal,
+-- above), like current_tier/current_split/calendar_start_date. Deliberately
+-- does NOT feed activity_days (the main dashboard streak) — this tier keeps
+-- its own weekly completion tracking.
+-- -----------------------------------------------------------------------------
+create table if not exists public.senior_session_checklist (
+  profile_id uuid not null references public.profiles(id) on delete cascade,
+  session_type text not null check (session_type in ('mobilidade', 'equilibrio', 'fortalecimento')),
+  exercise_idx integer not null,
+  checked boolean not null default true,
+  updated_at timestamptz not null default now(),
+  primary key (profile_id, session_type, exercise_idx)
+);
+
+create table if not exists public.senior_session_completions (
+  id uuid primary key default gen_random_uuid(),
+  profile_id uuid not null references public.profiles(id) on delete cascade,
+  session_type text not null check (session_type in ('mobilidade', 'equilibrio', 'fortalecimento')),
+  completed_at date not null default current_date,
+  feeling text check (feeling in ('otima', 'ok', 'dificil')),
+  created_at timestamptz not null default now()
+);
+
+create index if not exists senior_session_completions_profile_id_completed_at_idx
+  on public.senior_session_completions(profile_id, completed_at);
+
+-- NOTE: `create table if not exists` above won't alter an already-created
+-- table/enum, so an existing deployment also needs the standalone
+-- supabase/migration_terceira_idade.sql run once in the SQL editor (it also
+-- adds 'treino-terceira-idade' to the training_tier enum and
+-- profiles.senior_freq_goal above).
+
 -- =============================================================================
 -- Auto-create a profiles row whenever a new auth.users row appears
 -- (standard Supabase recipe: a trigger function on auth.users insert).
@@ -768,6 +810,8 @@ alter table public.diary_entries enable row level security;
 alter table public.user_recipes enable row level security;
 alter table public.meal_prep_plan enable row level security;
 alter table public.shopping_extras enable row level security;
+alter table public.senior_session_checklist enable row level security;
+alter table public.senior_session_completions enable row level security;
 
 -- --- profiles -----------------------------------------------------------
 -- Everyone can read their own profile; a personal can also read the
@@ -1233,6 +1277,55 @@ create policy "shopping_extras_update_own"
 
 create policy "shopping_extras_delete_own"
   on public.shopping_extras for delete
+  using (profile_id = auth.uid());
+
+-- --- senior_session_checklist ------------------------------------------------
+create policy "senior_session_checklist_select_own"
+  on public.senior_session_checklist for select
+  using (profile_id = auth.uid());
+
+create policy "senior_session_checklist_select_by_personal"
+  on public.senior_session_checklist for select
+  using (
+    exists (
+      select 1 from public.profiles p
+      where p.id = senior_session_checklist.profile_id and p.linked_personal_id = auth.uid()
+    )
+  );
+
+create policy "senior_session_checklist_insert_own"
+  on public.senior_session_checklist for insert
+  with check (profile_id = auth.uid());
+
+create policy "senior_session_checklist_update_own"
+  on public.senior_session_checklist for update
+  using (profile_id = auth.uid())
+  with check (profile_id = auth.uid());
+
+create policy "senior_session_checklist_delete_own"
+  on public.senior_session_checklist for delete
+  using (profile_id = auth.uid());
+
+-- --- senior_session_completions ------------------------------------------------
+create policy "senior_session_completions_select_own"
+  on public.senior_session_completions for select
+  using (profile_id = auth.uid());
+
+create policy "senior_session_completions_select_by_personal"
+  on public.senior_session_completions for select
+  using (
+    exists (
+      select 1 from public.profiles p
+      where p.id = senior_session_completions.profile_id and p.linked_personal_id = auth.uid()
+    )
+  );
+
+create policy "senior_session_completions_insert_own"
+  on public.senior_session_completions for insert
+  with check (profile_id = auth.uid());
+
+create policy "senior_session_completions_delete_own"
+  on public.senior_session_completions for delete
   using (profile_id = auth.uid());
 
 -- --- personal write access for workout application --------------------------
