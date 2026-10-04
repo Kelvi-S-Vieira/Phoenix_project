@@ -110,7 +110,7 @@ construir (custo de API, abordagem técnica); P3 = expansão de conteúdo
   flutuante na tela (ex. canto inferior) para ficar visível durante o
   treino sem precisar rolar — `app/treino/avancado/AvancadoBuilder.tsx`
 
-### P1 — Lacunas entre níveis de treino
+### P1 — Lacunas entre níveis de treino ✅ done
 - [x] Aba "🏃 Cardio" (corrida/bike/elíptico/natação, com duração e
   intensidade) existe no protótipo para Básico e Intermediário também, mas
   só foi portada para o Avançado — adicionar a mesma aba, no mesmo modelo,
@@ -125,31 +125,48 @@ construir (custo de API, abordagem técnica); P3 = expansão de conteúdo
   usuário, personal vinculado (se tiver), gráfico de evolução de peso,
   resumo do treino da semana — com um botão separado "Editar metas" que aí
   sim abre o assistente. (`app/onboarding/page.tsx` → nova `app/perfil/page.tsx`)
-- [ ] Verificar o fluxo "Continuar com Google" ponta a ponta (login E
-  cadastro) — o código parece completo (`signInWithOAuth` → `/auth/callback`
-  → `/complete-profile` se for conta nova), mas precisa de teste real; se
-  der erro específico, me avisa qual para eu investigar
+- [x] Verificar o fluxo "Continuar com Google" ponta a ponta (login E
+  cadastro) — revisado linha a linha (`login/page.tsx` → `signInWithOAuth`
+  → `/auth/callback` → checa `profile.role` → `/complete-profile` se for
+  conta nova, senão `/`). Fluxo está correto e completo; nenhum bug
+  encontrado na leitura do código. (Teste real em produção ainda recomendado
+  pelo usuário, mas sem decisão de produto pendente.)
 
-### P2 — Features novas (preciso da sua decisão antes de construir)
-- [ ] Diário: reconhecimento de calorias por foto do prato (IA). Precisa de
-  um provedor de visão computacional com custo por uso — posso usar a
-  própria IA deste app (sem custo extra de API externa, mas menos
-  especializada em comida) ou um serviço especializado em alimentos (mais
-  preciso, custo por chamada). Qual prefere?
-- [ ] Diário: "falar a refeição" (voz → texto). Dá pra usar o reconhecimento
-  de voz nativo do navegador (grátis, funciona bem no Chrome, pode não
-  funcionar em todos os navegadores/celulares) ou um serviço de
-  transcrição na nuvem (mais confiável, tem custo). Qual prefere?
-- [ ] Diário: digitar a refeição inteira em texto livre ("arroz, feijão e
-  2 ovos") e a IA estimar os macros automaticamente — mesma decisão de
-  provedor do item de foto acima, dá pra reaproveitar.
-- [ ] Receitas Fit e Suplementação hoje não se conectam ao Montar Plano —
-  a ideia proposta: ao montar o plano (ou quando não há personal), oferecer
-  um "plano inicial recomendado" com sugestões de receitas/suplementos que
-  o usuário pode aceitar, ajustar ou ignorar e montar do zero; quando há
-  personal, é ele quem monta. Isso é uma feature de produto nova, não um
-  conserto — preciso confirmar o formato antes de desenhar (ex.: isso vira
-  uma etapa a mais no assistente de Montar Plano, ou uma aba separada?)
+### P2 — Features novas (decisões do usuário em 2026-10-04) ✅ done
+- [x] Diário: reconhecimento de calorias por foto do prato (IA) — decisão:
+  **IA do próprio app** (`app/api/diario/estimar/route.ts`, Anthropic API
+  server-side, tool-use para saída estruturada; downscale da foto no
+  cliente antes de enviar). Modo "Foto (IA)" em `app/diario/AddFood.tsx`.
+  Precisa de `ANTHROPIC_API_KEY` configurada no Vercel — sem ela, mostra
+  aviso amigável em vez de quebrar.
+- [x] Diário: "falar a refeição" (voz → texto) — decisão: **reconhecimento
+  de voz nativo do navegador** (Web Speech API, `pt-BR`, sem serviço de
+  nuvem). Botão de microfone no modo "Descrever (IA)", só aparece se o
+  navegador suportar.
+- [x] Diário: digitar a refeição inteira em texto livre e a IA estimar os
+  macros — mesma rota de IA do item de foto acima (texto em vez de
+  imagem), com lista de itens revisável/editável antes de salvar.
+- [x] Receitas Fit e Suplementação conectados ao Montar Plano — decisão:
+  **etapa a mais no assistente** (`app/montar-plano/PlanRecommendStep.tsx`,
+  só aparece quando o perfil NÃO tem personal vinculado). Marmitas e
+  Receitas Fit escolhidas entram de fato no plano da semana
+  (`user_recipes`/`meal_prep_plan`, mesmo mecanismo de "adicionar sugestão"
+  já existente em Marmitas); suplementos ficam registrados em
+  `plan_recommendation_picks` e aparecem com um selo "⭐ Recomendado no seu
+  plano" em Suplementação/Receitas Fit.
+- [x] (Ajuste pedido em 2026-10-04, mesma sessão) Botões reais de
+  "+ Adicionar à semana" e "+ Registrar no diário hoje" em cada card de
+  Receitas Fit (`RecipesFitBrowser.tsx`) — escolher uma receita ali agora
+  também entra no cardápio da semana e pode ser lançada direto no Diário
+  de hoje, sem precisar digitar os macros de novo.
+- [x] (Ajuste pedido em 2026-10-04, mesma sessão) Novo card "O que
+  recomendamos ingerir por dia" em Montar Plano (`components/
+  PlanNutritionSummary.tsx`) — mostra kcal/proteína/carbo/gordura (já
+  calculados no onboarding) + uma nova meta de água (`computeWaterTargetMl`,
+  `lib/fenix-domain.ts`, 35ml/kg + ajuste por nível de atividade) + lista de
+  suplementos recomendados para o objetivo, com link para Diário/
+  Suplementação/Receitas Fit — faltava qualquer visualização disso no
+  Montar Plano.
 
 ### P3 — Expansão de conteúdo (trabalho manual incremental)
 - [ ] Ampliar a base de alimentos do Diário (hoje 204 itens)

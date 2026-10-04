@@ -14,8 +14,15 @@ const CATEGORY_LABEL: Record<string, string> = Object.fromEntries(
 // page look "stuck" on one category, so it now always starts on "Todos"
 // regardless of goal — no `goal` prop needed anymore (dropped cleanly rather
 // than kept unused; see the call site in page.tsx).
-export default function SupplementsBrowser() {
+export default function SupplementsBrowser({
+  recommendedNames = [],
+}: {
+  // Names recorded in plan_recommendation_picks (kind="supplement") for the
+  // current user's plan — see app/montar-plano/PlanRecommendStep.tsx.
+  recommendedNames?: string[];
+}) {
   const [activeCategory, setActiveCategory] = useState("all");
+  const recommendedSet = new Set(recommendedNames);
 
   const list = SUPPLEMENTS.filter(
     (s) => activeCategory === "all" || s.tags.includes(activeCategory)
@@ -38,6 +45,9 @@ export default function SupplementsBrowser() {
       <div className="suggestions-grid sup-grid">
         {list.map((s) => (
           <div className="sup-card" key={s.name}>
+            {recommendedSet.has(s.name) && (
+              <span className="fx-rec-badge">⭐ Recomendado no seu plano</span>
+            )}
             <h4>{s.name}</h4>
             <div className="sup-tags">
               {s.tags.map((t) => (

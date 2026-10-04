@@ -246,9 +246,22 @@ export type DiaryEntry = {
   protein: number;
   carb: number;
   fat: number;
-  source: "db" | "manual";
+  source: "db" | "manual" | "ai_photo" | "ai_text";
   created_at: string;
   updated_at: string;
+};
+
+// Montar Plano's "plano inicial recomendado" step (see
+// app/montar-plano/PlanSetupForm.tsx, supabase/migration_plan_recommendations.sql)
+// — which Supplements/Receitas Fit catalog items (by name) the user accepted
+// when creating a plan with no linked personal. Marmita picks go into
+// user_recipes/meal_prep_plan instead (see above).
+export type PlanRecommendationPick = {
+  id: string;
+  profile_id: string;
+  kind: "supplement" | "receita_fit";
+  ref_name: string;
+  created_at: string;
 };
 
 // Alimentação / Marmitas — a user's own meal-prep recipes. `ingredients` is
@@ -362,6 +375,7 @@ export type Database = {
       lifts: Table<Lift>;
       weekly_cardio: Table<WeeklyCardio>;
       diary_entries: Table<DiaryEntry>;
+      plan_recommendation_picks: Table<PlanRecommendationPick>;
       user_recipes: Table<UserRecipe>;
       meal_prep_plan: Table<MealPrepPlan>;
       shopping_extras: Table<ShoppingExtra>;

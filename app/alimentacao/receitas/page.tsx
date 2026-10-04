@@ -29,6 +29,15 @@ export default async function ReceitasFitPage() {
 
   const unit = await getServerWeightUnit();
 
+  // Badge any catalog item the user accepted in Montar Plano's "plano
+  // inicial recomendado" step (see app/montar-plano/PlanRecommendStep.tsx).
+  const { data: picks } = await supabase
+    .from("plan_recommendation_picks")
+    .select("ref_name")
+    .eq("profile_id", user.id)
+    .eq("kind", "receita_fit");
+  const recommendedNames = (picks ?? []).map((p) => p.ref_name);
+
   return (
     <div className="app-shell">
       <Sidebar
@@ -50,7 +59,7 @@ export default async function ReceitasFitPage() {
             </div>
           </div>
 
-          <RecipesFitBrowser />
+          <RecipesFitBrowser profileId={user.id} recommendedNames={recommendedNames} />
 
           <div className="footer-note">
             PROJETO FÊNIX — proteína também pode ser gostosa.

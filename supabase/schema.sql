@@ -444,7 +444,7 @@ create table if not exists public.diary_entries (
   protein numeric not null default 0,
   carb numeric not null default 0,
   fat numeric not null default 0,
-  source text not null check (source in ('db', 'manual')),
+  source text not null check (source in ('db', 'manual', 'ai_photo', 'ai_text')),
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now()
 );
@@ -546,6 +546,25 @@ create index if not exists senior_session_completions_profile_id_completed_at_id
 -- supabase/migration_terceira_idade.sql run once in the SQL editor (it also
 -- adds 'treino-terceira-idade' to the training_tier enum and
 -- profiles.senior_freq_goal above).
+
+-- -----------------------------------------------------------------------------
+-- plan_recommendation_picks
+-- Records which "plano inicial recomendado" suggestions (Montar Plano's
+-- extra step, see supabase/migration_plan_recommendations.sql for the full
+-- rationale) the user accepted, for the Suplementação/Receitas Fit pages
+-- to badge. Marmita picks go straight into user_recipes/meal_prep_plan
+-- above instead.
+-- -----------------------------------------------------------------------------
+create table if not exists public.plan_recommendation_picks (
+  id uuid primary key default gen_random_uuid(),
+  profile_id uuid not null references public.profiles(id) on delete cascade,
+  kind text not null check (kind in ('supplement', 'receita_fit')),
+  ref_name text not null,
+  created_at timestamptz not null default now()
+);
+
+create index if not exists plan_recommendation_picks_profile_id_idx
+  on public.plan_recommendation_picks(profile_id);
 
 -- =============================================================================
 -- Auto-create a profiles row whenever a new auth.users row appears
@@ -835,6 +854,7 @@ alter table public.meal_prep_plan enable row level security;
 alter table public.shopping_extras enable row level security;
 alter table public.senior_session_checklist enable row level security;
 alter table public.senior_session_completions enable row level security;
+alter table public.plan_recommendation_picks enable row level security;
 
 -- --- profiles -----------------------------------------------------------
 -- Everyone can read their own profile; a personal can also read the
@@ -1376,6 +1396,28 @@ create policy "senior_session_completions_insert_own"
 
 create policy "senior_session_completions_delete_own"
   on public.senior_session_completions for delete
+  using (profile_id = auth.uid());
+
+-- --- plan_recommendation_picks ------------------------------------------------
+create policy "plan_recommendation_picks_select_own"
+  on public.plan_recommendation_picks for select
+  using (profile_id = auth.uid());
+
+create policy "plan_recommendation_picks_select_by_personal"
+  on public.plan_recommendation_picks for select
+  using (
+    exists (
+      select 1 from public.profiles p
+      where p.id = plan_recommendation_picks.profile_id and p.linked_personal_id = auth.uid()
+    )
+  );
+
+create policy "plan_recommendation_picks_insert_own"
+  on public.plan_recommendation_picks for insert
+  with check (profile_id = auth.uid());
+
+create policy "plan_recommendation_picks_delete_own"
+  on public.plan_recommendation_picks for delete
   using (profile_id = auth.uid());
 
 -- --- personal write access for workout application --------------------------

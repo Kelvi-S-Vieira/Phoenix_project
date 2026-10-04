@@ -624,6 +624,93 @@ h1 {
   flex: 1;
 }
 
+/* Small badge on a Suplementação/Receitas Fit catalog card whose name
+   matches a plan_recommendation_picks row for the current user — see
+   app/alimentacao/suplementacao/SupplementsBrowser.tsx and
+   app/alimentacao/receitas/RecipesFitBrowser.tsx. */
+.fx-rec-badge {
+  display: inline-block;
+  align-self: flex-start;
+  font-family: "JetBrains Mono", monospace;
+  font-size: 9px;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  color: var(--good);
+  background: rgba(127, 184, 138, 0.1);
+  border: 1px solid rgba(127, 184, 138, 0.3);
+  border-radius: 20px;
+  padding: 3px 8px;
+  margin-bottom: 8px;
+}
+
+/* Montar Plano's "plano inicial recomendado" step — see
+   app/montar-plano/PlanRecommendStep.tsx. Reuses .card/.field/.btn and the
+   checkbox-row look already established by .fx-exercise-main. */
+.fx-planrec-intro {
+  color: var(--text-muted);
+  font-size: 13px;
+  margin-bottom: 18px;
+}
+.fx-planrec-group {
+  margin-bottom: 18px;
+}
+.fx-planrec-group-title {
+  font-size: 12px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.02em;
+  color: var(--text-muted);
+  margin-bottom: 8px;
+}
+.fx-planrec-group-note {
+  font-size: 12px;
+  color: var(--text-muted);
+  margin-bottom: 8px;
+}
+.fx-planrec-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 12px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  background: var(--surface-2);
+  margin-bottom: 8px;
+  cursor: pointer;
+}
+.fx-planrec-row input[type="checkbox"] {
+  width: 18px;
+  height: 18px;
+  accent-color: var(--good);
+  cursor: pointer;
+  flex-shrink: 0;
+}
+.fx-planrec-row-main {
+  flex: 1;
+  font-size: 13.5px;
+  color: var(--text);
+}
+.fx-planrec-row-stat {
+  font-family: "JetBrains Mono", monospace;
+  font-size: 11px;
+  color: var(--text-muted);
+  white-space: nowrap;
+}
+.fx-planrec-actions {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+  margin-top: 20px;
+}
+.fx-planrec-actions .btn {
+  flex: 1;
+}
+@media (max-width: 480px) {
+  .fx-planrec-actions {
+    flex-direction: column;
+  }
+}
+
 .form-error {
   background: rgba(224, 92, 92, 0.12);
   border: 1px solid rgba(224, 92, 92, 0.35);
@@ -947,6 +1034,112 @@ h1 {
   font-family: var(--font-mono);
   font-size: 12px;
   color: var(--gold);
+  margin-bottom: 12px;
+}
+
+/* --------------------------------------------------------------------------
+   Diário "Foto (IA)" / "Descrever (IA)" modes (app/diario/AddFood.tsx,
+   app/diario/AiEstimateReview.tsx) — added 2026-10-04 per MIGRATION_PLAN.md's
+   P2 decisions. New, so prefixed .fx-ai- rather than extending the
+   unprefixed Diário classes above; still reuses .field/.row2/.btn/
+   .computed-preview's surrounding layout where it already fits.
+   -------------------------------------------------------------------------- */
+.fx-ai-photo-btn {
+  display: inline-flex;
+  align-items: center;
+  cursor: pointer;
+  margin-bottom: 12px;
+}
+.fx-ai-photo-btn input[type="file"] {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  opacity: 0;
+  overflow: hidden;
+}
+
+.fx-ai-texto-actions {
+  display: flex;
+  gap: 10px;
+  margin-bottom: 12px;
+  flex-wrap: wrap;
+}
+.fx-ai-recording {
+  border-color: var(--danger) !important;
+  color: var(--danger) !important;
+}
+
+.fx-ai-review {
+  margin-top: 4px;
+}
+.fx-ai-review-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-bottom: 14px;
+}
+.fx-ai-review-row {
+  display: grid;
+  grid-template-columns: auto 2fr 1fr 1fr 1fr 1fr auto;
+  gap: 8px;
+  align-items: center;
+  padding: 8px 10px;
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+}
+.fx-ai-review-row-excluded {
+  opacity: 0.45;
+}
+@media (max-width: 560px) {
+  .fx-ai-review-row {
+    grid-template-columns: auto 1fr auto;
+    grid-template-areas:
+      "check name remove"
+      "k p c f";
+  }
+  .fx-ai-review-row input[type="checkbox"] {
+    grid-area: check;
+  }
+  .fx-ai-review-row .fx-ai-review-name {
+    grid-area: name;
+  }
+  .fx-ai-review-row .fx-ai-review-remove {
+    grid-area: remove;
+  }
+  .fx-ai-review-row .fx-ai-review-num {
+    grid-column: span 1;
+  }
+}
+.fx-ai-review-name,
+.fx-ai-review-num {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 6px 8px;
+  color: var(--text);
+  font-size: 13px;
+  width: 100%;
+  font-family: inherit;
+}
+.fx-ai-review-num {
+  font-family: var(--font-mono);
+  text-align: right;
+}
+.fx-ai-review-remove {
+  background: none;
+  border: none;
+  color: var(--text-muted);
+  cursor: pointer;
+  font-size: 16px;
+  line-height: 1;
+}
+.fx-ai-review-remove:hover {
+  color: var(--danger);
+}
+.fx-ai-review-empty {
+  color: var(--text-muted);
+  font-size: 13px;
   margin-bottom: 12px;
 }
 
@@ -3888,6 +4081,34 @@ h1 {
 .rs-card .rs-prep { margin-bottom: 0; }
 .rs-card .rs-prep ol { margin: 0; padding-left: 18px; }
 .rs-card .rs-prep li { border-bottom: none; padding: 2px 0; }
+
+.fx-rs-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-top: 14px;
+  padding-top: 14px;
+  border-top: 1px solid var(--border);
+}
+.fx-rs-actions .btn {
+  width: 100%;
+}
+.fx-rs-log-row {
+  display: flex;
+  gap: 8px;
+}
+.fx-rs-log-row select {
+  flex: 0 0 auto;
+  max-width: 120px;
+}
+.fx-rs-log-row .btn {
+  flex: 1;
+}
+.fx-rs-status {
+  font-size: 12px;
+  color: var(--good);
+  margin-top: 8px;
+}
 
 /* -----------------------------------------------------------------------
    Montar Plano / Plano 17 semanas / Calendário

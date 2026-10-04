@@ -5,15 +5,35 @@ import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import { DIET_OPTIONS } from "@/lib/plan-generation";
 import { TIER_LABELS, SPLIT_OPTIONS } from "@/lib/fenix-domain";
-import type { Tier } from "@/lib/database.types";
+import type { Goal, Tier } from "@/lib/database.types";
 import { todayBR } from "@/lib/date-br";
+import PlanRecommendStep from "./PlanRecommendStep";
 
 const TIER_ORDER: Tier[] = ["treino-basico", "treino-intermediario", "treino-avancado"];
 
+export type InsertPlanResult = { ok: true } | { ok: false; message: string };
+
 // Ported from the prototype's `createPlan()` (projeto_fenix_app_final.html,
 // ~line 18892): weeks are clamped 1-52, startDate = now.
-export default function PlanSetupForm({ profileId }: { profileId: string }) {
+//
+// Extended (2026-10-04, see MIGRATION_PLAN.md's "P2") into a 2-step wizard:
+// a profile with NO linked personal gets an extra "plano inicial
+// recomendado" step before the plan is actually created (PlanRecommendStep
+// below); a profile WITH a linked personal keeps the original single-step
+// flow untouched ("quando há personal, é ele quem monta" — the user's own
+// words), since createPlanDirect() below calls insertPlan() immediately,
+// exactly like the old createPlan() did.
+export default function PlanSetupForm({
+  profileId,
+  goal,
+  hasPersonal,
+}: {
+  profileId: string;
+  goal: Goal | null;
+  hasPersonal: boolean;
+}) {
   const router = useRouter();
+  const [step, setStep] = useState<"form" | "recommend">("form");
   const [weeks, setWeeks] = useState(12);
   const [diet, setDiet] = useState(DIET_OPTIONS[0].key);
   const [tier, setTier] = useState<Tier>(TIER_ORDER[0]);
@@ -26,9 +46,11 @@ export default function PlanSetupForm({ profileId }: { profileId: string }) {
     setSplit(SPLIT_OPTIONS[nextTier][0]?.key ?? "");
   }
 
-  async function createPlan() {
-    setSaving(true);
-    setError(null);
+  // The actual custom_plans insert — unchanged from the original
+  // createPlan() except that saving/error state is now the caller's
+  // responsibility, since this is called both from the fast path below and
+  // from PlanRecommendStep's "Finalizar"/"Montar do zero" actions.
+  async function insertPlan(): Promise<InsertPlanResult> {
     const clampedWeeks = Math.max(1, Math.min(52, weeks || 12));
     const supabase = createClient();
 
@@ -41,10 +63,8 @@ export default function PlanSetupForm({ profileId }: { profileId: string }) {
       .eq("profile_id", profileId)
       .maybeSingle();
     if (existing) {
-      setSaving(false);
-      setError("Você já tem um plano ativo. Exclua-o antes de criar outro.");
       router.refresh();
-      return;
+      return { ok: false, message: "Você já tem um plano ativo. Exclua-o antes de criar outro." };
     }
 
     const { error: insertError } = await supabase.from("custom_plans").insert({
@@ -55,15 +75,48 @@ export default function PlanSetupForm({ profileId }: { profileId: string }) {
       split,
       start_date: todayBR(),
     });
-    setSaving(false);
     if (insertError) {
-      setError(insertError.message);
+      return { ok: false, message: insertError.message };
+    }
+    return { ok: true };
+  }
+
+  // hasPersonal fast path: identical behavior to the old single-step form —
+  // one click creates the plan, no recommend step ever shown.
+  async function createPlanDirect() {
+    setSaving(true);
+    setError(null);
+    const result = await insertPlan();
+    setSaving(false);
+    if (!result.ok) {
+      setError(result.message);
       return;
     }
     router.refresh();
   }
 
+  function handleSubmit() {
+    if (hasPersonal) {
+      createPlanDirect();
+      return;
+    }
+    setError(null);
+    setStep("recommend");
+  }
+
   const dietDesc = DIET_OPTIONS.find((d) => d.key === diet)?.desc ?? "";
+
+  if (step === "recommend") {
+    return (
+      <PlanRecommendStep
+        profileId={profileId}
+        goal={goal}
+        createPlan={insertPlan}
+        onBack={() => setStep("form")}
+        onDone={() => router.refresh()}
+      />
+    );
+  }
 
   return (
     <div className="card">
@@ -115,8 +168,8 @@ export default function PlanSetupForm({ profileId }: { profileId: string }) {
         </select>
       </div>
 
-      <button className="btn" onClick={createPlan} disabled={saving}>
-        {saving ? "Criando..." : "Criar plano"}
+      <button className="btn" onClick={handleSubmit} disabled={saving}>
+        {saving ? "Criando..." : hasPersonal ? "Criar plano" : "Continuar"}
       </button>
       {error && (
         <div className="form-error" style={{ marginTop: 10 }}>

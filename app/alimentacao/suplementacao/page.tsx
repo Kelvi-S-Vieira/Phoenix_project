@@ -30,6 +30,15 @@ export default async function SuplementacaoPage() {
 
   const unit = await getServerWeightUnit();
 
+  // Badge any catalog item the user accepted in Montar Plano's "plano
+  // inicial recomendado" step (see app/montar-plano/PlanRecommendStep.tsx).
+  const { data: picks } = await supabase
+    .from("plan_recommendation_picks")
+    .select("ref_name")
+    .eq("profile_id", user.id)
+    .eq("kind", "supplement");
+  const recommendedNames = (picks ?? []).map((p) => p.ref_name);
+
   return (
     <div className="app-shell">
       <Sidebar
@@ -56,7 +65,7 @@ export default async function SuplementacaoPage() {
             suplemento, converse com um nutricionista ou médico.
           </div>
 
-          <SupplementsBrowser />
+          <SupplementsBrowser recommendedNames={recommendedNames} />
 
           <div className="footer-note">
             PROJETO FÊNIX — suplemento ajuda quem já treina e come direito.

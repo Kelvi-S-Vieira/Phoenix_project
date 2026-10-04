@@ -242,6 +242,22 @@ export function computeMaintenanceCalories(input: {
   return Math.round(tdee);
 }
 
+/**
+ * Daily water-intake target in ml — 35ml per kg of body weight (a common,
+ * conservative hydration guideline), rounded to the nearest 50ml, plus a
+ * flat +500ml for `intenso`/`atleta` activity levels (sweat losses from
+ * frequent/hard training). Used by the "Resumo nutricional do plano" card
+ * (app/montar-plano/page.tsx) alongside the existing calorie/macro targets
+ * — those already exist on `profiles` from onboarding (computeTargets()
+ * above); this is the one target that didn't have a formula anywhere yet
+ * (added per user feedback 2026-10-04: no water guidance was shown at all).
+ */
+export function computeWaterTargetMl(weightKg: number, activity?: ActivityLevel | null): number {
+  const base = weightKg * 35;
+  const extra = activity === "intenso" || activity === "atleta" ? 500 : 0;
+  return Math.round((base + extra) / 50) * 50;
+}
+
 /** Display label for an activity level key (prototype's `activityLabel`), falling back to "—" when not found. */
 export function activityLabel(key: ActivityLevel | "" | null | undefined): string {
   const a = ACTIVITY_LEVELS.find((x) => x.key === key);

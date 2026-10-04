@@ -6,12 +6,13 @@ import { ALUNO_SIDEBAR_SECTIONS } from "@/lib/sidebar-nav";
 import { getServerWeightUnit } from "@/lib/weight-unit-server";
 import { dietLabel, buildWeeklyPlan, computePlanProgress } from "@/lib/plan-generation";
 import { TIER_LABELS, SPLIT_OPTIONS } from "@/lib/fenix-domain";
-import type { ActivityLevel, Tier } from "@/lib/database.types";
+import type { ActivityLevel, Goal, Tier } from "@/lib/database.types";
 import PlanSetupForm from "./PlanSetupForm";
 import PlanActions from "./PlanActions";
 import PlanChart from "@/components/PlanChart";
 import PlanWeekTable from "@/components/PlanWeekTable";
 import PlanCompleteCard from "@/components/PlanCompleteCard";
+import PlanNutritionSummary from "@/components/PlanNutritionSummary";
 
 export default async function MontarPlanoPage() {
   const supabase = await createClient();
@@ -59,7 +60,11 @@ export default async function MontarPlanoPage() {
           </div>
 
           {!plan ? (
-            <PlanSetupForm profileId={user.id} />
+            <PlanSetupForm
+              profileId={user.id}
+              goal={profile.goal}
+              hasPersonal={profile.linked_personal_id != null}
+            />
           ) : (
             <PlanProgressView
               plan={plan}
@@ -69,6 +74,11 @@ export default async function MontarPlanoPage() {
               age={profile.age}
               sex={profile.sex}
               activityLevel={profile.activity_level}
+              goal={profile.goal}
+              calorieTarget={profile.calorie_target}
+              proteinTarget={profile.protein_target}
+              carbTarget={profile.carb_target}
+              fatTarget={profile.fat_target}
               unit={unit}
               profileId={user.id}
             />
@@ -87,6 +97,11 @@ async function PlanProgressView({
   age,
   sex,
   activityLevel,
+  goal,
+  calorieTarget,
+  proteinTarget,
+  carbTarget,
+  fatTarget,
   unit,
   profileId,
 }: {
@@ -97,6 +112,11 @@ async function PlanProgressView({
   age: number | null;
   sex: "M" | "F" | null;
   activityLevel: ActivityLevel | null;
+  goal: Goal | null;
+  calorieTarget: number | null;
+  proteinTarget: number | null;
+  carbTarget: number | null;
+  fatTarget: number | null;
   unit: "kg" | "lb";
   profileId: string;
 }) {
@@ -144,6 +164,16 @@ async function PlanProgressView({
           activity={activityLevel!}
         />
       )}
+
+      <PlanNutritionSummary
+        weight={currentWeight}
+        goal={goal}
+        activity={activityLevel}
+        calorieTarget={calorieTarget}
+        proteinTarget={proteinTarget}
+        carbTarget={carbTarget}
+        fatTarget={fatTarget}
+      />
 
       <div className="card">
         <h2 style={{ marginTop: 0 }}>Plano ativo</h2>
