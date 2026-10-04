@@ -174,6 +174,90 @@ construir (custo de API, abordagem técnica); P3 = expansão de conteúdo
 
 ---
 
+## Fase 4 — Uso real pós-P2 (feedback do usuário em 2026-10-04, manhã)
+
+Auditoria feita ANTES de qualquer correção, a pedido do usuário. Marmitas e
+Suplementação já foram corrigidas (ver checkmarks abaixo). O item do Treino
+Avançado está em construção — decisões já tomadas pelo usuário:
+sub-navegação dentro da própria página `/treino` (não itens no menu lateral
+principal); cronômetro de descanso sugerido = tempo total da sessão dividido
+pelo número de pausas (não regra fixa por tipo de exercício).
+
+### Treino Avançado — separar "montar treino" de "acompanhar treino" ✅ done
+Hoje `app/treino/avancado/AvancadoBuilder.tsx` é um componente único (2086
+linhas) onde a escolha de grupo muscular, a escolha de exercícios, os
+filtros de equipamento/nível E o registro de carga/repetição aparecem todos
+juntos, sempre visíveis, na mesma tela/aba (`MusculacaoTab` e irmãs) — é
+isso que a screenshot mostra. Não existe hoje uma tela "só acompanhamento"
+separada da tela "só configuração", nem um item de dia no menu lateral
+(tipo "Segunda · Treino Peito").
+- [x] Separar em duas fases: uma etapa de configuração ("Montar treino" ou
+  "Gerar treino" — template + grupos/exercícios por dia, como já existe)
+  que roda uma vez (ou quando o usuário pedir pra editar), e uma tela de
+  acompanhamento diário nova, focada só em: exercícios já selecionados do
+  dia, número de séries, gif de execução, e campos pra registrar
+  repetições/carga feitas. A lógica de seleção/toggle já existe quase
+  toda — é principalmente separar a UI em duas telas, não reescrever o
+  motor. (`AvancadoBuilder.tsx`: toggle `"⚙️ Montar treino" / "📋 Treino do
+  dia"` no topo da página, estado `mode`.)
+- [x] Menu lateral (ou sub-nav dentro de Treino) ganha a visão por dia —
+  ex. "Segunda · Treino Peito" — pra abrir direto o dia, sem passar pela
+  configuração de novo. Decisão travada: isso vive como modo/aba DENTRO da
+  página `/treino` existente, não como novos itens no menu lateral — modo
+  "📋 Treino do dia" com um seletor de dia compacto (`.tv-compact-day-strip`)
+  próprio, sem precisar passar pelas seções 0/1/2 de configuração.
+- [x] Filtro de equipamento: virar um checkbox discreto, fechado por
+  padrão, só pra quem quiser restringir a lista de exercícios por
+  equipamento disponível — não abrir sempre visível como hoje.
+  (`EquipmentFilterBox`, disclosure fechada por padrão, modo "montar"
+  apenas.)
+- [x] Filtro de nível (iniciante/intermediário/avançado/idoso — distinto do
+  tier da conta): decidido uma vez no cadastro/onboarding em vez de ficar
+  como filtro manual na tela de treino. (`profiles.avancado_level`,
+  `supabase/migration_avancado_level.sql`; escolhido em `TierPicker.tsx` ao
+  marcar "Treino Avançado"; `LevelFilterBox` removido do render ao vivo,
+  substituído por `LevelMiniPicker` — linha somente leitura + "mudar".)
+- [x] Cronômetro de descanso: hoje sempre começa em 60s e o usuário escolhe
+  o preset manualmente a cada série. Sugerir automaticamente uma duração
+  de descanso (e re-sugerir ao longo da sessão) com base na quantidade de
+  exercícios/séries do dia e no tempo de treino disponível, pra sessão
+  inteira caber no tempo — hoje não existe nenhum cálculo disso, é sempre
+  fixo. (`computeSuggestedRestSeconds`: tempo planejado da sessão ÷ número
+  de séries de trabalho planejadas, limitado a 20-240s; botão "✨ usar
+  sugestão" ao lado dos presets 30/60/90/120s em `RestTimer`, só exibido no
+  modo "Treino do dia".)
+
+### Marmitas ✅ done
+- [x] A receita padrão "Frango grelhado, arroz e legumes"
+  (`DEFAULT_RECIPES` em `app/alimentacao/marmitas/page.tsx`) era semeada
+  TODA VEZ que a lista de receitas do usuário ficava vazia (não era um
+  seed único) — era por isso que "sempre inicia com uma". Removido o
+  auto-seed; lista começa vazia, com um aviso apontando pra aba Sugestões.
+
+### Suplementação — recomendações pouco diversas ✅ done
+- [x] `pickRecommendedSupplements()` (novo, `lib/supplements.ts`) escolhe 1
+  item por papel/função (fonte de proteína, creatina, cafeína/pré-treino,
+  recuperação/saúde geral), variando a proteína e o item de recuperação
+  pelo objetivo. Usado em `PlanNutritionSummary.tsx` e
+  `PlanRecommendStep.tsx` — os dois lugares mostram a mesma lista agora.
+
+### Recomendações adicionais (sugestões minhas, fora do que você pediu)
+- [ ] Persistir o filtro de equipamento como preferência do perfil (define
+  uma vez, aplica em todos os dias/treinos) em vez de reiniciar a cada
+  sessão.
+- [ ] Resumo semanal no topo da nova tela de acompanhamento diário (ex.
+  "3/5 treinos feitos essa semana") — Básico/Intermediário e Terceira
+  Idade já têm algo parecido, Avançado hoje não tem nenhum resumo rápido.
+- [ ] Cronômetro de descanso iniciar automaticamente ao marcar uma série
+  como concluída, em vez de precisar apertar "iniciar" toda vez.
+- [ ] Diversificação de suplementos: se o perfil tiver alguma preferência
+  alimentar registrada (ex. vegano/vegetariano), priorizar proteína
+  vegetal no lugar de whey na recomendação — hoje não há esse campo no
+  perfil, então isso depende de adicionar a pergunta no onboarding
+  primeiro (pode ficar pra depois).
+
+---
+
 ## Original Sprint 3–5 plan (superseded, kept for history)
 
 This sprint (Phase 2) proved the architecture end-to-end with a deliberately

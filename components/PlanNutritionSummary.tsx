@@ -1,11 +1,7 @@
 import Link from "next/link";
 import { computeWaterTargetMl } from "@/lib/fenix-domain";
-import { SUPPLEMENTS, GOAL_TO_SUPPLEMENT_CATEGORY, SUPPLEMENT_CATEGORIES } from "@/lib/supplements";
+import { pickRecommendedSupplements } from "@/lib/supplements";
 import type { ActivityLevel, Goal } from "@/lib/database.types";
-
-const CATEGORY_LABEL: Record<string, string> = Object.fromEntries(
-  SUPPLEMENT_CATEGORIES.filter((c) => c.key !== "all").map((c) => [c.key, c.label])
-);
 
 // "Resumo nutricional do plano" — added per user feedback (2026-10-04):
 // Montar Plano had no clear, at-a-glance visualization of what's actually
@@ -36,8 +32,7 @@ export default function PlanNutritionSummary({
   fatTarget: number | null;
 }) {
   const waterMl = weight != null ? computeWaterTargetMl(weight, activity) : null;
-  const supplementCategory = GOAL_TO_SUPPLEMENT_CATEGORY[goal ?? "manter"] ?? "recuperacao";
-  const recommendedSupplements = SUPPLEMENTS.filter((s) => s.tags.includes(supplementCategory)).slice(0, 4);
+  const recommendedSupplements = pickRecommendedSupplements(goal);
 
   const hasFoodTargets = calorieTarget != null;
 
@@ -95,7 +90,7 @@ export default function PlanNutritionSummary({
       {recommendedSupplements.length > 0 && (
         <>
           <div className="fx-plan-desc" style={{ marginTop: 16, marginBottom: 6 }}>
-            Suplementos recomendados para o seu objetivo ({CATEGORY_LABEL[supplementCategory] ?? supplementCategory}):
+            Suplementos recomendados para o seu objetivo:
           </div>
           <ul style={{ margin: 0, paddingLeft: 20 }}>
             {recommendedSupplements.map((s) => (

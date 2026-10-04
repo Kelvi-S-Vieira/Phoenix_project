@@ -48,6 +48,10 @@ export type Profile = {
   // kept directly on profiles like other per-user prefs, see
   // supabase/migration_terceira_idade.sql.
   senior_freq_goal: number;
+  // Avançado tier's training-level filter ("iniciante"/"intermediario"/
+  // "avancado"/"idoso"), decided once at cadastro instead of a live filter
+  // box (see supabase/migration_avancado_level.sql).
+  avancado_level: string | null;
   // Anchors Calendário's rolling window when there's no active custom_plans
   // row (see supabase/migration_plano.sql).
   calendar_start_date: string | null;

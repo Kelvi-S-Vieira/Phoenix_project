@@ -87,6 +87,13 @@ create table if not exists public.profiles (
   -- supabase/migration_terceira_idade.sql.
   senior_freq_goal integer not null default 3,
 
+  -- Avançado tier's training-level filter ("iniciante"/"intermediario"/
+  -- "avancado"/"idoso", see TRAINING_LEVELS in lib/treino-avancado-
+  -- builder.ts), decided once at cadastro (TierPicker.tsx) instead of a
+  -- live filter box inside AvancadoBuilder — see
+  -- supabase/migration_avancado_level.sql.
+  avancado_level text,
+
   -- Anchors Calendário's rolling 84-day/12-week window when the profile has
   -- no active custom_plans row (set once, on first open — see
   -- app/calendario/page.tsx). Ignored once a Montar Plano exists; that

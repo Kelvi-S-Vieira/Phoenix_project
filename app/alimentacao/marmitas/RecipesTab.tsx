@@ -50,7 +50,10 @@ export default function RecipesTab({
   return (
     <div>
       {recipes.length === 0 && (
-        <div className="empty-note">Nenhuma receita ainda. Adicione a primeira.</div>
+        <div className="empty-note">
+          Nenhuma receita ainda. Adicione a primeira abaixo, ou escolha uma pronta na aba
+          Sugestões.
+        </div>
       )}
 
       {recipes.map((recipe) => (

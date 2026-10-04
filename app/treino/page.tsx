@@ -14,7 +14,7 @@ import * as treinoAvancado from "@/lib/treino-avancado-data";
 import type { Tier } from "@/lib/database.types";
 import { TIER_LABELS } from "@/lib/fenix-domain";
 import AvancadoBuilder from "./avancado/AvancadoBuilder";
-import { defaultPlan, normalizePlan, type AvancadoPlan } from "@/lib/treino-avancado-builder";
+import { defaultPlan, normalizePlan, levelFilterForLevel, type AvancadoPlan } from "@/lib/treino-avancado-builder";
 import { getServerWeightUnit } from "@/lib/weight-unit-server";
 import TerceiraIdadeBoard from "./terceira-idade/TerceiraIdadeBoard";
 import type { SeniorSessionTypeId } from "@/lib/terceira-idade-data";
@@ -120,6 +120,7 @@ export default async function TreinoPage() {
             profile={profile}
             tier={profile.current_tier as Tier}
             tierData={tierData}
+            avancadoLevel={profile.avancado_level}
           />
         )}
       </div>
@@ -286,11 +287,13 @@ async function TreinoTierPage({
   profile,
   tier,
   tierData,
+  avancadoLevel,
 }: {
   profileId: string;
   profile: { current_split: string | null; senior_freq_goal: number };
   tier: Tier;
   tierData: TierWorkoutData;
+  avancadoLevel: string | null;
 }) {
   const splitKey = profile.current_split;
   const split = splitKey ? tierData.SPLITS[splitKey] : null;
@@ -317,7 +320,7 @@ async function TreinoTierPage({
             </div>
           </details>
         </div>
-        <AvancadoTreino profileId={profileId} />
+        <AvancadoTreino profileId={profileId} avancadoLevel={avancadoLevel} />
       </>
     );
   }
@@ -616,7 +619,7 @@ async function TreinoContent({
 // weekdays; see lib/treino-shared-types.ts and lib/treino-avancado-builder.ts
 // for why plan vs. log are kept separate here).
 // =============================================================================
-async function AvancadoTreino({ profileId }: { profileId: string }) {
+async function AvancadoTreino({ profileId, avancadoLevel }: { profileId: string; avancadoLevel: string | null }) {
   const supabase = await createClient();
 
   const { data: planRow } = await supabase
@@ -627,7 +630,15 @@ async function AvancadoTreino({ profileId }: { profileId: string }) {
 
   let row = planRow;
   if (!row) {
+    // Seed the brand-new plan's levelFilter from the profile's
+    // avancado_level (chosen once in TierPicker) instead of the old
+    // all-true default — ONLY for a plan that doesn't exist yet; an
+    // existing, already-customized plan's levelFilter is never touched
+    // here (see normalizePlan below, which just passes it through).
     const fresh = defaultPlan();
+    if (avancadoLevel) {
+      fresh.levelFilter = levelFilterForLevel(avancadoLevel);
+    }
     const { data: inserted } = await supabase
       .from("avancado_plans")
       .insert({ profile_id: profileId, week: fresh as unknown as Record<string, unknown> })
@@ -693,6 +704,7 @@ async function AvancadoTreino({ profileId }: { profileId: string }) {
       initialBody={body}
       initialLog={initialLog}
       initialSetLogs={initialSetLogs}
+      initialAvancadoLevel={avancadoLevel}
     />
   );
 }

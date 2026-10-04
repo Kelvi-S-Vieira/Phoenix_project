@@ -3,14 +3,10 @@
 import { useMemo, useState } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { MARMITA_SUGGESTIONS, type MarmitaSuggestion } from "@/lib/marmita-suggestions";
-import { SUPPLEMENTS, SUPPLEMENT_CATEGORIES, GOAL_TO_SUPPLEMENT_CATEGORY, type Supplement } from "@/lib/supplements";
+import { pickRecommendedSupplements, type Supplement } from "@/lib/supplements";
 import { SUPPLEMENT_RECIPES, type SupplementRecipe } from "@/lib/supplement-recipes";
 import type { Goal } from "@/lib/database.types";
 import type { InsertPlanResult } from "./PlanSetupForm";
-
-const SUPPLEMENT_CATEGORY_LABEL: Record<string, string> = Object.fromEntries(
-  SUPPLEMENT_CATEGORIES.filter((c) => c.key !== "all").map((c) => [c.key, c.label])
-);
 
 // lib/supplement-recipes.ts's own goal keys ("ganho"/"emagrecimento"/
 // "geral") are distinct from the profile's Goal — the prototype never
@@ -41,9 +37,14 @@ function pickMarmitas(goal: Goal | null): MarmitaSuggestion[] {
   return sorted.slice(0, 4);
 }
 
+// pickRecommendedSupplements() always returns items in this fixed role
+// order (protein source, creatine, caffeine, recovery/health) — see its
+// comment in lib/supplements.ts — so this index-matched label array is
+// safe, and reads better here than the item's raw category tag.
+const SUPPLEMENT_ROLE_LABELS = ["Fonte de proteína", "Força/performance", "Pré-treino/energia", "Recuperação/saúde"];
+
 function pickSupplements(goal: Goal | null): Supplement[] {
-  const category = GOAL_TO_SUPPLEMENT_CATEGORY[goal ?? "manter"] ?? "recuperacao";
-  return SUPPLEMENTS.filter((s) => s.tags.includes(category)).slice(0, 4);
+  return pickRecommendedSupplements(goal);
 }
 
 function pickReceitasFit(goal: Goal | null): SupplementRecipe[] {
@@ -215,7 +216,7 @@ export default function PlanRecommendStep({
       {supplements.length > 0 && (
         <div className="fx-planrec-group">
           <div className="fx-planrec-group-title">Suplementos</div>
-          {supplements.map((s) => (
+          {supplements.map((s, idx) => (
             <label className="fx-planrec-row" key={s.name}>
               <input
                 type="checkbox"
@@ -223,9 +224,7 @@ export default function PlanRecommendStep({
                 onChange={() => toggle(suppChecked, setSuppChecked, s.name)}
               />
               <span className="fx-planrec-row-main">{s.name}</span>
-              <span className="fx-planrec-row-stat">
-                {SUPPLEMENT_CATEGORY_LABEL[s.tags[0]] ?? s.tags[0]}
-              </span>
+              <span className="fx-planrec-row-stat">{SUPPLEMENT_ROLE_LABELS[idx] ?? ""}</span>
             </label>
           ))}
         </div>

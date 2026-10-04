@@ -4449,3 +4449,123 @@ h1 {
   gap: 8px;
   margin-top: 14px;
 }
+
+/* =============================================================================
+   Treino Avançado — "montar treino" vs. "treino do dia" mode split
+   (Fase 4, 2026-10-04 feedback). See app/treino/avancado/AvancadoBuilder.tsx.
+   ============================================================================= */
+.tv-mode-card {
+  margin-bottom: 18px;
+}
+.tv-mode-toggle {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+.tv-mode-btn {
+  flex: 1;
+  min-width: 160px;
+  text-align: center;
+  background: var(--surface-2);
+  border: 1.5px solid var(--border);
+  border-radius: var(--radius-sm);
+  padding: 12px 16px;
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--text-muted);
+  cursor: pointer;
+  user-select: none;
+  transition: border-color 0.15s ease, background 0.15s ease, color 0.15s ease;
+}
+.tv-mode-btn:hover {
+  border-color: var(--ember-dim);
+  color: var(--text);
+}
+.tv-mode-btn.active {
+  background: linear-gradient(135deg, var(--ember), var(--gold));
+  border-color: transparent;
+  color: #1a1108;
+}
+
+/* Compact day picker used inside "treino" mode — a leaner alternative to
+   the full section-2 week strip (which stays montar-mode only). */
+.tv-compact-day-strip {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+  margin-bottom: 16px;
+}
+.tv-compact-day-chip {
+  flex: 1;
+  min-width: 44px;
+  text-align: center;
+  background: var(--surface-2);
+  border: 1.5px solid var(--border);
+  border-radius: 20px;
+  padding: 8px 10px;
+  font-size: 12px;
+  font-weight: 700;
+  text-transform: uppercase;
+  color: var(--text-muted);
+  cursor: pointer;
+  user-select: none;
+  transition: border-color 0.15s ease, background 0.15s ease, color 0.15s ease;
+}
+.tv-compact-day-chip:hover {
+  border-color: var(--ember-dim);
+}
+.tv-compact-day-chip.active {
+  border-color: var(--ember);
+  background: var(--ember-dim);
+  color: var(--text);
+}
+.tv-compact-day-chip.rest {
+  opacity: 0.5;
+}
+
+/* Equipment filter — collapsed disclosure instead of an always-open box
+   (Fase 4, point 4). Montar mode only. */
+.tv-equipment-disclosure .tv-disclosure-toggle {
+  cursor: pointer;
+  margin-bottom: 0;
+  user-select: none;
+}
+.tv-disclosure-toggle .chevron {
+  color: var(--text-muted);
+  transition: transform 0.2s ease;
+  font-size: 11px;
+}
+.tv-disclosure-toggle.open .chevron {
+  transform: rotate(90deg);
+}
+
+/* Training level — read-only line + inline "mudar" mini-picker instead of
+   a live filter box (Fase 4, point 5). */
+.tv-level-mini .tv-editor-title span:first-child {
+  text-transform: none;
+  letter-spacing: 0;
+  font-size: 13px;
+  color: var(--text);
+}
+.tv-level-mini .tv-editor-title b {
+  color: var(--ember);
+}
+
+/* Rest-timer auto-suggestion quick button (Fase 4, point 6). */
+.tv-pill-suggested {
+  border-color: var(--gold);
+  color: var(--gold);
+}
+.tv-pill-suggested:hover {
+  border-color: var(--gold);
+  color: var(--text);
+}
+
+/* "Treino do dia" group headers aren't clickable disclosures (always
+   expanded, selection happens in "montar" mode instead). */
+.tv-group-header-static {
+  cursor: default;
+}
+.tv-group-header-static:hover {
+  background: none;
+}

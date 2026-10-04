@@ -15,7 +15,7 @@ import {
   ALL_LEVEL_KEYS,
   exercisePassesFilters,
   defaultEquipmentFilter,
-  defaultLevelFilter,
+  levelFilterForLevel,
   WEEKLY_VOLUME_TARGETS,
   HIGH_VOLUME_GROUPS,
   suggestWorkSets,
@@ -96,12 +96,14 @@ export default function AvancadoBuilder({
   initialBody,
   initialLog,
   initialSetLogs,
+  initialAvancadoLevel,
 }: {
   profileId: string;
   initialPlan: AvancadoPlan;
   initialBody: BodyInfo;
   initialLog: Record<string, LogEntry>;
   initialSetLogs: Record<string, SetLogEntry[]>;
+  initialAvancadoLevel: string | null;
 }) {
   const [plan, setPlan] = useState<AvancadoPlan>(initialPlan);
   const [body, setBody] = useState<BodyInfo>(initialBody);
@@ -112,6 +114,12 @@ export default function AvancadoBuilder({
   const [openGroups, setOpenGroups] = useState<Record<string, boolean>>({});
   const [openDetails, setOpenDetails] = useState<Record<string, boolean>>({});
   const [saving, setSaving] = useState(false);
+  // "montar" = setup (templates, group/exercise selection, filters) vs.
+  // "treino" = a leaner day-tracking view (selected exercises only, GIF,
+  // logging, rest timer) — see Fase 4 (2026-10-04 feedback).
+  const [mode, setMode] = useState<"montar" | "treino">("montar");
+  const [avancadoLevel, setAvancadoLevel] = useState<string | null>(initialAvancadoLevel);
+  const [levelPickerOpen, setLevelPickerOpen] = useState(false);
 
   const saveTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const latestPlan = useRef(plan);
@@ -293,8 +301,40 @@ export default function AvancadoBuilder({
   }
 
   function selectDay(dayKey: DayKey) {
-    setSelectedDay((prev) => (prev === dayKey ? null : dayKey));
+    setSelectedDay((prev) => {
+      const next = prev === dayKey ? null : dayKey;
+      // Default mode when opening a day: if it already has something
+      // selected, the user is most likely here to train, not reconfigure —
+      // otherwise start in setup mode since there's nothing to track yet.
+      if (next) setMode(dayHasAnyActivity(plan.week[next]) ? "treino" : "montar");
+      return next;
+    });
     setOpenGroups({});
+  }
+
+  // Compact day picker used inside "treino" mode — always selects (never
+  // toggles off), so the day-tracking view never collapses to an empty
+  // state just from re-tapping the current day.
+  function pickDayForTreino(dayKey: DayKey) {
+    setSelectedDay(dayKey);
+    setOpenGroups({});
+  }
+
+  // Training-level ("iniciante"/"intermediario"/"avancado"/"idoso") is now
+  // decided once here instead of a live filter box — writes both the
+  // profile's own avancado_level (so TierPicker/future sessions remember
+  // it) and the current plan's levelFilter (so it actually takes effect).
+  async function changeLevel(level: string) {
+    setAvancadoLevel(level);
+    setLevelPickerOpen(false);
+    setPlan((prev) => {
+      const next = { ...prev, levelFilter: levelFilterForLevel(level) };
+      latestPlan.current = next;
+      return next;
+    });
+    scheduleSave(true);
+    const supabase = createClient();
+    await supabase.from("profiles").update({ avancado_level: level }).eq("id", profileId);
   }
 
   function toggleGroupInDay(dayKey: DayKey, groupKey: MuscleGroupKey) {
@@ -436,23 +476,6 @@ export default function AvancadoBuilder({
     });
     scheduleSave(true);
   }
-  function toggleLevel(key: string) {
-    setPlan((prev) => {
-      const next = { ...prev, levelFilter: { ...prev.levelFilter, [key]: prev.levelFilter[key] === false } };
-      latestPlan.current = next;
-      return next;
-    });
-    scheduleSave(true);
-  }
-  function resetLevel() {
-    setPlan((prev) => {
-      const next = { ...prev, levelFilter: defaultLevelFilter() };
-      latestPlan.current = next;
-      return next;
-    });
-    scheduleSave(true);
-  }
-
   function updateBodyField(field: keyof BodyInfo, value: string) {
     const v = field === "sex" ? (value || null) : value === "" ? null : Number(value);
     setBody((prev) => {
@@ -466,266 +489,380 @@ export default function AvancadoBuilder({
   // -------------------------------------------------------------------------
   const dayInfo = selectedDay ? DAYS.find((d) => d.key === selectedDay) : null;
   const day = selectedDay ? plan.week[selectedDay] : null;
+  const levelLabel = avancadoLevel ? TRAINING_LEVELS[avancadoLevel] ?? avancadoLevel : null;
+  const suggestedRestSeconds = day ? computeSuggestedRestSeconds(day, activeTab) : undefined;
+
+  const tabPane = day && selectedDay && (
+    <div className="tv-tab-pane">
+      {activeTab === "warmup" && (
+        <WarmupTab
+          dayKey={selectedDay}
+          day={day}
+          onToggleExercise={toggleWarmupExercise}
+          onChangeMinutes={(v) => updateDay(selectedDay, (d) => ({ ...d, warmupMinutes: v }))}
+          onChangeIntensity={(v) => updateDay(selectedDay, (d) => ({ ...d, warmupIntensity: v }), true)}
+          onBlurPersist={() => scheduleSave(true)}
+          log={log}
+          onToggleDone={toggleDone}
+          openDetails={openDetails}
+          setOpenDetails={setOpenDetails}
+        />
+      )}
+      {activeTab === "musculacao" && (
+        <MusculacaoTab
+          mode={mode}
+          dayLabel={dayInfo!.label}
+          day={day}
+          plan={plan}
+          onToggleGroup={(g) => toggleGroupInDay(selectedDay, g)}
+          onClearDay={() => clearDay(selectedDay)}
+          onToggleExercise={(g, name, portion) => toggleExerciseSelection(selectedDay, g, name, portion)}
+          onUpdateSelection={(id, field, value) => updateSelectionField(selectedDay, id, field, value)}
+          onBlurPersist={() => scheduleSave(true)}
+          onChangeDuration={(v) => updateDay(selectedDay, (d) => ({ ...d, strengthDurationMin: v }))}
+          onToggleEquipment={toggleEquipment}
+          onResetEquipment={resetEquipment}
+          levelLabel={levelLabel}
+          levelPickerOpen={levelPickerOpen}
+          onToggleLevelPicker={() => setLevelPickerOpen((v) => !v)}
+          onChangeLevel={changeLevel}
+          openGroups={openGroups}
+          setOpenGroups={setOpenGroups}
+          openDetails={openDetails}
+          setOpenDetails={setOpenDetails}
+          entryFor={entryFor}
+          onToggleDone={toggleDone}
+          logFor={logFor}
+          onSaveLog={saveSetLog}
+          onSwapExercise={(groupKey, portionKey, oldId, portionExercises) =>
+            swapExerciseInSelection(selectedDay, oldId, groupKey, portionKey, portionExercises)
+          }
+          onRezone={(id, zone) => {
+            updateSelectionField(selectedDay, id, "reps", zone);
+            scheduleSave(true);
+          }}
+        />
+      )}
+      {activeTab === "calistenia" && (
+        <CalisteniaTab
+          mode={mode}
+          day={day}
+          plan={plan}
+          onToggleExercise={(name) => toggleCalistExercise(selectedDay, name)}
+          onUpdateField={(name, field, value) => updateCalistField(selectedDay, name, field, value)}
+          onBlurPersist={() => scheduleSave(true)}
+          onChangeDuration={(v) => updateDay(selectedDay, (d) => ({ ...d, calistenia: { ...d.calistenia, durationMin: v } }))}
+          onToggleEquipment={toggleEquipment}
+          onResetEquipment={resetEquipment}
+          levelLabel={levelLabel}
+          levelPickerOpen={levelPickerOpen}
+          onToggleLevelPicker={() => setLevelPickerOpen((v) => !v)}
+          onChangeLevel={changeLevel}
+          openDetails={openDetails}
+          setOpenDetails={setOpenDetails}
+          log={log}
+          onToggleDone={toggleDone}
+        />
+      )}
+      {activeTab === "cardio" && (
+        <CardioTab
+          day={day}
+          weight={body.weight}
+          onAdd={() => addCardioEntry(selectedDay)}
+          onRemove={(id) => removeCardioEntry(selectedDay, id)}
+          onUpdate={(id, patch) => updateCardioEntry(selectedDay, id, patch)}
+          onBlurPersist={() => scheduleSave(true)}
+        />
+      )}
+      {(["hiit", "tabata", "hyrox", "crossfit"] as GenericTypeKey[]).includes(activeTab as GenericTypeKey) && (
+        <CircuitTab
+          mode={mode}
+          type={activeTab as GenericTypeKey}
+          day={day}
+          weight={body.weight}
+          levelFilter={plan.levelFilter}
+          openDetails={openDetails}
+          setOpenDetails={setOpenDetails}
+          onUpdateField={(patch, immediate) => updateCircuitDay(selectedDay, activeTab as GenericTypeKey, patch, immediate)}
+          onToggleExercise={(name) => toggleCircuitExercise(selectedDay, activeTab as GenericTypeKey, name)}
+          onApplyPreset={(intensity) => applyCircuitPresetToDay(selectedDay, activeTab as GenericTypeKey, intensity)}
+          onApplyTimeBuilder={(minutes) => applyTimeBuilderToDay(selectedDay, activeTab as GenericTypeKey, minutes)}
+          onClearExercises={() => updateCircuitDay(selectedDay, activeTab as GenericTypeKey, { exercises: [] }, true)}
+          onBlurPersist={() => scheduleSave(true)}
+        />
+      )}
+      {activeTab === "esportes" && (
+        <SportsTab
+          day={day}
+          weight={body.weight}
+          onAdd={() => addSportEntry(selectedDay)}
+          onRemove={(id) => removeSportEntry(selectedDay, id)}
+          onUpdate={(id, patch) => updateSportEntry(selectedDay, id, patch)}
+          onBlurPersist={() => scheduleSave(true)}
+        />
+      )}
+    </div>
+  );
 
   return (
     <>
-      <div className="card">
-        <h2>
-          0. Seus dados <span className="tv-tag">para calcular calorias</span>
-        </h2>
-        <p className="sub" style={{ margin: "-6px 0 14px" }}>
-          Usamos peso + tempo de atividade para estimar o gasto calórico (fórmula MET). Idade e altura são opcionais.
-        </p>
-        <div className="tv-userinfo-grid">
-          <label>
-            Peso (kg) *
-            <input
-              type="number"
-              step="0.1"
-              min="0"
-              value={body.weight ?? ""}
-              onChange={(e) => updateBodyField("weight", e.target.value)}
-              onBlur={() => scheduleSave(true)}
-            />
-          </label>
-          <label>
-            Idade (opcional)
-            <input
-              type="number"
-              min="0"
-              value={body.age ?? ""}
-              onChange={(e) => updateBodyField("age", e.target.value)}
-              onBlur={() => scheduleSave(true)}
-            />
-          </label>
-          <label>
-            Altura cm (opcional)
-            <input
-              type="number"
-              min="0"
-              value={body.height ?? ""}
-              onChange={(e) => updateBodyField("height", e.target.value)}
-              onBlur={() => scheduleSave(true)}
-            />
-          </label>
-          <label>
-            Sexo (opcional)
-            <select value={body.sex ?? ""} onChange={(e) => updateBodyField("sex", e.target.value)}>
-              <option value="">—</option>
-              <option value="masculino">Masculino</option>
-              <option value="feminino">Feminino</option>
-            </select>
-          </label>
-        </div>
-        {saving && (
-          <div className="sub" style={{ marginTop: 8 }}>
-            Salvando...
+      <div className="card tv-mode-card">
+        <div className="tv-mode-toggle">
+          <div
+            className={"tv-mode-btn" + (mode === "montar" ? " active" : "")}
+            role="button"
+            onClick={() => setMode("montar")}
+          >
+            ⚙️ Montar treino
           </div>
-        )}
-      </div>
-
-      <div className="card">
-        <h2>
-          1. Ponto de partida (opcional) <span className="tv-tag">modelos prontos</span>
-        </h2>
-        <p className="sub" style={{ margin: "-6px 0 14px" }}>
-          Escolha um modelo para preencher a semana rapidamente — depois edite cada dia como quiser, misturando
-          qualquer grupo muscular.
+          <div
+            className={"tv-mode-btn" + (mode === "treino" ? " active" : "")}
+            role="button"
+            onClick={() => setMode("treino")}
+          >
+            📋 Treino do dia
+          </div>
+        </div>
+        <p className="sub" style={{ margin: "8px 0 0" }}>
+          {mode === "montar"
+            ? "Configure seus dias de treino — modelos, grupos musculares, exercícios e metas de séries/reps."
+            : "Acompanhe o treino de hoje — só o que você já selecionou, pronto para marcar e registrar."}
         </p>
-        <div className="tv-split-grid">
-          {(Object.entries(SPLITS) as [SplitKey, (typeof SPLITS)[SplitKey]][]).map(([key, s]) => (
-            <div
-              key={key}
-              className={"tv-split-card" + (plan.lastTemplate === key ? " active" : "")}
-              role="button"
-              onClick={() => chooseTemplate(key)}
-            >
-              <h3>{s.label}</h3>
-              <p>{s.desc}</p>
+      </div>
+
+      {mode === "montar" ? (
+        <>
+          <div className="card">
+            <h2>
+              0. Seus dados <span className="tv-tag">para calcular calorias</span>
+            </h2>
+            <p className="sub" style={{ margin: "-6px 0 14px" }}>
+              Usamos peso + tempo de atividade para estimar o gasto calórico (fórmula MET). Idade e altura são
+              opcionais.
+            </p>
+            <div className="tv-userinfo-grid">
+              <label>
+                Peso (kg) *
+                <input
+                  type="number"
+                  step="0.1"
+                  min="0"
+                  value={body.weight ?? ""}
+                  onChange={(e) => updateBodyField("weight", e.target.value)}
+                  onBlur={() => scheduleSave(true)}
+                />
+              </label>
+              <label>
+                Idade (opcional)
+                <input
+                  type="number"
+                  min="0"
+                  value={body.age ?? ""}
+                  onChange={(e) => updateBodyField("age", e.target.value)}
+                  onBlur={() => scheduleSave(true)}
+                />
+              </label>
+              <label>
+                Altura cm (opcional)
+                <input
+                  type="number"
+                  min="0"
+                  value={body.height ?? ""}
+                  onChange={(e) => updateBodyField("height", e.target.value)}
+                  onBlur={() => scheduleSave(true)}
+                />
+              </label>
+              <label>
+                Sexo (opcional)
+                <select value={body.sex ?? ""} onChange={(e) => updateBodyField("sex", e.target.value)}>
+                  <option value="">—</option>
+                  <option value="masculino">Masculino</option>
+                  <option value="feminino">Feminino</option>
+                </select>
+              </label>
             </div>
-          ))}
-        </div>
-      </div>
-
-      <div className="card">
-        <h2>2. Sua semana</h2>
-        <div className="tv-week-strip">
-          {DAYS.map((d) => {
-            const dp = plan.week[d.key];
-            const hasActivity = dayHasAnyActivity(dp);
-            const kcalInfo = kcalForDay(dp, body.weight);
-            const labels: string[] = [];
-            if (dp.groups.length) labels.push(dp.groups.map((g) => MUSCLE_GROUPS[g]?.label ?? g).join("+"));
-            if (Object.keys(dp.calistenia.exercises).length) labels.push("Calistenia");
-            if (dp.warmupExercises.length) labels.push("Aquecimento");
-            if (dp.cardio.length) labels.push("Cardio");
-            if (dp.sports.length) labels.push("Esporte");
-            GENERIC_TYPE_KEYS.forEach((k) => {
-              if (dp.generic[k].exercises.length) labels.push(GENERIC_TAB_LABELS[k].replace(/^\S+\s/, ""));
-            });
-            return (
-              <div
-                key={d.key}
-                className={"tv-day-chip" + (!hasActivity ? " rest" : "") + (selectedDay === d.key ? " active" : "")}
-                role="button"
-                onClick={() => selectDay(d.key)}
-              >
-                <div className="dname">{d.label.slice(0, 3)}</div>
-                {hasActivity ? (
-                  <>
-                    <div className="dgroups">{labels.join(" · ")}</div>
-                    <div className="dcount">{kcalInfo.total > 0 ? `🔥 ${kcalInfo.total} kcal` : "informe seu peso ↑"}</div>
-                  </>
-                ) : (
-                  <div className="dgroups">Descanso · toque para editar</div>
-                )}
+            {saving && (
+              <div className="sub" style={{ marginTop: 8 }}>
+                Salvando...
               </div>
-            );
-          })}
-        </div>
-      </div>
+            )}
+          </div>
 
-      <div className="card">
-        <h2>
-          3. Monte o treino do dia {dayInfo ? <span className="sub">— {dayInfo.label}</span> : null}
-        </h2>
-        {!selectedDay || !day ? (
-          <div className="fx-empty-state">Selecione um dia da semana acima para editar os grupos e montar os exercícios.</div>
-        ) : (
-          <>
-            <div className="tv-tab-bar">
-              {DAY_TABS.map((t) => (
+          <div className="card">
+            <h2>
+              1. Ponto de partida (opcional) <span className="tv-tag">modelos prontos</span>
+            </h2>
+            <p className="sub" style={{ margin: "-6px 0 14px" }}>
+              Escolha um modelo para preencher a semana rapidamente — depois edite cada dia como quiser, misturando
+              qualquer grupo muscular.
+            </p>
+            <div className="tv-split-grid">
+              {(Object.entries(SPLITS) as [SplitKey, (typeof SPLITS)[SplitKey]][]).map(([key, s]) => (
                 <div
-                  key={t.key}
-                  className={"tv-tab-btn" + (activeTab === t.key ? " active" : "")}
+                  key={key}
+                  className={"tv-split-card" + (plan.lastTemplate === key ? " active" : "")}
                   role="button"
-                  onClick={() => setActiveTab(t.key)}
+                  onClick={() => chooseTemplate(key)}
                 >
-                  {t.label}
+                  <h3>{s.label}</h3>
+                  <p>{s.desc}</p>
                 </div>
               ))}
             </div>
+          </div>
 
-            <RestTimer />
-
-            <div className="tv-tab-pane">
-              {activeTab === "warmup" && (
-                <WarmupTab
-                  dayKey={selectedDay}
-                  day={day}
-                  onToggleExercise={toggleWarmupExercise}
-                  onChangeMinutes={(v) => updateDay(selectedDay, (d) => ({ ...d, warmupMinutes: v }))}
-                  onChangeIntensity={(v) => updateDay(selectedDay, (d) => ({ ...d, warmupIntensity: v }), true)}
-                  onBlurPersist={() => scheduleSave(true)}
-                  log={log}
-                  onToggleDone={toggleDone}
-                  openDetails={openDetails}
-                  setOpenDetails={setOpenDetails}
-                />
-              )}
-              {activeTab === "musculacao" && (
-                <MusculacaoTab
-                  dayLabel={dayInfo!.label}
-                  day={day}
-                  plan={plan}
-                  onToggleGroup={(g) => toggleGroupInDay(selectedDay, g)}
-                  onClearDay={() => clearDay(selectedDay)}
-                  onToggleExercise={(g, name, portion) => toggleExerciseSelection(selectedDay, g, name, portion)}
-                  onUpdateSelection={(id, field, value) => updateSelectionField(selectedDay, id, field, value)}
-                  onBlurPersist={() => scheduleSave(true)}
-                  onChangeDuration={(v) => updateDay(selectedDay, (d) => ({ ...d, strengthDurationMin: v }))}
-                  onToggleEquipment={toggleEquipment}
-                  onResetEquipment={resetEquipment}
-                  onToggleLevel={toggleLevel}
-                  onResetLevel={resetLevel}
-                  openGroups={openGroups}
-                  setOpenGroups={setOpenGroups}
-                  openDetails={openDetails}
-                  setOpenDetails={setOpenDetails}
-                  entryFor={entryFor}
-                  onToggleDone={toggleDone}
-                  logFor={logFor}
-                  onSaveLog={saveSetLog}
-                  onSwapExercise={(groupKey, portionKey, oldId, portionExercises) =>
-                    swapExerciseInSelection(selectedDay, oldId, groupKey, portionKey, portionExercises)
-                  }
-                  onRezone={(id, zone) => {
-                    updateSelectionField(selectedDay, id, "reps", zone);
-                    scheduleSave(true);
-                  }}
-                />
-              )}
-              {activeTab === "calistenia" && (
-                <CalisteniaTab
-                  day={day}
-                  plan={plan}
-                  onToggleExercise={(name) => toggleCalistExercise(selectedDay, name)}
-                  onUpdateField={(name, field, value) => updateCalistField(selectedDay, name, field, value)}
-                  onBlurPersist={() => scheduleSave(true)}
-                  onChangeDuration={(v) => updateDay(selectedDay, (d) => ({ ...d, calistenia: { ...d.calistenia, durationMin: v } }))}
-                  onToggleEquipment={toggleEquipment}
-                  onResetEquipment={resetEquipment}
-                  onToggleLevel={toggleLevel}
-                  onResetLevel={resetLevel}
-                  openDetails={openDetails}
-                  setOpenDetails={setOpenDetails}
-                  log={log}
-                  onToggleDone={toggleDone}
-                />
-              )}
-              {activeTab === "cardio" && (
-                <CardioTab
-                  day={day}
-                  weight={body.weight}
-                  onAdd={() => addCardioEntry(selectedDay)}
-                  onRemove={(id) => removeCardioEntry(selectedDay, id)}
-                  onUpdate={(id, patch) => updateCardioEntry(selectedDay, id, patch)}
-                  onBlurPersist={() => scheduleSave(true)}
-                />
-              )}
-              {(["hiit", "tabata", "hyrox", "crossfit"] as GenericTypeKey[]).includes(activeTab as GenericTypeKey) && (
-                <CircuitTab
-                  type={activeTab as GenericTypeKey}
-                  day={day}
-                  weight={body.weight}
-                  levelFilter={plan.levelFilter}
-                  openDetails={openDetails}
-                  setOpenDetails={setOpenDetails}
-                  onUpdateField={(patch, immediate) => updateCircuitDay(selectedDay, activeTab as GenericTypeKey, patch, immediate)}
-                  onToggleExercise={(name) => toggleCircuitExercise(selectedDay, activeTab as GenericTypeKey, name)}
-                  onApplyPreset={(intensity) => applyCircuitPresetToDay(selectedDay, activeTab as GenericTypeKey, intensity)}
-                  onApplyTimeBuilder={(minutes) => applyTimeBuilderToDay(selectedDay, activeTab as GenericTypeKey, minutes)}
-                  onClearExercises={() => updateCircuitDay(selectedDay, activeTab as GenericTypeKey, { exercises: [] }, true)}
-                  onBlurPersist={() => scheduleSave(true)}
-                />
-              )}
-              {activeTab === "esportes" && (
-                <SportsTab
-                  day={day}
-                  weight={body.weight}
-                  onAdd={() => addSportEntry(selectedDay)}
-                  onRemove={(id) => removeSportEntry(selectedDay, id)}
-                  onUpdate={(id, patch) => updateSportEntry(selectedDay, id, patch)}
-                  onBlurPersist={() => scheduleSave(true)}
-                />
-              )}
+          <div className="card">
+            <h2>2. Sua semana</h2>
+            <div className="tv-week-strip">
+              {DAYS.map((d) => {
+                const dp = plan.week[d.key];
+                const hasActivity = dayHasAnyActivity(dp);
+                const kcalInfo = kcalForDay(dp, body.weight);
+                const labels: string[] = [];
+                if (dp.groups.length) labels.push(dp.groups.map((g) => MUSCLE_GROUPS[g]?.label ?? g).join("+"));
+                if (Object.keys(dp.calistenia.exercises).length) labels.push("Calistenia");
+                if (dp.warmupExercises.length) labels.push("Aquecimento");
+                if (dp.cardio.length) labels.push("Cardio");
+                if (dp.sports.length) labels.push("Esporte");
+                GENERIC_TYPE_KEYS.forEach((k) => {
+                  if (dp.generic[k].exercises.length) labels.push(GENERIC_TAB_LABELS[k].replace(/^\S+\s/, ""));
+                });
+                return (
+                  <div
+                    key={d.key}
+                    className={"tv-day-chip" + (!hasActivity ? " rest" : "") + (selectedDay === d.key ? " active" : "")}
+                    role="button"
+                    onClick={() => selectDay(d.key)}
+                  >
+                    <div className="dname">{d.label.slice(0, 3)}</div>
+                    {hasActivity ? (
+                      <>
+                        <div className="dgroups">{labels.join(" · ")}</div>
+                        <div className="dcount">{kcalInfo.total > 0 ? `🔥 ${kcalInfo.total} kcal` : "informe seu peso ↑"}</div>
+                      </>
+                    ) : (
+                      <div className="dgroups">Descanso · toque para editar</div>
+                    )}
+                  </div>
+                );
+              })}
             </div>
+          </div>
 
-            <DayKcalTotal day={day} weight={body.weight} />
-          </>
-        )}
-      </div>
+          <div className="card">
+            <h2>
+              3. Monte o treino do dia {dayInfo ? <span className="sub">— {dayInfo.label}</span> : null}
+            </h2>
+            {!selectedDay || !day ? (
+              <div className="fx-empty-state">Selecione um dia da semana acima para editar os grupos e montar os exercícios.</div>
+            ) : (
+              <>
+                <div className="tv-tab-bar">
+                  {DAY_TABS.map((t) => (
+                    <div
+                      key={t.key}
+                      className={"tv-tab-btn" + (activeTab === t.key ? " active" : "")}
+                      role="button"
+                      onClick={() => setActiveTab(t.key)}
+                    >
+                      {t.label}
+                    </div>
+                  ))}
+                </div>
 
-      <div className="card">
-        <h2>4. Resumo do plano</h2>
-        <Summary plan={plan} weight={body.weight} />
-        <p className="tv-note">
-          Os vídeos de execução não podem ser incorporados diretamente aqui — cada exercício traz um link de busca
-          no YouTube com o nome correto do movimento.
-        </p>
-      </div>
+                {tabPane}
+
+                <DayKcalTotal day={day} weight={body.weight} />
+              </>
+            )}
+          </div>
+
+          <div className="card">
+            <h2>4. Resumo do plano</h2>
+            <Summary plan={plan} weight={body.weight} />
+            <p className="tv-note">
+              Os vídeos de execução não podem ser incorporados diretamente aqui — cada exercício traz um link de busca
+              no YouTube com o nome correto do movimento.
+            </p>
+          </div>
+        </>
+      ) : (
+        <div className="card">
+          <h2>Treino do dia {dayInfo ? <span className="sub">— {dayInfo.label}</span> : null}</h2>
+          <div className="tv-compact-day-strip">
+            {DAYS.map((d) => {
+              const dp = plan.week[d.key];
+              const hasActivity = dayHasAnyActivity(dp);
+              return (
+                <div
+                  key={d.key}
+                  className={"tv-compact-day-chip" + (!hasActivity ? " rest" : "") + (selectedDay === d.key ? " active" : "")}
+                  role="button"
+                  onClick={() => pickDayForTreino(d.key)}
+                >
+                  {d.label.slice(0, 3)}
+                </div>
+              );
+            })}
+          </div>
+
+          {!selectedDay || !day ? (
+            <div className="fx-empty-state">Escolha um dia acima para ver o treino de hoje.</div>
+          ) : !dayHasAnyActivity(day) ? (
+            <div className="fx-empty-state">
+              Esse dia ainda não tem nada montado — volte para &quot;⚙️ Montar treino&quot; para escolher os
+              exercícios primeiro.
+            </div>
+          ) : (
+            <>
+              <div className="tv-tab-bar">
+                {DAY_TABS.map((t) => (
+                  <div
+                    key={t.key}
+                    className={"tv-tab-btn" + (activeTab === t.key ? " active" : "")}
+                    role="button"
+                    onClick={() => setActiveTab(t.key)}
+                  >
+                    {t.label}
+                  </div>
+                ))}
+              </div>
+
+              <RestTimer suggestedSeconds={suggestedRestSeconds} />
+
+              {tabPane}
+
+              <DayKcalTotal day={day} weight={body.weight} />
+            </>
+          )}
+        </div>
+      )}
     </>
   );
+}
+
+// =============================================================================
+// Rest-timer auto-suggestion (Fase 4, point 6): total session time budget ÷
+// number of rest pauses (≈ total planned work sets) for whichever of
+// Musculação/Calistenia the active tab is, clamped to a sane range so a
+// tiny/huge input never produces a useless timer. Only meaningful for those
+// two tabs — everything else falls back to RestTimer's own 60s default.
+// =============================================================================
+function computeSuggestedRestSeconds(day: DayPlan, activeTab: string): number | undefined {
+  function clamp(n: number): number {
+    return Math.max(20, Math.min(240, Math.round(n)));
+  }
+  if (activeTab === "musculacao") {
+    const totalSets = Object.values(day.selections).reduce((sum, sel) => sum + (Number(sel.sets) || 0), 0);
+    if (totalSets <= 0) return undefined;
+    return clamp(((day.strengthDurationMin || 60) * 60) / totalSets);
+  }
+  if (activeTab === "calistenia") {
+    const totalSets = Object.values(day.calistenia.exercises).reduce((sum, ex) => sum + (Number(ex.sets) || 0), 0);
+    if (totalSets <= 0) return undefined;
+    return clamp(((day.calistenia.durationMin || 30) * 60) / totalSets);
+  }
+  return undefined;
 }
 
 // =============================================================================
@@ -736,11 +873,27 @@ export default function AvancadoBuilder({
 // stays reachable while scrolling the exercise list, instead of scrolling
 // out of view with the rest of the page.
 // =============================================================================
-function RestTimer() {
-  const [total, setTotal] = useState(60);
-  const [remaining, setRemaining] = useState(60);
+function RestTimer({ suggestedSeconds }: { suggestedSeconds?: number }) {
+  const initial = suggestedSeconds ?? 60;
+  const [total, setTotal] = useState(initial);
+  const [remaining, setRemaining] = useState(initial);
   const [running, setRunning] = useState(false);
   const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
+
+  // Re-initialize from a new suggestion when the active tab/day changes —
+  // only while idle, so it never yanks the timer mid-countdown. Adjusted
+  // during render (React's own pattern for resetting state from a changed
+  // prop) rather than in an effect, which would cause an extra render.
+  // Deliberately scoped to "right when this mounts/the tab changes", not a
+  // live in-session pacing engine.
+  const [lastSuggested, setLastSuggested] = useState(suggestedSeconds);
+  if (suggestedSeconds !== lastSuggested && !running) {
+    setLastSuggested(suggestedSeconds);
+    if (suggestedSeconds) {
+      setTotal(suggestedSeconds);
+      setRemaining(suggestedSeconds);
+    }
+  }
 
   function clearTimer() {
     if (intervalRef.current) {
@@ -816,6 +969,11 @@ function RestTimer() {
             {sec}s
           </div>
         ))}
+        {suggestedSeconds && (
+          <div className="tv-pill tv-pill-suggested" role="button" onClick={() => start(suggestedSeconds)}>
+            ✨ usar sugestão ({suggestedSeconds}s)
+          </div>
+        )}
       </div>
       <div className="tv-duration-row">
         <button type="button" className="tv-add-entry-btn" onClick={pause}>
@@ -833,8 +991,10 @@ function RestTimer() {
 }
 
 // =============================================================================
-// Equipment / training-level filter pill boxes — shared by Musculação and
-// Calistenia (both filter the same way, same underlying keyword detection).
+// Equipment filter — collapsed by default (Fase 4, point 4): a small
+// disclosure toggle instead of an always-open pill box, matching this
+// file's existing openGroups/openDetails local-toggle pattern. Montar mode
+// only.
 // =============================================================================
 function EquipmentFilterBox({
   filter,
@@ -845,59 +1005,78 @@ function EquipmentFilterBox({
   onToggle: (key: string) => void;
   onReset: () => void;
 }) {
+  const [open, setOpen] = useState(false);
   return (
-    <div className="tv-editor-box">
-      <div className="tv-editor-title">
-        <span>🎒 Equipamentos disponíveis (desmarque o que você não tem)</span>
+    <div className="tv-editor-box tv-equipment-disclosure">
+      <div
+        className={"tv-editor-title tv-disclosure-toggle" + (open ? " open" : "")}
+        role="button"
+        onClick={() => setOpen((v) => !v)}
+      >
+        <span>⚙️ Filtrar por equipamento disponível</span>
+        <span className="chevron">▶</span>
       </div>
-      <div className="tv-pill-row">
-        {ALL_EQUIPMENT_KEYS.map((key) => {
-          const active = filter[key] !== false;
-          return (
-            <div key={key} className={"tv-pill" + (active ? " active" : "")} role="button" onClick={() => onToggle(key)}>
-              {EQUIPMENT_TYPES[key]}
-            </div>
-          );
-        })}
-      </div>
-      <span className="tv-clear-day" onClick={onReset}>
-        marcar todos
-      </span>
+      {open && (
+        <>
+          <div className="tv-pill-row" style={{ marginTop: 10 }}>
+            {ALL_EQUIPMENT_KEYS.map((key) => {
+              const active = filter[key] !== false;
+              return (
+                <div key={key} className={"tv-pill" + (active ? " active" : "")} role="button" onClick={() => onToggle(key)}>
+                  {EQUIPMENT_TYPES[key]}
+                </div>
+              );
+            })}
+          </div>
+          <span className="tv-clear-day" onClick={onReset}>
+            marcar todos
+          </span>
+        </>
+      )}
     </div>
   );
 }
 
-function LevelFilterBox({
-  filter,
-  onToggle,
-  onReset,
+// =============================================================================
+// Training level — decided once at cadastro (TierPicker.tsx) instead of a
+// live filter box (Fase 4, point 5). Shown as a read-only line with a
+// "mudar" link that reopens the same 4-option picker inline, writing to
+// both profiles.avancado_level and the current plan's levelFilter. Montar
+// mode only.
+// =============================================================================
+function LevelMiniPicker({
+  levelLabel,
+  pickerOpen,
+  onTogglePicker,
+  onChangeLevel,
 }: {
-  filter: Record<string, boolean>;
-  onToggle: (key: string) => void;
-  onReset: () => void;
+  levelLabel: string | null;
+  pickerOpen: boolean;
+  onTogglePicker: () => void;
+  onChangeLevel: (level: string) => void;
 }) {
   return (
-    <div className="tv-editor-box">
+    <div className="tv-editor-box tv-level-mini">
       <div className="tv-editor-title">
-        <span>🎯 Nível de treino (filtre por dificuldade)</span>
+        <span>
+          🎯 Nível: <b>{levelLabel ?? "não definido"}</b>
+        </span>
+        <span className="tv-clear-day" role="button" onClick={onTogglePicker}>
+          mudar
+        </span>
       </div>
-      <div className="tv-pill-row">
-        {ALL_LEVEL_KEYS.map((key) => {
-          const active = filter[key] !== false;
-          return (
-            <div key={key} className={"tv-pill" + (active ? " active" : "")} role="button" onClick={() => onToggle(key)}>
+      {pickerOpen && (
+        <div className="tv-pill-row" style={{ marginTop: 10 }}>
+          {ALL_LEVEL_KEYS.map((key) => (
+            <div key={key} className="tv-pill" role="button" onClick={() => onChangeLevel(key)}>
               {TRAINING_LEVELS[key]}
             </div>
-          );
-        })}
-      </div>
-      <span className="tv-clear-day" onClick={onReset}>
-        marcar todos
-      </span>
-      {filter.idoso !== false && (
+          ))}
+        </div>
+      )}
+      {!levelLabel && (
         <div className="sub" style={{ marginTop: 8 }}>
-          🧓 Recomendamos validar esses exercícios com um profissional de educação física, especialmente se você tem
-          alguma condição pré-existente.
+          Escolha seu nível para filtrar os exercícios por dificuldade.
         </div>
       )}
     </div>
@@ -1175,6 +1354,7 @@ function TrainingTips() {
 // Musculação tab
 // =============================================================================
 function MusculacaoTab({
+  mode,
   dayLabel,
   day,
   plan,
@@ -1186,8 +1366,10 @@ function MusculacaoTab({
   onChangeDuration,
   onToggleEquipment,
   onResetEquipment,
-  onToggleLevel,
-  onResetLevel,
+  levelLabel,
+  levelPickerOpen,
+  onToggleLevelPicker,
+  onChangeLevel,
   openGroups,
   setOpenGroups,
   openDetails,
@@ -1199,6 +1381,7 @@ function MusculacaoTab({
   onSwapExercise,
   onRezone,
 }: {
+  mode: "montar" | "treino";
   dayLabel: string;
   day: DayPlan;
   plan: AvancadoPlan;
@@ -1210,8 +1393,10 @@ function MusculacaoTab({
   onChangeDuration: (v: number) => void;
   onToggleEquipment: (k: string) => void;
   onResetEquipment: () => void;
-  onToggleLevel: (k: string) => void;
-  onResetLevel: () => void;
+  levelLabel: string | null;
+  levelPickerOpen: boolean;
+  onToggleLevelPicker: () => void;
+  onChangeLevel: (level: string) => void;
   openGroups: Record<string, boolean>;
   setOpenGroups: React.Dispatch<React.SetStateAction<Record<string, boolean>>>;
   openDetails: Record<string, boolean>;
@@ -1224,51 +1409,67 @@ function MusculacaoTab({
   onRezone: (id: string, zone: string) => void;
 }) {
   const weeklyVolume = weeklyVolumeByGroup(plan);
+  const isMontar = mode === "montar";
+
+  if (day.groups.length === 0 && !isMontar) {
+    return <div className="tv-empty-note">Nenhum exercício de musculação selecionado para este dia.</div>;
+  }
 
   return (
     <>
-      <div className="tv-editor-box">
-        <div className="tv-editor-title">
-          <span>Grupos musculares de {dayLabel}</span>
-          {day.groups.length > 0 && (
-            <span className="tv-clear-day" onClick={onClearDay}>
-              limpar dia
-            </span>
-          )}
+      {isMontar && (
+        <div className="tv-editor-box">
+          <div className="tv-editor-title">
+            <span>Grupos musculares de {dayLabel}</span>
+            {day.groups.length > 0 && (
+              <span className="tv-clear-day" onClick={onClearDay}>
+                limpar dia
+              </span>
+            )}
+          </div>
+          <div className="tv-pill-row">
+            {ALL_GROUP_KEYS.map((groupKey) => {
+              const active = day.groups.includes(groupKey);
+              return (
+                <div key={groupKey} className={"tv-pill" + (active ? " active" : "")} role="button" onClick={() => onToggleGroup(groupKey)}>
+                  {MUSCLE_GROUPS[groupKey].label}
+                </div>
+              );
+            })}
+          </div>
         </div>
-        <div className="tv-pill-row">
-          {ALL_GROUP_KEYS.map((groupKey) => {
-            const active = day.groups.includes(groupKey);
-            return (
-              <div key={groupKey} className={"tv-pill" + (active ? " active" : "")} role="button" onClick={() => onToggleGroup(groupKey)}>
-                {MUSCLE_GROUPS[groupKey].label}
-              </div>
-            );
-          })}
-        </div>
-      </div>
+      )}
 
-      <TrainingTips />
+      {isMontar && <TrainingTips />}
 
       {day.groups.length === 0 ? (
         <div className="tv-empty-note">Nenhum grupo muscular selecionado para este dia — escolha acima.</div>
       ) : (
         <>
-          <div className="tv-duration-row">
-            <span>⏱ Duração estimada da sessão de musculação:</span>
-            <input
-              type="number"
-              min="10"
-              step="5"
-              defaultValue={day.strengthDurationMin || 60}
-              onChange={(e) => onChangeDuration(Number(e.target.value) || 60)}
-              onBlur={onBlurPersist}
-            />
-            <span>min</span>
-          </div>
+          {isMontar && (
+            <>
+              <div className="tv-duration-row">
+                <span>⏱ Duração estimada da sessão de musculação:</span>
+                <input
+                  type="number"
+                  min="10"
+                  step="5"
+                  defaultValue={day.strengthDurationMin || 60}
+                  onChange={(e) => onChangeDuration(Number(e.target.value) || 60)}
+                  onBlur={onBlurPersist}
+                />
+                <span>min</span>
+              </div>
 
-          <EquipmentFilterBox filter={plan.equipmentFilter} onToggle={onToggleEquipment} onReset={onResetEquipment} />
-          <LevelFilterBox filter={plan.levelFilter} onToggle={onToggleLevel} onReset={onResetLevel} />
+              <EquipmentFilterBox filter={plan.equipmentFilter} onToggle={onToggleEquipment} onReset={onResetEquipment} />
+              <LevelMiniPicker
+                levelLabel={levelLabel}
+                pickerOpen={levelPickerOpen}
+                onTogglePicker={onToggleLevelPicker}
+                onChangeLevel={onChangeLevel}
+              />
+            </>
+          )}
 
           {day.groups.map((groupKey) => {
             const group = MUSCLE_GROUPS[groupKey];
@@ -1279,27 +1480,32 @@ function MusculacaoTab({
               0
             );
             const selectedCount = Object.keys(day.selections).filter((k) => k.split("::")[1] === groupKey).length;
+            if (!isMontar && selectedCount === 0) return null;
             const range = WEEKLY_VOLUME_TARGETS[groupKey] || [8, 12];
             const weekTotal = weeklyVolume[groupKey] || 0;
-            const isOpen = !!openGroups[groupKey];
+            const isOpen = isMontar ? !!openGroups[groupKey] : true;
             const tier = HIGH_VOLUME_GROUPS.includes(groupKey) ? "volume alto" : "volume baixo";
 
             return (
               <div className="tv-group-block" key={groupKey}>
                 <div
-                  className={"tv-group-header" + (isOpen ? " open" : "")}
-                  role="button"
-                  onClick={() => setOpenGroups((prev) => ({ ...prev, [groupKey]: !prev[groupKey] }))}
+                  className={"tv-group-header" + (isOpen ? " open" : "") + (isMontar ? "" : " tv-group-header-static")}
+                  role={isMontar ? "button" : undefined}
+                  onClick={isMontar ? () => setOpenGroups((prev) => ({ ...prev, [groupKey]: !prev[groupKey] })) : undefined}
                 >
                   <h3>{group.label}</h3>
                   <div style={{ display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap" }}>
-                    <span className="tv-badge">
-                      {selectedCount}/{totalEx} selecionados
-                    </span>
-                    <span className="tv-badge" title={`Meta: ${range[0]}-${range[1]} séries de trabalho/semana (${tier})`}>
-                      📊 {weekTotal}/{range[0]}-{range[1]} séries/sem
-                    </span>
-                    <span className="chevron">▶</span>
+                    {isMontar && (
+                      <>
+                        <span className="tv-badge">
+                          {selectedCount}/{totalEx} selecionados
+                        </span>
+                        <span className="tv-badge" title={`Meta: ${range[0]}-${range[1]} séries de trabalho/semana (${tier})`}>
+                          📊 {weekTotal}/{range[0]}-{range[1]} séries/sem
+                        </span>
+                        <span className="chevron">▶</span>
+                      </>
+                    )}
                   </div>
                 </div>
                 <div className={"tv-group-body" + (isOpen ? " open" : "")}>
@@ -1310,26 +1516,34 @@ function MusculacaoTab({
                         const id = exerciseKey("musculacao", groupKey, ex.name, portionKey);
                         const sel = day.selections[id];
                         const isChecked = !!sel;
+                        if (!isMontar && !isChecked) return null;
                         const passes = exercisePassesFilters(ex.name, plan.equipmentFilter, plan.levelFilter);
-                        if (!passes && !isChecked) return null;
+                        if (isMontar && !passes && !isChecked) return null;
                         const detailsKey = "m::" + id;
-                        const detailsOpen = !!openDetails[detailsKey];
+                        const detailsOpen = isMontar ? !!openDetails[detailsKey] : openDetails[detailsKey] !== false;
                         return (
                           <div className={"tv-exercise-row" + (isChecked ? " checked" : "")} key={id}>
-                            <div className="tv-exercise-main" role="button" onClick={() => onToggleExercise(groupKey, ex.name, portionKey)}>
-                              <input type="checkbox" checked={isChecked} readOnly />
+                            <div
+                              className="tv-exercise-main"
+                              role={isMontar ? "button" : undefined}
+                              onClick={isMontar ? () => onToggleExercise(groupKey, ex.name, portionKey) : undefined}
+                            >
+                              {isMontar && <input type="checkbox" checked={isChecked} readOnly />}
                               <span className="exname">{ex.name}</span>
                               <span
                                 className="toggle-details"
                                 onClick={(e) => {
                                   e.stopPropagation();
-                                  setOpenDetails((prev) => ({ ...prev, [detailsKey]: !prev[detailsKey] }));
+                                  setOpenDetails((prev) => {
+                                    const current = isMontar ? !!prev[detailsKey] : prev[detailsKey] !== false;
+                                    return { ...prev, [detailsKey]: !current };
+                                  });
                                 }}
                               >
                                 detalhes
                               </span>
                             </div>
-                            {isChecked && sel && (
+                            {isMontar && isChecked && sel && (
                               <div className="tv-setsreps-row">
                                 <span title="Séries de preparação (aquecimento, não contam no volume)">Aquecimento:</span>
                                 <input
@@ -1360,11 +1574,18 @@ function MusculacaoTab({
                                   onChange={(e) => onUpdateSelection(id, "reps", e.target.value)}
                                   onBlur={onBlurPersist}
                                 />
+                              </div>
+                            )}
+                            {!isMontar && sel && (
+                              <div className="tv-setsreps-row">
+                                <span className="tv-badge">
+                                  {sel.sets} séries × {sel.reps}
+                                </span>
                                 <DoneToggle checked={entryFor(id).checked} onToggle={() => onToggleDone(id)} />
                               </div>
                             )}
                             <ExerciseDetails ex={ex} open={detailsOpen} />
-                            {isChecked && sel && detailsOpen && (
+                            {!isMontar && sel && (
                               <ExerciseLogBox
                                 targetReps={sel.reps}
                                 log={logFor(id)}
@@ -1393,6 +1614,7 @@ function MusculacaoTab({
 // by the shared TreinoBoard for the simplified tiers (CALIST_GROUPS).
 // =============================================================================
 function CalisteniaTab({
+  mode,
   day,
   plan,
   onToggleExercise,
@@ -1401,13 +1623,16 @@ function CalisteniaTab({
   onChangeDuration,
   onToggleEquipment,
   onResetEquipment,
-  onToggleLevel,
-  onResetLevel,
+  levelLabel,
+  levelPickerOpen,
+  onToggleLevelPicker,
+  onChangeLevel,
   openDetails,
   setOpenDetails,
   log,
   onToggleDone,
 }: {
+  mode: "montar" | "treino";
   day: DayPlan;
   plan: AvancadoPlan;
   onToggleExercise: (name: string) => void;
@@ -1416,13 +1641,16 @@ function CalisteniaTab({
   onChangeDuration: (v: number) => void;
   onToggleEquipment: (k: string) => void;
   onResetEquipment: () => void;
-  onToggleLevel: (k: string) => void;
-  onResetLevel: () => void;
+  levelLabel: string | null;
+  levelPickerOpen: boolean;
+  onToggleLevelPicker: () => void;
+  onChangeLevel: (level: string) => void;
   openDetails: Record<string, boolean>;
   setOpenDetails: React.Dispatch<React.SetStateAction<Record<string, boolean>>>;
   log: Record<string, LogEntry>;
   onToggleDone: (id: string) => void;
 }) {
+  const isMontar = mode === "montar";
   const portions = CALIST_GROUPS.calistenia.portions!;
   const portionEntries = Object.entries(portions);
   const totalEx = portionEntries.reduce(
@@ -1430,6 +1658,10 @@ function CalisteniaTab({
     0
   );
   const selectedCount = Object.keys(day.calistenia.exercises).length;
+
+  if (selectedCount === 0 && !isMontar) {
+    return <div className="tv-empty-note">Nenhum exercício de calistenia selecionado para este dia.</div>;
+  }
 
   return (
     <div className="tv-subblock">
@@ -1439,10 +1671,19 @@ function CalisteniaTab({
           {selectedCount}/{totalEx} selecionados
         </span>
       </div>
-      <EquipmentFilterBox filter={plan.equipmentFilter} onToggle={onToggleEquipment} onReset={onResetEquipment} />
-      <LevelFilterBox filter={plan.levelFilter} onToggle={onToggleLevel} onReset={onResetLevel} />
+      {isMontar && (
+        <>
+          <EquipmentFilterBox filter={plan.equipmentFilter} onToggle={onToggleEquipment} onReset={onResetEquipment} />
+          <LevelMiniPicker
+            levelLabel={levelLabel}
+            pickerOpen={levelPickerOpen}
+            onTogglePicker={onToggleLevelPicker}
+            onChangeLevel={onChangeLevel}
+          />
+        </>
+      )}
 
-      {selectedCount > 0 && (
+      {isMontar && selectedCount > 0 && (
         <div className="tv-duration-row">
           <span>⏱ Duração estimada:</span>
           <input
@@ -1465,25 +1706,31 @@ function CalisteniaTab({
           {portion.exercises.map((ex) => {
             const entry = day.calistenia.exercises[ex.name];
             const isChecked = !!entry;
+            if (!isMontar && !isChecked) return null;
             const passes = exercisePassesFilters(ex.name, plan.equipmentFilter, plan.levelFilter);
-            if (!passes && !isChecked) return null;
+            if (isMontar && !passes && !isChecked) return null;
             const detailsKey = "c::" + portionKey + "::" + ex.name;
-            const detailsOpen = !!openDetails[detailsKey];
+            const detailsOpen = isMontar ? !!openDetails[detailsKey] : openDetails[detailsKey] !== false;
             const logId = exerciseKey("calistenia", "calistenia", ex.name, portionKey);
             return (
               <div className="tv-calist-check-row" key={ex.name}>
-                <input type="checkbox" checked={isChecked} onChange={() => onToggleExercise(ex.name)} />
+                {isMontar && <input type="checkbox" checked={isChecked} onChange={() => onToggleExercise(ex.name)} />}
                 <div className="cc-body">
                   <div className="cc-name">
                     {ex.name}{" "}
                     <span
                       className="cc-toggle"
-                      onClick={() => setOpenDetails((prev) => ({ ...prev, [detailsKey]: !prev[detailsKey] }))}
+                      onClick={() =>
+                        setOpenDetails((prev) => {
+                          const current = isMontar ? !!prev[detailsKey] : prev[detailsKey] !== false;
+                          return { ...prev, [detailsKey]: !current };
+                        })
+                      }
                     >
                       detalhes
                     </span>
                   </div>
-                  {isChecked && entry && (
+                  {isMontar && isChecked && entry && (
                     <div className="tv-setsreps-row">
                       <span>Séries:</span>
                       <input
@@ -1502,6 +1749,13 @@ function CalisteniaTab({
                         onChange={(e) => onUpdateField(ex.name, "reps", e.target.value)}
                         onBlur={onBlurPersist}
                       />
+                    </div>
+                  )}
+                  {!isMontar && entry && (
+                    <div className="tv-setsreps-row">
+                      <span className="tv-badge">
+                        {entry.sets} séries × {entry.reps}
+                      </span>
                       <DoneToggle checked={(log[logId] ?? EMPTY_LOG).checked} onToggle={() => onToggleDone(logId)} />
                     </div>
                   )}
@@ -1734,6 +1988,7 @@ function SportsTab({
 // `categoria` sub-heading for HYROX's oficial/alternativa split).
 // =============================================================================
 function CircuitTab({
+  mode,
   type,
   day,
   weight,
@@ -1747,6 +2002,7 @@ function CircuitTab({
   onClearExercises,
   onBlurPersist,
 }: {
+  mode: "montar" | "treino";
   type: GenericTypeKey;
   day: DayPlan;
   weight: number | null;
@@ -1760,6 +2016,7 @@ function CircuitTab({
   onClearExercises: () => void;
   onBlurPersist: () => void;
 }) {
+  const isMontar = mode === "montar";
   const circuitDay = day.generic[type];
   const pool = CIRCUIT_POOLS[type];
   const circuit = isCircuitFormat(type, circuitDay);
@@ -1768,15 +2025,22 @@ function CircuitTab({
   const presetLabel = circuitDay.intensity === "leve" ? "leve" : circuitDay.intensity === "intenso" ? "intensa" : "moderada";
   const est = computeCircuitEstimate(type, circuitDay, weight);
   const hasCategories = pool.some((ex) => !!ex.categoria);
+  const visiblePool = isMontar ? pool : pool.filter((ex) => circuitDay.exercises.includes(ex.name));
+
+  if (!isMontar && circuitDay.exercises.length === 0) {
+    return <div className="tv-empty-note">Nenhum exercício de {GENERIC_TAB_LABELS[type]} selecionado para este dia.</div>;
+  }
 
   return (
     <div className="tv-subblock">
       <div className="tv-subblock-title">
         <h4>{GENERIC_TAB_LABELS[type]}</h4>
-        <span className="tv-kcal-tag">
-          {circuitDay.exercises.length}/{pool.length} selecionados
-        </span>
-        {circuitDay.exercises.length > 0 && (
+        {isMontar && (
+          <span className="tv-kcal-tag">
+            {circuitDay.exercises.length}/{pool.length} selecionados
+          </span>
+        )}
+        {isMontar && circuitDay.exercises.length > 0 && (
           <span
             className="tv-clear-day"
             role="button"
@@ -1791,7 +2055,7 @@ function CircuitTab({
         )}
       </div>
 
-      {levelFilter.idoso !== false && (
+      {isMontar && levelFilter.idoso !== false && (
         <div className="tv-empty-note" style={{ marginBottom: 12 }}>
           🧓 <b>{GENERIC_TAB_LABELS[type]}</b> normalmente não é recomendado para o perfil 60+/baixo impacto (alto
           impacto, saltos e/ou alta intensidade). Considere usar as abas 🏋️ Musculação ou 🤸 Calistenia com o filtro
@@ -1799,6 +2063,20 @@ function CircuitTab({
         </div>
       )}
 
+      {!isMontar && (
+        <div className="tv-duration-row" style={{ marginTop: 8 }}>
+          {weight ? (
+            <span>
+              ⏱ Duração estimada: <b>{est.minutes} min</b> · 🔥 Estimativa: <b>{est.kcal} kcal</b>
+            </span>
+          ) : (
+            <span>⏱ Duração estimada: <b>{est.minutes} min</b></span>
+          )}
+        </div>
+      )}
+
+      {isMontar && (
+      <>
       <div className="tv-duration-row" style={{ flexWrap: "wrap" }}>
         {type === "crossfit" && (
           <>
@@ -1943,13 +2221,15 @@ function CircuitTab({
           </div>
         </>
       )}
+      </>
+      )}
 
-      {pool.map((ex, idx) => {
+      {visiblePool.map((ex, idx) => {
         const isChecked = circuitDay.exercises.includes(ex.name);
         const detailsKey = `g::${type}::${ex.name}`;
-        const detailsOpen = !!openDetails[detailsKey];
-        const prevCategoria = idx > 0 ? pool[idx - 1].categoria ?? null : null;
-        const showCategoryHeading = hasCategories && (ex.categoria ?? null) !== prevCategoria;
+        const detailsOpen = isMontar ? !!openDetails[detailsKey] : openDetails[detailsKey] !== false;
+        const prevCategoria = idx > 0 ? visiblePool[idx - 1].categoria ?? null : null;
+        const showCategoryHeading = isMontar && hasCategories && (ex.categoria ?? null) !== prevCategoria;
         return (
             <div key={ex.name}>
               {showCategoryHeading && (
@@ -1960,11 +2240,19 @@ function CircuitTab({
                 </div>
               )}
               <div className="tv-calist-check-row">
-                <input type="checkbox" checked={isChecked} onChange={() => onToggleExercise(ex.name)} />
+                {isMontar && <input type="checkbox" checked={isChecked} onChange={() => onToggleExercise(ex.name)} />}
                 <div className="cc-body">
                   <div className="cc-name">
                     {ex.name}{" "}
-                    <span className="cc-toggle" onClick={() => setOpenDetails((prev) => ({ ...prev, [detailsKey]: !prev[detailsKey] }))}>
+                    <span
+                      className="cc-toggle"
+                      onClick={() =>
+                        setOpenDetails((prev) => {
+                          const current = isMontar ? !!prev[detailsKey] : prev[detailsKey] !== false;
+                          return { ...prev, [detailsKey]: !current };
+                        })
+                      }
+                    >
                       detalhes
                     </span>
                   </div>

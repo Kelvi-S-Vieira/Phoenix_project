@@ -192,6 +192,20 @@ export function defaultLevelFilter(): Record<string, boolean> {
   return f;
 }
 
+/**
+ * Single-level filter derived from the profile's `avancado_level` (decided
+ * once at cadastro/onboarding, see TierPicker.tsx) instead of the old
+ * always-visible multi-select LevelFilterBox. Only the chosen level passes
+ * — idoso-eligible exercises still pass for a non-"idoso" level via
+ * `detectLevel`'s own primary+idoso dual-tagging, this just picks which
+ * single level is the "home" level for this profile.
+ */
+export function levelFilterForLevel(level: string): Record<string, boolean> {
+  const f: Record<string, boolean> = {};
+  ALL_LEVEL_KEYS.forEach((k) => (f[k] = k === level));
+  return f;
+}
+
 export function exercisePassesFilters(
   name: string,
   equipmentFilter: Record<string, boolean>,

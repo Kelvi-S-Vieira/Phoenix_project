@@ -31,7 +31,11 @@ export const SUPPLEMENT_CATEGORIES: { key: string; label: string }[] = [
 ];
 
 // Ported from `GOAL_TO_CATEGORY` (projeto_fenix_app_final.html, ~line 15658)
-// — used to pre-select a filter category from the profile's `goal`.
+// — used to pre-select a filter category from the profile's `goal`. Only
+// used to pre-filter the Suplementação browse page's category tabs
+// (SupplementsBrowser no longer even does that — see that file's own
+// comment on the 2026-10-04 "stuck on one category" fix); kept exported in
+// case something else wants a single category guess from a goal.
 export const GOAL_TO_SUPPLEMENT_CATEGORY: Record<string, string> = {
   perder: "emagrecimento",
   ganhar: "hipertrofia",
@@ -722,3 +726,40 @@ export const SUPPLEMENTS: Supplement[] = [
     dose: "500-1000mg por dia, junto de uma refeição com gordura e pimenta-preta."
   }
 ];
+
+// Goal-based "1 per role" supplement recommendation — replaces the old
+// `SUPPLEMENTS.filter(s => s.tags.includes(category)).slice(0, 4)` approach
+// (still visible in git history / GOAL_TO_SUPPLEMENT_CATEGORY above), which
+// for "recuperacao" returned 4 near-identical protein products (Whey
+// Concentrado, Whey Isolado, Caseína, Albumina) in a row since they all
+// share that tag and happen to sit early in the array. Fixed per user
+// feedback (2026-10-04: "não está genérico, dois tipos de fontes de
+// proteína?"). Picks exactly one item per functional role instead —
+// protein source, creatine, caffeine/pre-workout, and one general
+// recovery/health item — each varied by goal, and used by both
+// components/PlanNutritionSummary.tsx and
+// app/montar-plano/PlanRecommendStep.tsx so the two stay in sync.
+const PROTEIN_PICK_BY_GOAL: Record<string, string> = {
+  perder: "Whey Protein Isolado", // leaner macro profile, fits a deficit
+  recomp: "Whey Protein Isolado",
+  ganhar: "Hipercalórico / Mass Gainer", // easier path to a calorie surplus
+  manter: "Whey Protein Concentrado",
+};
+const RECOVERY_PICK_BY_GOAL: Record<string, string> = {
+  perder: "Multivitamínico", // covers dietary gaps common in a deficit
+  recomp: "Ômega-3",
+  ganhar: "Ômega-3", // anti-inflammatory support for higher training volume
+  manter: "Multivitamínico",
+};
+// Creatine and caffeine are each recommended as-is regardless of goal —
+// both are well-studied for performance, and caffeine's mild thermogenic
+// effect fits emagrecimento too (see its own `desc` above).
+const CREATINE_NAME = "Creatina Monohidratada";
+const CAFFEINE_NAME = "Cafeína Anidra";
+
+export function pickRecommendedSupplements(goal: string | null | undefined): Supplement[] {
+  const g = goal && goal in PROTEIN_PICK_BY_GOAL ? goal : "manter";
+  const names = [PROTEIN_PICK_BY_GOAL[g], CREATINE_NAME, CAFFEINE_NAME, RECOVERY_PICK_BY_GOAL[g]];
+  const byName = new Map(SUPPLEMENTS.map((s) => [s.name, s]));
+  return names.map((n) => byName.get(n)).filter((s): s is Supplement => !!s);
+}

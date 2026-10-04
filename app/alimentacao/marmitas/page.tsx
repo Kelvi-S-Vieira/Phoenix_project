@@ -6,22 +6,15 @@ import { getServerWeightUnit } from "@/lib/weight-unit-server";
 import MarmitasTabs from "./MarmitasTabs";
 import type { UserRecipe } from "@/lib/database.types";
 
-// Ported from the prototype's `defaultRecipes` (projeto_fenix_app_final.html,
-// ~lines 12940-12952) — seeded into `user_recipes` the first time a profile
-// has zero rows there, same pattern as the Dashboard's DEFAULT_LIFTS
-// (app/dashboard/page.tsx / migration_dashboard_lifts_cardio.sql).
-const DEFAULT_RECIPES = [
-  {
-    name: "Frango grelhado, arroz e legumes",
-    yield_count: 4,
-    ingredients: [
-      { name: "Peito de frango", qty: 800, unit: "g" },
-      { name: "Arroz", qty: 2, unit: "xíc" },
-      { name: "Brócolis", qty: 1, unit: "unid" },
-      { name: "Cenoura", qty: 2, unit: "unid" },
-    ],
-  },
-];
+// The prototype's `defaultRecipes` (projeto_fenix_app_final.html, ~lines
+// 12940-12952) used to be seeded into `user_recipes` every time a profile
+// had zero rows there — not a true one-time seed, since it re-fired any
+// time the list emptied out again (e.g. after deleting every recipe), so
+// "Frango grelhado, arroz e legumes" kept reappearing on its own. Removed
+// per user feedback (2026-10-04): with the Sugestões tab (145 marmita
+// suggestions) and Montar Plano's recommendation step already covering
+// discovery, this auto-seed was redundant and confusing rather than
+// helpful. The list now genuinely starts empty for a new profile.
 
 // Marmitas — ported from the prototype's #page-marmitas (projeto_fenix_app_
 // final.html, markup ~lines 4419-4466, module logic ~lines 12935-15172).
@@ -62,16 +55,7 @@ export default async function MarmitasPage() {
       .order("created_at", { ascending: true }),
   ]);
 
-  // Seed the default recipe the first time this profile has none.
-  let recipeRows: UserRecipe[] = recipes ?? [];
-  if (recipeRows.length === 0) {
-    const { data: seeded } = await supabase
-      .from("user_recipes")
-      .insert(DEFAULT_RECIPES.map((r) => ({ ...r, profile_id: user.id })))
-      .select("*")
-      .order("created_at", { ascending: true });
-    recipeRows = seeded ?? [];
-  }
+  const recipeRows: UserRecipe[] = recipes ?? [];
 
   const planMap: Record<string, number> = {};
   for (const row of planRows ?? []) {
