@@ -78,6 +78,85 @@ shipped (code merged, build/lint clean) — not when it's merely planned.
 
 ---
 
+## Fase 3 — Produto e UX (a partir de feedback de uso real, 2026-10-04)
+
+Com a paridade funcional vs. o protótipo fechada (itens 4-7 acima), esta fase
+é guiada por uso real do app, não mais pelo protótipo. Itens vindos do
+feedback do usuário em 2026-10-04, mais algumas lacunas e sugestões que
+apareceram durante a investigação de cada ponto. Prioridade: P0 = correções
+rápidas e de baixo risco; P1 = lacunas de paridade entre níveis, escopo
+claro; P2 = features novas que precisam de uma decisão de produto antes de
+construir (custo de API, abordagem técnica); P3 = expansão de conteúdo
+(trabalho manual, incremental).
+
+### P0 — Correções rápidas ✅ done
+- [x] Suplementação: filtro inicial sempre em "Todos" (hoje pré-filtra pela
+  meta do perfil — ex. "manter"/"recomp" cai direto em "Recuperação e
+  Saúde", parecendo fixo) — `app/alimentacao/suplementacao/SupplementsBrowser.tsx`
+- [x] Treino Avançado: adicionar a imagem de cabeçalho que Básico/Intermediário
+  já têm (`.tb-header`/`.ti-header` usam `--tier-header-image`; o cabeçalho do
+  Avançado não usa essa classe) — `app/treino/page.tsx`
+- [x] Sidebar: corrigir o bug visual à esquerda (menu ficando sobreposto/
+  cortado) e reorganizar para não ficar tão extenso — avaliar seções
+  colapsáveis, ou cabeçalho fixo com a navegação rolando por baixo
+  (`components/Sidebar.tsx`, `app/globals.css` `.sidebar`)
+- [x] Layout desktop: `.fx-app` está com `max-width: 640px` fixo em
+  qualquer tamanho de tela — isso faz telas grandes mostrarem o conteúdo
+  "espremido" no centro, como se fosse mobile. Ajustar para uma largura
+  maior em telas de desktop via media query (CSS puro, sem precisar
+  detectar o dispositivo por JS) — `app/globals.css`
+- [x] Cronômetro de descanso: hoje fica embutido no meio da página do
+  Avançado (precisa rolar até ele toda vez). Avaliar deixá-lo fixo/
+  flutuante na tela (ex. canto inferior) para ficar visível durante o
+  treino sem precisar rolar — `app/treino/avancado/AvancadoBuilder.tsx`
+
+### P1 — Lacunas entre níveis de treino
+- [x] Aba "🏃 Cardio" (corrida/bike/elíptico/natação, com duração e
+  intensidade) existe no protótipo para Básico e Intermediário também, mas
+  só foi portada para o Avançado — adicionar a mesma aba, no mesmo modelo,
+  em Básico/Intermediário (`lib/treino-basico-data.ts`,
+  `lib/treino-intermediario-data.ts`, `app/treino/TreinoBoard.tsx`)
+- [x] Ao final da duração de um plano (Montar Plano/Plano semanal), mostrar
+  qual o consumo calórico recomendado para manutenção do objetivo atingido
+  — hoje isso não aparece em lugar nenhum. (`lib/plan-generation.ts`,
+  `app/plano17/page.tsx`, `app/montar-plano/page.tsx`)
+- [x] Meu Perfil: hoje "/onboarding" sempre abre o assistente de metas do
+  zero. Construir uma página de perfil de verdade — resumo de quem é o
+  usuário, personal vinculado (se tiver), gráfico de evolução de peso,
+  resumo do treino da semana — com um botão separado "Editar metas" que aí
+  sim abre o assistente. (`app/onboarding/page.tsx` → nova `app/perfil/page.tsx`)
+- [ ] Verificar o fluxo "Continuar com Google" ponta a ponta (login E
+  cadastro) — o código parece completo (`signInWithOAuth` → `/auth/callback`
+  → `/complete-profile` se for conta nova), mas precisa de teste real; se
+  der erro específico, me avisa qual para eu investigar
+
+### P2 — Features novas (preciso da sua decisão antes de construir)
+- [ ] Diário: reconhecimento de calorias por foto do prato (IA). Precisa de
+  um provedor de visão computacional com custo por uso — posso usar a
+  própria IA deste app (sem custo extra de API externa, mas menos
+  especializada em comida) ou um serviço especializado em alimentos (mais
+  preciso, custo por chamada). Qual prefere?
+- [ ] Diário: "falar a refeição" (voz → texto). Dá pra usar o reconhecimento
+  de voz nativo do navegador (grátis, funciona bem no Chrome, pode não
+  funcionar em todos os navegadores/celulares) ou um serviço de
+  transcrição na nuvem (mais confiável, tem custo). Qual prefere?
+- [ ] Diário: digitar a refeição inteira em texto livre ("arroz, feijão e
+  2 ovos") e a IA estimar os macros automaticamente — mesma decisão de
+  provedor do item de foto acima, dá pra reaproveitar.
+- [ ] Receitas Fit e Suplementação hoje não se conectam ao Montar Plano —
+  a ideia proposta: ao montar o plano (ou quando não há personal), oferecer
+  um "plano inicial recomendado" com sugestões de receitas/suplementos que
+  o usuário pode aceitar, ajustar ou ignorar e montar do zero; quando há
+  personal, é ele quem monta. Isso é uma feature de produto nova, não um
+  conserto — preciso confirmar o formato antes de desenhar (ex.: isso vira
+  uma etapa a mais no assistente de Montar Plano, ou uma aba separada?)
+
+### P3 — Expansão de conteúdo (trabalho manual incremental)
+- [ ] Ampliar a base de alimentos do Diário (hoje 204 itens)
+- [ ] Ampliar as sugestões de marmitas (hoje 145) e receitas fit (hoje 53)
+
+---
+
 ## Original Sprint 3–5 plan (superseded, kept for history)
 
 This sprint (Phase 2) proved the architecture end-to-end with a deliberately

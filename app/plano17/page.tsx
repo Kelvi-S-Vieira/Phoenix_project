@@ -4,10 +4,11 @@ import { createClient } from "@/lib/supabase/server";
 import Sidebar from "@/components/Sidebar";
 import { ALUNO_SIDEBAR_SECTIONS } from "@/lib/sidebar-nav";
 import { getServerWeightUnit } from "@/lib/weight-unit-server";
-import { buildWeeklyPlan, dietLabel } from "@/lib/plan-generation";
+import { buildWeeklyPlan, computePlanProgress, dietLabel } from "@/lib/plan-generation";
 import { formatWeight } from "@/lib/weight-unit";
 import PlanChart from "@/components/PlanChart";
 import PlanWeekTable from "@/components/PlanWeekTable";
+import PlanCompleteCard from "@/components/PlanCompleteCard";
 
 // Generalized replacement for the prototype's hardcoded, name-gated
 // "Plano 17 semanas" (#page-plano17, ~lines 4799-4854 and 16768-16916 of
@@ -66,6 +67,18 @@ export default async function Plano17Page() {
   const recorded = rows.filter((r) => r.actualWeight != null);
   const latest = recorded[recorded.length - 1] ?? null;
 
+  // Only when the plan both exists and has run its full duration, and the
+  // profile has everything the maintenance-calorie estimate needs — see
+  // components/PlanCompleteCard.tsx.
+  const planComplete = plan ? computePlanProgress(plan).isComplete : false;
+  const canShowMaintenance =
+    planComplete &&
+    targetWeight != null &&
+    profile.height != null &&
+    profile.age != null &&
+    profile.sex != null &&
+    profile.activity_level != null;
+
   return (
     <div className="app-shell">
       <Sidebar
@@ -87,6 +100,17 @@ export default async function Plano17Page() {
             </div>
           </div>
 
+          {canShowMaintenance && plan && (
+            <PlanCompleteCard
+              weeks={plan.weeks}
+              targetWeight={targetWeight!}
+              height={profile.height!}
+              age={profile.age!}
+              sex={profile.sex!}
+              activity={profile.activity_level!}
+            />
+          )}
+
           {!plan ? (
             <div className="card">
               <div className="fx-empty-state">
@@ -98,7 +122,7 @@ export default async function Plano17Page() {
             <div className="card">
               <div className="fx-empty-state">
                 Preencha seu peso atual e peso-alvo em{" "}
-                <Link href="/onboarding">Meu Perfil</Link> para gerar as metas semanais.
+                <Link href="/onboarding">Editar metas</Link> para gerar as metas semanais.
               </div>
             </div>
           ) : (

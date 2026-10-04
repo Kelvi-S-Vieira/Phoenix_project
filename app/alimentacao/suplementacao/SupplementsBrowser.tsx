@@ -1,31 +1,21 @@
 "use client";
 
 import { useState } from "react";
-import {
-  SUPPLEMENTS,
-  SUPPLEMENT_CATEGORIES,
-  GOAL_TO_SUPPLEMENT_CATEGORY,
-} from "@/lib/supplements";
-import type { Goal } from "@/lib/database.types";
+import { SUPPLEMENTS, SUPPLEMENT_CATEGORIES } from "@/lib/supplements";
 
 const CATEGORY_LABEL: Record<string, string> = Object.fromEntries(
   SUPPLEMENT_CATEGORIES.filter((c) => c.key !== "all").map((c) => [c.key, c.label])
 );
 
-// Ported from the prototype's `suInitCategory()` (projeto_fenix_app_final.html,
-// ~lines 15663-15670): pre-select the category matching the profile's goal.
-// The prototype also remembered the last manual choice in localStorage
-// (`fenix_supl_filter`); this port keeps it simple — session-only state,
-// always starting from the goal-based default on page load.
-function initialCategory(goal: Goal | null): string {
-  if (goal && GOAL_TO_SUPPLEMENT_CATEGORY[goal]) {
-    return GOAL_TO_SUPPLEMENT_CATEGORY[goal];
-  }
-  return "all";
-}
-
-export default function SupplementsBrowser({ goal }: { goal: Goal | null }) {
-  const [activeCategory, setActiveCategory] = useState(() => initialCategory(goal));
+// The prototype's `suInitCategory()` (projeto_fenix_app_final.html, ~lines
+// 15663-15670) pre-selected the category matching the profile's goal
+// (GOAL_TO_SUPPLEMENT_CATEGORY in lib/supplements.ts) and remembered the last
+// manual choice in localStorage. Per user feedback (2026-10-04) this made the
+// page look "stuck" on one category, so it now always starts on "Todos"
+// regardless of goal — no `goal` prop needed anymore (dropped cleanly rather
+// than kept unused; see the call site in page.tsx).
+export default function SupplementsBrowser() {
+  const [activeCategory, setActiveCategory] = useState("all");
 
   const list = SUPPLEMENTS.filter(
     (s) => activeCategory === "all" || s.tags.includes(activeCategory)

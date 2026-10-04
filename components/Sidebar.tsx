@@ -157,51 +157,53 @@ export default function Sidebar({
         </div>
       </div>
 
-      {nav}
+      <div className="sidebar-nav">{nav}</div>
 
-      <div className="nav-item" onClick={toggleTheme} style={{ marginTop: 14 }}>
-        <span className="dot"></span>
-        {theme === "dark" ? "🌙 Tema escuro" : "☀️ Tema claro"}
-      </div>
-
-      <div className="fx-accent-picker-sidebar fx-accent-picker">
-        <span className="fx-accent-picker-label">Cor:</span>
-        {ACCENTS.map((a) => (
-          <div
-            key={a.key}
-            className={"fx-accent-swatch-mini" + (accent === a.key ? " selected" : "")}
-            data-accent={a.key}
-            title={a.title}
-            onClick={() => handleAccentClick(a.key)}
-          />
-        ))}
-      </div>
-
-      {variant === "aluno" && (
-        <div className="fx-unit-toggle">
-          <span className="fx-unit-toggle-label">Unidade:</span>
-          <div className="fx-unit-toggle-pill">
-            <span
-              className={"fx-unit-opt" + (weightUnit === "kg" ? " active" : "")}
-              data-unit="kg"
-              onClick={() => handleUnitClick("kg")}
-            >
-              kg
-            </span>
-            <span
-              className={"fx-unit-opt" + (weightUnit === "lb" ? " active" : "")}
-              data-unit="lb"
-              onClick={() => handleUnitClick("lb")}
-            >
-              lb
-            </span>
-          </div>
+      <div className="sidebar-footer">
+        <div className="nav-item" onClick={toggleTheme} style={{ marginTop: 14 }}>
+          <span className="dot"></span>
+          {theme === "dark" ? "🌙 Tema escuro" : "☀️ Tema claro"}
         </div>
-      )}
 
-      <div className="nav-item" onClick={handleLogout} style={{ marginTop: 6 }}>
-        <span className="dot"></span>
-        Sair
+        <div className="fx-accent-picker-sidebar fx-accent-picker">
+          <span className="fx-accent-picker-label">Cor:</span>
+          {ACCENTS.map((a) => (
+            <div
+              key={a.key}
+              className={"fx-accent-swatch-mini" + (accent === a.key ? " selected" : "")}
+              data-accent={a.key}
+              title={a.title}
+              onClick={() => handleAccentClick(a.key)}
+            />
+          ))}
+        </div>
+
+        {variant === "aluno" && (
+          <div className="fx-unit-toggle">
+            <span className="fx-unit-toggle-label">Unidade:</span>
+            <div className="fx-unit-toggle-pill">
+              <span
+                className={"fx-unit-opt" + (weightUnit === "kg" ? " active" : "")}
+                data-unit="kg"
+                onClick={() => handleUnitClick("kg")}
+              >
+                kg
+              </span>
+              <span
+                className={"fx-unit-opt" + (weightUnit === "lb" ? " active" : "")}
+                data-unit="lb"
+                onClick={() => handleUnitClick("lb")}
+              >
+                lb
+              </span>
+            </div>
+          </div>
+        )}
+
+        <div className="nav-item" onClick={handleLogout} style={{ marginTop: 6 }}>
+          <span className="dot"></span>
+          Sair
+        </div>
       </div>
     </aside>
   );

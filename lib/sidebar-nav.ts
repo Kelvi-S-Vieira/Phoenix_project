@@ -25,7 +25,7 @@ export const ALUNO_SIDEBAR_SECTIONS: SidebarNavSection[] = [
     label: "Visão Geral",
     items: [
       { href: "/dashboard", label: "Dashboard" },
-      { href: "/onboarding", label: "Meu Perfil" },
+      { href: "/perfil", label: "Meu Perfil" },
     ],
   },
   {

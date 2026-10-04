@@ -186,6 +186,20 @@ export type ExerciseSetLog = {
   created_at: string;
 };
 
+// Simple cardio log (corrida/bike/elíptico/natação, duração + intensidade)
+// backing the "🏃 Cardio" tab shared by Básico and Intermediário
+// (app/treino/TreinoBoard.tsx) — NO calorie/MET calculation, unlike
+// Avançado's own cardio system. See supabase/migration_cardio_log.sql.
+export type CardioLogEntry = {
+  id: string;
+  profile_id: string;
+  day_key: "seg" | "ter" | "qua" | "qui" | "sex" | "sab" | "dom";
+  activity_key: string;
+  duration: number | null;
+  intensity: "leve" | "moderado" | "intenso";
+  created_at: string;
+};
+
 // Dashboard "Cargas" card — one row per tracked lift. See
 // supabase/migration_dashboard_lifts_cardio.sql.
 export type Lift = {
@@ -342,6 +356,7 @@ export type Database = {
       custom_plans: Table<CustomPlan>;
       calendar_days: Table<CalendarDay>;
       workout_log_entries: Table<WorkoutLogEntry>;
+      cardio_log_entries: Table<CardioLogEntry>;
       avancado_plans: Table<AvancadoPlanRow>;
       exercise_set_logs: Table<ExerciseSetLog>;
       lifts: Table<Lift>;

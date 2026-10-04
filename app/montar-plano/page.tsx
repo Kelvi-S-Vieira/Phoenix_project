@@ -6,11 +6,12 @@ import { ALUNO_SIDEBAR_SECTIONS } from "@/lib/sidebar-nav";
 import { getServerWeightUnit } from "@/lib/weight-unit-server";
 import { dietLabel, buildWeeklyPlan, computePlanProgress } from "@/lib/plan-generation";
 import { TIER_LABELS, SPLIT_OPTIONS } from "@/lib/fenix-domain";
-import type { Tier } from "@/lib/database.types";
+import type { ActivityLevel, Tier } from "@/lib/database.types";
 import PlanSetupForm from "./PlanSetupForm";
 import PlanActions from "./PlanActions";
 import PlanChart from "@/components/PlanChart";
 import PlanWeekTable from "@/components/PlanWeekTable";
+import PlanCompleteCard from "@/components/PlanCompleteCard";
 
 export default async function MontarPlanoPage() {
   const supabase = await createClient();
@@ -64,6 +65,10 @@ export default async function MontarPlanoPage() {
               plan={plan}
               currentWeight={profile.current_weight}
               targetWeight={profile.target_weight}
+              height={profile.height}
+              age={profile.age}
+              sex={profile.sex}
+              activityLevel={profile.activity_level}
               unit={unit}
               profileId={user.id}
             />
@@ -78,17 +83,32 @@ async function PlanProgressView({
   plan,
   currentWeight,
   targetWeight,
+  height,
+  age,
+  sex,
+  activityLevel,
   unit,
   profileId,
 }: {
   plan: { id: string; weeks: number; diet_choice: string | null; tier: Tier | null; split: string | null; start_date: string };
   currentWeight: number | null;
   targetWeight: number | null;
+  height: number | null;
+  age: number | null;
+  sex: "M" | "F" | null;
+  activityLevel: ActivityLevel | null;
   unit: "kg" | "lb";
   profileId: string;
 }) {
   const supabase = await createClient();
   const progress = computePlanProgress(plan);
+  const canShowMaintenance =
+    progress.isComplete &&
+    targetWeight != null &&
+    height != null &&
+    age != null &&
+    sex != null &&
+    activityLevel != null;
   const tierLabel = plan.tier ? TIER_LABELS[plan.tier] : "—";
   const splitLabel = plan.tier && plan.split
     ? SPLIT_OPTIONS[plan.tier].find((o) => o.key === plan.split)?.label ?? plan.split
@@ -114,6 +134,17 @@ async function PlanProgressView({
 
   return (
     <>
+      {canShowMaintenance && (
+        <PlanCompleteCard
+          weeks={plan.weeks}
+          targetWeight={targetWeight!}
+          height={height!}
+          age={age!}
+          sex={sex!}
+          activity={activityLevel!}
+        />
+      )}
+
       <div className="card">
         <h2 style={{ marginTop: 0 }}>Plano ativo</h2>
         <div className="fx-plan-summary-row">
@@ -152,7 +183,7 @@ async function PlanProgressView({
         <div className="card">
           <div className="fx-empty-state">
             Preencha seu peso atual e peso-alvo em{" "}
-            <Link href="/onboarding">Meu Perfil</Link> para ver as metas semanais e o gráfico.
+            <Link href="/onboarding">Editar metas</Link> para ver as metas semanais e o gráfico.
           </div>
         </div>
       ) : (

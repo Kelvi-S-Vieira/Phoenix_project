@@ -56,7 +56,7 @@ export default async function SuplementacaoPage() {
             suplemento, converse com um nutricionista ou médico.
           </div>
 
-          <SupplementsBrowser goal={profile.goal} />
+          <SupplementsBrowser />
 
           <div className="footer-note">
             PROJETO FÊNIX — suplemento ajuda quem já treina e come direito.

@@ -7,12 +7,15 @@ import ExerciseMedia from "@/components/ExerciseMedia";
 import {
   DAYS,
   exerciseId,
+  CARDIO_ACTIVITIES,
+  CARDIO_INTENSITIES,
   type DayKey,
   type Split,
   type WorkoutType,
   type WorkoutTypeKey,
   type MuscleGroup,
   type Exercise,
+  type CardioIntensity,
 } from "@/lib/treino-shared-types";
 
 interface LogEntry {
@@ -22,6 +25,25 @@ interface LogEntry {
   load: string;
 }
 
+// One row of the simple Cardio tab log (corrida/bike/elíptico/natação +
+// duração + intensidade, NO calorie/MET calculation — see
+// lib/treino-shared-types.ts). `id` mirrors the `cardio_log_entries.id` uuid
+// once persisted; a locally-added-but-not-yet-saved entry temporarily uses a
+// client-generated id until the insert resolves.
+interface CardioEntry {
+  id: string;
+  activityKey: string;
+  duration: string;
+  intensity: CardioIntensity;
+}
+
+// "Tab" the day-content area is showing — either one of the generic
+// muscle-group-browsing workout types (musculação/calistenia) or the
+// cardio log, which is structurally unrelated (flat activity+duration+
+// intensity entries, not WorkoutType/MuscleGroup) and always available,
+// even on a rest day — see renderCardioTab below.
+type ActiveMode = WorkoutTypeKey | "cardio";
+
 const EMPTY_ENTRY: LogEntry = { checked: false, sets: "", reps: "", load: "" };
 
 export default function TreinoBoard({
@@ -30,6 +52,7 @@ export default function TreinoBoard({
   workoutTypes,
   muscleGroups,
   initialLog,
+  initialCardio,
   defaultDay,
   sectionClass,
   leadClass,
@@ -40,6 +63,7 @@ export default function TreinoBoard({
   workoutTypes: Record<WorkoutTypeKey, WorkoutType>;
   muscleGroups: Record<string, MuscleGroup>;
   initialLog: Record<string, LogEntry>;
+  initialCardio: Record<DayKey, CardioEntry[]>;
   defaultDay: DayKey | null;
   // Tier-specific section wrapper/lead classes ("tb-section"/"tb-lead" or
   // "ti-section"/"ti-lead") and the "2. Sua semana" lead paragraph text,
@@ -50,9 +74,15 @@ export default function TreinoBoard({
   weekLead: string;
 }) {
   const [selectedDay, setSelectedDay] = useState<DayKey | null>(defaultDay);
-  const [activeTab, setActiveTab] = useState<WorkoutTypeKey>("musculacao");
+  const [activeTab, setActiveTab] = useState<ActiveMode>("musculacao");
   const [log, setLog] = useState<Record<string, LogEntry>>(initialLog);
   const [savingId, setSavingId] = useState<string | null>(null);
+  const [cardio, setCardio] = useState<Record<DayKey, CardioEntry[]>>(initialCardio);
+  const [cardioForm, setCardioForm] = useState<{ activityKey: string; duration: string; intensity: CardioIntensity }>({
+    activityKey: CARDIO_ACTIVITIES[0].key,
+    duration: "",
+    intensity: "moderado",
+  });
 
   function entryFor(id: string): LogEntry {
     return log[id] ?? EMPTY_ENTRY;
@@ -62,6 +92,120 @@ export default function TreinoBoard({
     const prefix = dayKey + "::";
     return Object.entries(log).some(
       ([id, entry]) => id.startsWith(prefix) && entry.checked
+    );
+  }
+
+  function dayHasCardio(dayKey: DayKey) {
+    return (cardio[dayKey]?.length ?? 0) > 0;
+  }
+
+  async function addCardioEntry(dayKey: DayKey) {
+    const duration = cardioForm.duration === "" ? null : Number(cardioForm.duration);
+    const supabase = createClient();
+    const { data } = await supabase
+      .from("cardio_log_entries")
+      .insert({
+        profile_id: profileId,
+        day_key: dayKey,
+        activity_key: cardioForm.activityKey,
+        duration,
+        intensity: cardioForm.intensity,
+      })
+      .select("id")
+      .single();
+    const entry: CardioEntry = {
+      id: data?.id ?? `local_${crypto.randomUUID()}`,
+      activityKey: cardioForm.activityKey,
+      duration: duration != null ? String(duration) : "",
+      intensity: cardioForm.intensity,
+    };
+    setCardio((prev) => ({ ...prev, [dayKey]: [...(prev[dayKey] ?? []), entry] }));
+    setCardioForm({ activityKey: CARDIO_ACTIVITIES[0].key, duration: "", intensity: "moderado" });
+  }
+
+  async function removeCardioEntry(dayKey: DayKey, id: string) {
+    setCardio((prev) => ({
+      ...prev,
+      [dayKey]: (prev[dayKey] ?? []).filter((e) => e.id !== id),
+    }));
+    const supabase = createClient();
+    await supabase.from("cardio_log_entries").delete().eq("id", id).eq("profile_id", profileId);
+  }
+
+  function renderCardioTab(dayKey: DayKey) {
+    const entries = cardio[dayKey] ?? [];
+    return (
+      <div>
+        <div className="fx-cardio-form">
+          <label>
+            Atividade
+            <select
+              value={cardioForm.activityKey}
+              onChange={(e) => setCardioForm((f) => ({ ...f, activityKey: e.target.value }))}
+            >
+              {CARDIO_ACTIVITIES.map((a) => (
+                <option key={a.key} value={a.key}>
+                  {a.icon} {a.label}
+                </option>
+              ))}
+            </select>
+          </label>
+          <label>
+            Duração (min)
+            <input
+              type="number"
+              min="0"
+              placeholder="30"
+              value={cardioForm.duration}
+              onChange={(e) => setCardioForm((f) => ({ ...f, duration: e.target.value }))}
+            />
+          </label>
+          <label>
+            Intensidade
+            <select
+              value={cardioForm.intensity}
+              onChange={(e) => setCardioForm((f) => ({ ...f, intensity: e.target.value as CardioIntensity }))}
+            >
+              {CARDIO_INTENSITIES.map(([key, label]) => (
+                <option key={key} value={key}>
+                  {label}
+                </option>
+              ))}
+            </select>
+          </label>
+          <button type="button" className="fx-cardio-add-btn" onClick={() => addCardioEntry(dayKey)}>
+            + Registrar
+          </button>
+        </div>
+
+        {entries.length === 0 ? (
+          <div className="fx-empty-state">
+            Nenhuma atividade de cardio registrada para este dia ainda.
+          </div>
+        ) : (
+          entries.map((entry) => {
+            const activityDef = CARDIO_ACTIVITIES.find((a) => a.key === entry.activityKey);
+            const intensityDef = CARDIO_INTENSITIES.find(([key]) => key === entry.intensity);
+            return (
+              <div className="fx-cardio-entry" key={entry.id}>
+                <span className="fx-cardio-icon">{activityDef?.icon ?? "🏃"}</span>
+                <span className="fx-cardio-info">
+                  <b>{activityDef?.label ?? entry.activityKey}</b>
+                  {entry.duration ? ` — ${entry.duration} min` : ""}
+                  {intensityDef ? ` — ${intensityDef[1]}` : ""}
+                </span>
+                <button
+                  type="button"
+                  className="fx-cardio-del"
+                  onClick={() => removeCardioEntry(dayKey, entry.id)}
+                >
+                  Remover
+                </button>
+              </div>
+            );
+          })
+        )}
+      </div>
     );
   }
 
@@ -101,13 +245,17 @@ export default function TreinoBoard({
   }
 
   const groups = selectedDay ? split.week[selectedDay] : null;
-  const typeInfo = workoutTypes[activeTab];
+  // "cardio" is not a WorkoutTypeKey (it's a structurally different flat
+  // log, not a muscle-group-browsing type), so typeInfo/renderGroups only
+  // apply to the musculação/calistenia tabs — see renderCardioTab above for
+  // the cardio tab's own render path.
+  const typeInfo = activeTab !== "cardio" ? workoutTypes[activeTab] : null;
   // Some workout types (e.g. Avançado's calistenia, organized by movement
   // pattern rather than by the day's scheduled muscle groups) declare a
   // fixed `alwaysGroups` list that should render on any training day,
   // instead of the day-specific `groups` list above (which only applies to
   // musculação-style, muscle-group-scheduled tabs).
-  const renderGroups = typeInfo.alwaysGroups ?? groups;
+  const renderGroups = activeTab !== "cardio" ? (typeInfo?.alwaysGroups ?? groups) : null;
 
   function renderExerciseCard(
     ex: Exercise,
@@ -206,7 +354,9 @@ export default function TreinoBoard({
             >
               <div className="fx-day-name">{d.label.slice(0, 3)}</div>
               <div className="fx-day-groups">{groupsLabel}</div>
-              <div className="fx-day-check">{dayHasChecked(d.key) ? "✅" : ""}</div>
+              <div className="fx-day-check">
+                {dayHasChecked(d.key) || dayHasCardio(d.key) ? "✅" : ""}
+              </div>
             </div>
           );
         })}
@@ -226,28 +376,45 @@ export default function TreinoBoard({
         </div>
       )}
 
-      {selectedDay && !renderGroups && (
-        <div className="fx-empty-state">
-          Hoje é dia de descanso nesse plano. Aproveite para recuperar — o
-          descanso também faz parte do treino.
+      {/* Tabs — sempre visíveis quando há um dia selecionado: o cardio
+          funciona também em dia de descanso, ao contrário de
+          musculação/calistenia (ported from the prototype's comment
+          "tabs — sempre visíveis, o cardio funciona também em dia de
+          descanso", projeto_fenix_app_final.html ~line 7586). */}
+      {selectedDay && (
+        <div className="fx-nav-row" style={{ marginBottom: 14 }}>
+          {(Object.keys(workoutTypes) as WorkoutTypeKey[]).map((typeKey) => (
+            <button
+              key={typeKey}
+              type="button"
+              className={"btn small" + (activeTab === typeKey ? "" : " secondary")}
+              onClick={() => setActiveTab(typeKey)}
+            >
+              {workoutTypes[typeKey].label}
+            </button>
+          ))}
+          <button
+            type="button"
+            className={"btn small" + (activeTab === "cardio" ? "" : " secondary")}
+            onClick={() => setActiveTab("cardio")}
+          >
+            🏃 Cardio
+          </button>
         </div>
       )}
 
-      {selectedDay && renderGroups && (
-        <>
-          <div className="fx-nav-row" style={{ marginBottom: 14 }}>
-            {(Object.keys(workoutTypes) as WorkoutTypeKey[]).map((typeKey) => (
-              <button
-                key={typeKey}
-                type="button"
-                className={"btn small" + (activeTab === typeKey ? "" : " secondary")}
-                onClick={() => setActiveTab(typeKey)}
-              >
-                {workoutTypes[typeKey].label}
-              </button>
-            ))}
-          </div>
+      {selectedDay && activeTab === "cardio" && renderCardioTab(selectedDay)}
 
+      {selectedDay && activeTab !== "cardio" && !renderGroups && (
+        <div className="fx-empty-state">
+          Hoje é dia de descanso nesse plano. Aproveite para recuperar — o
+          descanso também faz parte do treino. Você ainda pode registrar uma
+          atividade na aba Cardio, se quiser.
+        </div>
+      )}
+
+      {selectedDay && activeTab !== "cardio" && renderGroups && typeInfo && (
+        <>
           {renderGroups.map((groupKey) => {
             const groupDef = typeInfo.groups[groupKey];
             // Prefer the group's own label from this workout type (e.g.

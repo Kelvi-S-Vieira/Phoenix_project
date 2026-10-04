@@ -42,6 +42,37 @@ export interface MuscleGroup {
 
 export type DayKey = "seg" | "ter" | "qua" | "qui" | "sex" | "sab" | "dom";
 
+/**
+ * Simple cardio log shared by Básico and Intermediário — a flat activity +
+ * duration (minutes) + intensity entry, with NO calorie/MET calculation
+ * (unlike Avançado's own richer `CARDIO_ACTIVITIES` in
+ * lib/treino-avancado-builder.ts, which has MET values and 23 activities).
+ * Ported verbatim from the prototype's shared treino-basico/treino-
+ * intermediario module (projeto_fenix_app_final.html lines ~7289-7295) —
+ * both tiers use this exact same 4-activity list, so it lives here instead
+ * of being duplicated in treino-basico-data.ts/treino-intermediario-data.ts.
+ */
+export interface CardioActivity {
+  key: string;
+  label: string;
+  icon: string;
+}
+
+export const CARDIO_ACTIVITIES: CardioActivity[] = [
+  { key: "corrida", label: "Corrida", icon: "🏃" },
+  { key: "bike", label: "Bicicleta", icon: "🚴" },
+  { key: "eliptico", label: "Elíptico", icon: "🌀" },
+  { key: "natacao", label: "Natação", icon: "🏊" },
+];
+
+export type CardioIntensity = "leve" | "moderado" | "intenso";
+
+export const CARDIO_INTENSITIES: [CardioIntensity, string][] = [
+  ["leve", "Leve"],
+  ["moderado", "Moderado"],
+  ["intenso", "Intenso"],
+];
+
 export interface DayInfo {
   key: DayKey;
   label: string;

@@ -142,6 +142,11 @@ h1 {
   flex: 1;
 }
 
+/* Three-region layout (brand header / scrolling nav / pinned footer) so the
+   bottom controls (tema, cor, unidade, sair) never get clipped or overlap
+   the page below on shorter viewports — only the middle region scrolls, the
+   header and footer always stay fully visible. See .sidebar-nav /
+   .sidebar-footer below. */
 .sidebar {
   width: 220px;
   flex-shrink: 0;
@@ -151,9 +156,16 @@ h1 {
   position: sticky;
   top: 0;
   height: 100vh;
-  overflow-y: auto;
   display: flex;
   flex-direction: column;
+}
+.sidebar-nav {
+  flex: 1;
+  overflow-y: auto;
+  min-height: 0;
+}
+.sidebar-footer {
+  flex-shrink: 0;
 }
 
 .brand {
@@ -184,7 +196,7 @@ h1 {
   display: flex;
   align-items: center;
   gap: 10px;
-  padding: 11px 12px;
+  padding: 9px 12px;
   border-radius: 10px;
   cursor: pointer;
   color: var(--text-muted);
@@ -352,6 +364,14 @@ h1 {
     margin-bottom: 0;
     flex-shrink: 0;
   }
+  /* Unwrap the desktop-only scroll regions so the mobile top-bar keeps its
+     existing flat flex-row layout (sections/footer items as direct flex
+     children of .sidebar), unchanged from before the desktop sidebar
+     reorg above. */
+  .sidebar-nav,
+  .sidebar-footer {
+    display: contents;
+  }
 }
 
 .fx-app {
@@ -360,6 +380,18 @@ h1 {
   margin: 0 auto;
   padding: 28px 20px 60px;
   flex: 1;
+}
+
+/* Desktop monitors have far more room than a 640px phone-width column —
+   widen the content area past the sidebar's own 860px mobile breakpoint.
+   Stays well short of edge-to-edge so text-heavy pages (Guia, Diário)
+   keep a readable line length; grids inside .fx-app use auto-fit/auto-fill
+   minmax() tracks, so they simply gain columns on the extra width instead
+   of stretching awkwardly. */
+@media (min-width: 900px) {
+  .fx-app {
+    max-width: 960px;
+  }
 }
 
 .fx-topbar-wrap {
@@ -1652,6 +1684,81 @@ h1 {
   font-family: inherit;
 }
 
+/* CARDIO TAB — simple log shared by Básico/Intermediário (no MET/kcal,
+   unlike Avançado's .tv-entry-row cardio, which this mirrors in spirit). */
+.fx-cardio-form {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  padding: 12px 14px;
+  margin-bottom: 14px;
+}
+.fx-cardio-form label {
+  font-size: 11px;
+  color: var(--text-muted);
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.fx-cardio-form select,
+.fx-cardio-form input[type="number"] {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 7px;
+  padding: 6px 8px;
+  color: var(--text);
+  font-size: 13.5px;
+  font-family: inherit;
+}
+.fx-cardio-add-btn {
+  background: var(--ember);
+  border: none;
+  color: #1a0f08;
+  font-weight: 700;
+  padding: 8px 16px;
+  border-radius: 8px;
+  cursor: pointer;
+  font-size: 13px;
+}
+.fx-cardio-entry {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  padding: 10px 14px;
+  margin-bottom: 8px;
+  font-size: 13.5px;
+}
+.fx-cardio-entry .fx-cardio-icon {
+  font-size: 17px;
+}
+.fx-cardio-entry .fx-cardio-info {
+  flex: 1;
+  color: var(--text);
+}
+.fx-cardio-entry .fx-cardio-info b {
+  color: var(--gold);
+}
+.fx-cardio-entry .fx-cardio-del {
+  background: none;
+  border: 1px solid var(--border);
+  color: var(--text-muted);
+  border-radius: 6px;
+  padding: 4px 9px;
+  cursor: pointer;
+  font-size: 12px;
+}
+.fx-cardio-entry .fx-cardio-del:hover {
+  border-color: var(--danger);
+  color: var(--danger);
+}
+
 .fx-collapsible-toggle {
   color: var(--gold);
   font-size: 13px;
@@ -2128,6 +2235,39 @@ h1 {
 
 .tv-rest-timer-box {
   border: 1px solid var(--ember-dim);
+}
+/* Floating/pinned variant (P0 item 5, Fase 3): keeps the rest timer visible
+   while scrolling the exercise list instead of scrolling out of the normal
+   page flow. z-index 45 sits below the modal overlays (.fx-cal-overlay at
+   50, .fx-overlay at 100) and above the mobile sidebar top bar (40), so it
+   never fights with either. */
+.tv-rest-timer-floating {
+  position: fixed;
+  bottom: 20px;
+  right: 20px;
+  z-index: 45;
+  width: 260px;
+  max-height: calc(100vh - 40px);
+  overflow-y: auto;
+  box-shadow: 0 8px 28px rgba(0, 0, 0, 0.45);
+  margin-bottom: 0;
+}
+@media (max-width: 640px) {
+  .tv-rest-timer-floating {
+    left: 12px;
+    right: 12px;
+    bottom: 12px;
+    width: auto;
+    padding: 10px 14px;
+  }
+  .tv-rest-timer-floating .tv-timer-display {
+    font-size: 1.6rem;
+    padding: 4px 0;
+    margin-bottom: 6px;
+  }
+  .tv-rest-timer-floating .tv-subblock-title {
+    margin-bottom: 4px;
+  }
 }
 .tv-timer-display {
   text-align: center;
@@ -3034,7 +3174,8 @@ h1 {
    palette — same approach as the Avançado "tv-" block above.
    ============================================================================= */
 .tb-header,
-.ti-header {
+.ti-header,
+.tv-header {
   text-align: center;
   margin-bottom: 22px;
   padding: 26px 18px;
@@ -3052,8 +3193,15 @@ h1 {
 .ti-header {
   --tier-header-image: url("https://images.unsplash.com/photo-1656774950529-44a6153521ee?fm=jpg&q=70&w=1600&auto=format&fit=crop&ixlib=rb-4.1.0");
 }
+/* Avançado header image — added for P0 item 2 (Fase 3), same treatment as
+   Básico/Intermediário above, distinct photo (heavier barbell/strength
+   training, matching the tier's "advanced" tone). */
+.tv-header {
+  --tier-header-image: url("https://images.unsplash.com/photo-1517836357463-d25dfeac3438?fm=jpg&q=70&w=1600&auto=format&fit=crop&ixlib=rb-4.1.0");
+}
 .tb-header h1,
-.ti-header h1 {
+.ti-header h1,
+.tv-header h1 {
   font-size: 1.8rem;
   margin: 0 0 6px;
   background: linear-gradient(90deg, var(--ember), var(--gold));
@@ -3063,7 +3211,8 @@ h1 {
   letter-spacing: 0.5px;
 }
 .tb-header p,
-.ti-header p {
+.ti-header p,
+.tv-header p {
   color: rgba(255, 255, 255, 0.85);
   margin: 0;
   font-size: 0.95rem;

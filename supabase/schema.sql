@@ -311,6 +311,28 @@ create index if not exists workout_log_entries_profile_id_logged_at_idx
   on public.workout_log_entries(profile_id, logged_at);
 
 -- -----------------------------------------------------------------------------
+-- cardio_log_entries
+-- Simple cardio log (corrida/bike/elíptico/natação, duração + intensidade)
+-- backing the "🏃 Cardio" tab shared by Básico and Intermediário
+-- (app/treino/TreinoBoard.tsx) — NO calorie/MET calculation, unlike
+-- Avançado's own cardio system (lib/treino-avancado-builder.ts). Tier-
+-- agnostic (no tier column) — see supabase/migration_cardio_log.sql for the
+-- full rationale.
+-- -----------------------------------------------------------------------------
+create table if not exists public.cardio_log_entries (
+  id uuid primary key default gen_random_uuid(),
+  profile_id uuid not null references public.profiles(id) on delete cascade,
+  day_key text not null check (day_key in ('seg', 'ter', 'qua', 'qui', 'sex', 'sab', 'dom')),
+  activity_key text not null,
+  duration integer,
+  intensity text not null check (intensity in ('leve', 'moderado', 'intenso')),
+  created_at timestamptz not null default now()
+);
+
+create index if not exists cardio_log_entries_profile_id_day_key_idx
+  on public.cardio_log_entries(profile_id, day_key);
+
+-- -----------------------------------------------------------------------------
 -- avancado_plans
 -- One row per profile for the "treino-avancado" tier's full custom training
 -- builder (see lib/treino-avancado-builder.ts). `week` is the ENTIRE
@@ -802,6 +824,7 @@ alter table public.badges_unlocked enable row level security;
 alter table public.custom_plans enable row level security;
 alter table public.calendar_days enable row level security;
 alter table public.workout_log_entries enable row level security;
+alter table public.cardio_log_entries enable row level security;
 alter table public.avancado_plans enable row level security;
 alter table public.exercise_set_logs enable row level security;
 alter table public.lifts enable row level security;
@@ -1074,6 +1097,33 @@ create policy "workout_log_entries_select_by_personal"
 
 create policy "workout_log_entries_delete_own"
   on public.workout_log_entries for delete
+  using (profile_id = auth.uid());
+
+-- --- cardio_log_entries -------------------------------------------------------
+create policy "cardio_log_entries_select_own"
+  on public.cardio_log_entries for select
+  using (profile_id = auth.uid());
+
+create policy "cardio_log_entries_select_by_personal"
+  on public.cardio_log_entries for select
+  using (
+    exists (
+      select 1 from public.profiles p
+      where p.id = cardio_log_entries.profile_id and p.linked_personal_id = auth.uid()
+    )
+  );
+
+create policy "cardio_log_entries_insert_own"
+  on public.cardio_log_entries for insert
+  with check (profile_id = auth.uid());
+
+create policy "cardio_log_entries_update_own"
+  on public.cardio_log_entries for update
+  using (profile_id = auth.uid())
+  with check (profile_id = auth.uid());
+
+create policy "cardio_log_entries_delete_own"
+  on public.cardio_log_entries for delete
   using (profile_id = auth.uid());
 
 -- --- avancado_plans -----------------------------------------------------------

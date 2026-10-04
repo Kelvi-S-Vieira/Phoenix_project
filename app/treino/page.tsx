@@ -7,7 +7,7 @@ import { ALUNO_SIDEBAR_SECTIONS } from "@/lib/sidebar-nav";
 import SplitPicker from "./SplitPicker";
 import TierPicker from "./TierPicker";
 import TreinoBoard from "./TreinoBoard";
-import { DAYS, type DayKey, type Split, type TierWorkoutData } from "@/lib/treino-shared-types";
+import { DAYS, type DayKey, type Split, type TierWorkoutData, type CardioIntensity } from "@/lib/treino-shared-types";
 import * as treinoBasico from "@/lib/treino-basico-data";
 import * as treinoIntermediario from "@/lib/treino-intermediario-data";
 import * as treinoAvancado from "@/lib/treino-avancado-data";
@@ -305,8 +305,11 @@ async function TreinoTierPage({
   if (tier === "treino-avancado") {
     return (
       <>
+        <header className="tv-header">
+          <h1>🔥 Treino Avançado — Projeto Fênix</h1>
+          <p>Divisões elaboradas, técnicas de intensidade e um construtor 100% seu.</p>
+        </header>
         <div className="card">
-          <h2>{TIER_LABELS[tier]} — Treino</h2>
           <details className="fx-change-plan" style={{ marginTop: 4 }}>
             <summary>⚙️ Trocar nível</summary>
             <div style={{ marginTop: 16 }}>
@@ -494,6 +497,32 @@ async function TreinoContent({
     ? todayKey
     : DAYS.find((d) => split.week[d.key])?.key ?? null;
 
+  // --- Cardio tab's initial log, grouped by day (app/treino/TreinoBoard.tsx) -
+  // Unlike workout_log_entries, this table isn't scoped to "today" at all —
+  // it's a flat list of this week's logged entries per weekday, so the
+  // whole week's rows are what TreinoBoard needs (no per-day "latest value"
+  // logic required, since each row is its own standalone entry).
+  const { data: cardioRows } = await supabase
+    .from("cardio_log_entries")
+    .select("id, day_key, activity_key, duration, intensity")
+    .eq("profile_id", profileId)
+    .gte("created_at", `${weekStart}T00:00:00-03:00`)
+    .lte("created_at", `${weekEnd}T23:59:59-03:00`);
+
+  const initialCardio: Record<DayKey, { id: string; activityKey: string; duration: string; intensity: CardioIntensity }[]> = {
+    seg: [], ter: [], qua: [], qui: [], sex: [], sab: [], dom: [],
+  };
+  for (const row of cardioRows ?? []) {
+    const dayKey = row.day_key as DayKey;
+    if (!initialCardio[dayKey]) continue;
+    initialCardio[dayKey].push({
+      id: row.id,
+      activityKey: row.activity_key,
+      duration: row.duration != null ? String(row.duration) : "",
+      intensity: row.intensity as CardioIntensity,
+    });
+  }
+
   // --- "4. Resumo da semana" --------------------------------------------
   const { data: weekEntries } = await supabase
     .from("workout_log_entries")
@@ -519,6 +548,12 @@ async function TreinoContent({
   // suggest it regardless of how consistently the user trains.
   const allTrained = tier !== "treino-avancado" && scheduledDays > 0 && trainedDays >= scheduledDays;
 
+  // Cardio stat cards (sessões/minutos) — counted across all 7 weekdays,
+  // scheduled or rest, matching the prototype's renderSummary() (cardio
+  // works on rest days too).
+  const cardioSessions = cardioRows?.length ?? 0;
+  const cardioMinutes = (cardioRows ?? []).reduce((sum, r) => sum + (r.duration ?? 0), 0);
+
   return (
     <>
       <TreinoBoard
@@ -527,6 +562,7 @@ async function TreinoContent({
         workoutTypes={tierData.WORKOUT_TYPES}
         muscleGroups={tierData.MUSCLE_GROUPS}
         initialLog={initialLog}
+        initialCardio={initialCardio}
         defaultDay={defaultDay}
         sectionClass={content.sectionClass}
         leadClass={content.leadClass}
@@ -546,6 +582,14 @@ async function TreinoContent({
           <div className="sum-card">
             <div className="label">Exercícios marcados como feitos</div>
             <div className="value">{totalChecked}</div>
+          </div>
+          <div className="sum-card">
+            <div className="label">Sessões de cardio esta semana</div>
+            <div className="value">{cardioSessions}</div>
+          </div>
+          <div className="sum-card">
+            <div className="label">Minutos de cardio esta semana</div>
+            <div className="value">{cardioMinutes}</div>
           </div>
         </div>
         {allTrained && (

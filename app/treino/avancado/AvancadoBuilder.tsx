@@ -731,7 +731,10 @@ export default function AvancadoBuilder({
 // =============================================================================
 // Rest timer — visible on every tab, matches the prototype's 30/60/90/120s
 // presets + pause/resume/reset + a short beep on completion. Local-only
-// (not persisted): it's a workout-session aid, not plan data.
+// (not persisted): it's a workout-session aid, not plan data. Rendered as a
+// fixed/floating widget (.tv-rest-timer-floating, Fase 3 P0 item 5) so it
+// stays reachable while scrolling the exercise list, instead of scrolling
+// out of view with the rest of the page.
 // =============================================================================
 function RestTimer() {
   const [total, setTotal] = useState(60);
@@ -800,7 +803,7 @@ function RestTimer() {
   const display = `${m < 10 ? "0" : ""}${m}:${s < 10 ? "0" : ""}${s}`;
 
   return (
-    <div className="tv-subblock tv-rest-timer-box">
+    <div className="tv-subblock tv-rest-timer-box tv-rest-timer-floating">
       <div className="tv-subblock-title">
         <h4>⏱ Cronômetro de descanso</h4>
       </div>

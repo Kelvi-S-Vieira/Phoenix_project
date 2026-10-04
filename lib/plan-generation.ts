@@ -180,6 +180,8 @@ export interface PlanProgress {
   pct: number; // 0-100
   startDate: string;
   endDate: string;
+  /** True once the current date is at or past the plan's calculated end date (start_date + weeks weeks). */
+  isComplete: boolean;
 }
 
 /** Current-week / elapsed-% math shared by the Montar Plano progress view and Calendário's grid sizing. */
@@ -197,5 +199,6 @@ export function computePlanProgress(plan: Pick<CustomPlan, "start_date" | "weeks
     pct,
     startDate: plan.start_date,
     endDate: end.toISOString().slice(0, 10),
+    isComplete: now.getTime() >= end.getTime(),
   };
 }

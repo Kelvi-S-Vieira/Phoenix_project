@@ -144,6 +144,28 @@ export interface ProfileTargets {
  * optional here — when omitted we fall back to the prototype's flat
  * defaults for each goal, same as when the prototype has no timeframe.
  */
+/**
+ * Shared Mifflin-St Jeor BMR + activity-multiplier TDEE calculation — the
+ * one formula `computeTargets()` (goal-based targets) and
+ * `computeMaintenanceCalories()` (maintenance-only, no deficit/surplus) both
+ * build on, so there is exactly one place the formula/activity multipliers
+ * live.
+ */
+function computeBmrTdee(input: {
+  weight: number;
+  height: number;
+  age: number;
+  sex: "M" | "F";
+  activity: ActivityLevel;
+}): { bmr: number; tdee: number } {
+  const { weight: w, height: h, age: a, sex, activity } = input;
+  const bmr = 10 * w + 6.25 * h - 5 * a + (sex === "M" ? 5 : -161);
+  const activityFactor =
+    ACTIVITY_LEVELS.find((x) => x.key === activity)?.factor ?? 1.2;
+  const tdee = bmr * activityFactor;
+  return { bmr, tdee };
+}
+
 export function computeTargets(input: {
   weight: number;
   height: number;
@@ -153,12 +175,9 @@ export function computeTargets(input: {
   goal: Goal;
   pctPerWeek?: number | null;
 }): ProfileTargets {
-  const { weight: w, height: h, age: a, sex, activity, goal, pctPerWeek } = input;
+  const { weight: w, goal, pctPerWeek } = input;
 
-  const bmr = 10 * w + 6.25 * h - 5 * a + (sex === "M" ? 5 : -161);
-  const activityFactor =
-    ACTIVITY_LEVELS.find((x) => x.key === activity)?.factor ?? 1.2;
-  const tdee = bmr * activityFactor;
+  const { bmr, tdee } = computeBmrTdee(input);
 
   let calorieTarget: number;
   let proteinPerKg: number;
@@ -202,6 +221,25 @@ export function computeTargets(input: {
     carbG,
     rationale,
   };
+}
+
+/**
+ * Maintenance-only calorie estimate (no deficit/surplus) — same Mifflin-St
+ * Jeor BMR + activity-multiplier TDEE formula as `computeTargets()`, reused
+ * via `computeBmrTdee()` rather than duplicated. Used once a plan's
+ * duration is complete, to suggest the daily calorie target that should
+ * hold the weight the plan was built around (pass the plan's TARGET
+ * weight, not the current one, once the user has reached/is past it).
+ */
+export function computeMaintenanceCalories(input: {
+  weight: number;
+  height: number;
+  age: number;
+  sex: "M" | "F";
+  activity: ActivityLevel;
+}): number {
+  const { tdee } = computeBmrTdee(input);
+  return Math.round(tdee);
 }
 
 /** Display label for an activity level key (prototype's `activityLabel`), falling back to "—" when not found. */
