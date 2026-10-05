@@ -14,6 +14,7 @@ import PlanWeekTable from "@/components/PlanWeekTable";
 import PlanCompleteCard from "@/components/PlanCompleteCard";
 import type { DietaryPreference } from "@/lib/supplements";
 import PlanNutritionSummary from "@/components/PlanNutritionSummary";
+import type { DietType } from "@/lib/diet-types";
 
 export default async function MontarPlanoPage() {
   const supabase = await createClient();
@@ -65,6 +66,7 @@ export default async function MontarPlanoPage() {
               profileId={user.id}
               goal={profile.goal}
               dietaryPreference={profile.dietary_preference}
+              dietType={profile.diet_type}
               hasPersonal={profile.linked_personal_id != null}
             />
           ) : (
@@ -78,6 +80,7 @@ export default async function MontarPlanoPage() {
               activityLevel={profile.activity_level}
               goal={profile.goal}
               dietaryPreference={profile.dietary_preference}
+              dietType={profile.diet_type}
               calorieTarget={profile.calorie_target}
               proteinTarget={profile.protein_target}
               carbTarget={profile.carb_target}
@@ -102,6 +105,7 @@ async function PlanProgressView({
   activityLevel,
   goal,
   dietaryPreference,
+  dietType,
   calorieTarget,
   proteinTarget,
   carbTarget,
@@ -118,6 +122,7 @@ async function PlanProgressView({
   activityLevel: ActivityLevel | null;
   goal: Goal | null;
   dietaryPreference: DietaryPreference | null;
+  dietType: DietType | null;
   calorieTarget: number | null;
   proteinTarget: number | null;
   carbTarget: number | null;
@@ -174,6 +179,7 @@ async function PlanProgressView({
         weight={currentWeight}
         goal={goal}
         dietaryPreference={dietaryPreference}
+        dietType={dietType}
         activity={activityLevel}
         calorieTarget={calorieTarget}
         proteinTarget={proteinTarget}

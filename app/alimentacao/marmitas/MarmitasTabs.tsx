@@ -6,6 +6,7 @@ import type { UserRecipe, UserRecipeIngredient, ShoppingExtra } from "@/lib/data
 import type { MarmitaSuggestion } from "@/lib/marmita-suggestions";
 import RecipesTab from "./RecipesTab";
 import SuggestionsTab from "./SuggestionsTab";
+import type { DietType } from "@/lib/diet-types";
 import PlanTab from "./PlanTab";
 import ShoppingTab from "./ShoppingTab";
 
@@ -31,11 +32,13 @@ export default function MarmitasTabs({
   initialRecipes,
   initialPlan,
   initialExtras,
+  dietType = null,
 }: {
   profileId: string;
   initialRecipes: UserRecipe[];
   initialPlan: Record<string, number>;
   initialExtras: ShoppingExtra[];
+  dietType?: DietType | null;
 }) {
   const [view, setView] = useState<View>("recipes");
   const [recipes, setRecipes] = useState<UserRecipe[]>(initialRecipes);
@@ -262,7 +265,7 @@ export default function MarmitasTabs({
         />
       )}
 
-      {view === "suggestions" && <SuggestionsTab onAdd={addRecipeFromSuggestion} />}
+      {view === "suggestions" && <SuggestionsTab onAdd={addRecipeFromSuggestion} dietType={dietType} />}
 
       {view === "plan" && <PlanTab recipes={recipes} plan={plan} onSetDesiredCount={setDesiredCount} />}
 

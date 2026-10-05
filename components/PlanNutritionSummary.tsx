@@ -2,6 +2,7 @@ import Link from "next/link";
 import { computeWaterTargetMl } from "@/lib/fenix-domain";
 import { pickRecommendedSupplements, type DietaryPreference } from "@/lib/supplements";
 import type { ActivityLevel, Goal } from "@/lib/database.types";
+import { getDiet, type DietType } from "@/lib/diet-types";
 
 // "Resumo nutricional do plano" — added per user feedback (2026-10-04):
 // Montar Plano had no clear, at-a-glance visualization of what's actually
@@ -18,6 +19,7 @@ export default function PlanNutritionSummary({
   weight,
   goal,
   dietaryPreference,
+  dietType = null,
   activity,
   calorieTarget,
   proteinTarget,
@@ -27,6 +29,8 @@ export default function PlanNutritionSummary({
   weight: number | null;
   goal: Goal | null;
   dietaryPreference?: DietaryPreference | null;
+  // profiles.diet_type — the P/C/G targets below already reflect it.
+  dietType?: DietType | null;
   activity: ActivityLevel | null;
   calorieTarget: number | null;
   proteinTarget: number | null;
@@ -37,10 +41,25 @@ export default function PlanNutritionSummary({
   const recommendedSupplements = pickRecommendedSupplements(goal, dietaryPreference);
 
   const hasFoodTargets = calorieTarget != null;
+  const diet = getDiet(dietType);
 
   return (
     <div className="card">
       <h2 style={{ marginTop: 0 }}>O que recomendamos ingerir por dia</h2>
+
+      {hasFoodTargets && (
+        <div className="fx-plan-desc" style={{ marginBottom: 10 }}>
+          Dieta:{" "}
+          {diet ? (
+            <b style={{ color: "var(--gold)" }}>
+              {diet.emoji} {diet.label} ({diet.split.p}/{diet.split.c}/{diet.split.f}%)
+            </b>
+          ) : (
+            <>nenhuma escolhida</>
+          )}{" "}
+          · <Link href="/dieta">{diet ? "trocar" : "escolher"}</Link>
+        </div>
+      )}
 
       {hasFoodTargets ? (
         <div className="summary-grid">

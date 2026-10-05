@@ -3,22 +3,39 @@ import Anthropic from "@anthropic-ai/sdk";
 import { createClient } from "@/lib/supabase/server";
 
 // Backs the Diário's "Foto (IA)" and "Descrever (IA)" add-food modes
-// (app/diario/AddFood.tsx). Product decision (MIGRATION_PLAN.md P2,
-// 2026-10-04): both use the app's OWN AI via the Anthropic API directly —
-// deliberately NOT a specialized third-party food-vision/nutrition API —
-// so this is the one server-side place that talks to Anthropic for the
-// Diário. Server-only (ANTHROPIC_API_KEY is never exposed to the browser;
-// see .env.local.example), and auth-gated the same way as the only other
-// Route Handler in this app (app/api/export-data/route.ts) so a
-// logged-out visitor can't spend the app's API budget.
+// (app/diario/AddFood.tsx). Both use the app's OWN AI via the Anthropic API
+// directly (MIGRATION_PLAN.md P2). Server-only and auth-gated so a logged-out
+// visitor can't spend the API budget.
 //
-// The model's output is forced through tool-use (`tool_choice: { type:
-// "tool", name: "log_meal_items" }`) rather than parsed from free text —
-// this guarantees a parseable, uniformly-shaped response (an array of
-// {name, quantity_desc, kcal, protein, carb, fat}) regardless of how the
-// model would otherwise phrase its answer, and the quantities are always
-// per the described/visible portion (not per 100g), matching what
-// AddFood's review list and the `diary_entries` insert expect.
+// Output format (FitCal-style): the model identifies each ingredient, estimates
+// its TOTAL weight on the plate in grams and gives nutrition PER 100 g
+// (TACO/USDA-coherent). It is never asked for per-portion calories — the
+// client always computes item macros as per100 × grams / 100, so editing the
+// grams needs no round-trip. The tool output is forced (tool_choice) and then
+// validated/sanitized here before being returned.
+
+const MEAL_TYPES = ["cafe", "almoco", "lanche", "jantar", "ceia"] as const;
+type MealType = (typeof MEAL_TYPES)[number];
+
+export interface EstimateItem {
+  name: string;
+  grams: number;
+  kcal_per_100g: number;
+  protein_per_100g: number;
+  carb_per_100g: number;
+  fat_per_100g: number;
+  is_packaged_product: boolean;
+  source_note: string;
+}
+
+export interface EstimateDish {
+  dish_name: string;
+  description: string;
+  health_score: number;
+  meal_type_guess: MealType | null;
+  items: EstimateItem[];
+}
+
 export async function POST(request: Request) {
   const supabase = await createClient();
   const {
@@ -45,94 +62,129 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "missing_api_key" }, { status: 503 });
   }
 
-  const userContent: Anthropic.Messages.ContentBlockParam[] =
-    input.mode === "foto"
-      ? [
-          {
-            type: "image",
-            source: {
-              type: "base64",
-              media_type: input.mediaType,
-              data: input.imageBase64,
-            },
-          },
-          {
-            type: "text",
-            text:
-              "Esta é uma foto de um prato de comida. Identifique cada alimento " +
-              "visível e estime, para a porção mostrada na foto (não por 100g), " +
-              "as calorias e macros de cada um.",
-          },
-        ]
-      : [
-          {
-            type: "text",
-            text:
-              `O usuário descreveu a seguinte refeição: "${input.description}". ` +
-              "Separe essa descrição nos alimentos que a compõem e estime, para a " +
-              "porção descrita (não por 100g), as calorias e macros de cada um.",
-          },
-        ];
+  const userContent: Anthropic.Messages.ContentBlockParam[] = [];
+  if (input.mode === "foto") {
+    userContent.push({
+      type: "image",
+      source: { type: "base64", media_type: input.mediaType, data: input.imageBase64 },
+    });
+    userContent.push({
+      type: "text",
+      text:
+        "Esta é uma foto de uma refeição. Identifique cada ingrediente visível, " +
+        "estime o peso total de cada um no prato em gramas (use referências " +
+        "visuais: tamanho do prato, colher, talheres, tamanho da fruta ou da " +
+        "embalagem) e informe os valores nutricionais por 100 g.",
+    });
+  } else {
+    userContent.push({
+      type: "text",
+      text:
+        `O usuário descreveu a seguinte refeição: "${input.description}". ` +
+        "Separe a descrição nos ingredientes que a compõem, respeite as " +
+        "quantidades citadas (converta unidades caseiras para gramas) e informe " +
+        "os valores nutricionais por 100 g de cada um.",
+    });
+  }
+
+  if (input.correction) {
+    const prev = input.previous
+      ? `\n\nResultado anterior (JSON):\n${JSON.stringify(input.previous)}`
+      : "";
+    userContent.push({
+      type: "text",
+      text:
+        `O usuário pediu uma correção da análise anterior: "${input.correction}".` +
+        prev +
+        "\n\nRefaça a análise levando a correção em conta e devolva o prato " +
+        "completo já corrigido (todos os ingredientes, não apenas os alterados).",
+    });
+  }
 
   const anthropic = new Anthropic({ apiKey });
 
   try {
     const message = await anthropic.messages.create({
       model: "claude-sonnet-5",
-      max_tokens: 1536,
+      max_tokens: 2048,
       system:
-        "Você é um assistente de nutrição brasileiro que ajuda a estimar a " +
-        "composição nutricional de refeições a partir de uma foto do prato ou " +
-        "de uma descrição em texto livre. Responda sempre em português do " +
+        "Você é um nutricionista brasileiro que analisa refeições a partir de " +
+        "uma foto ou de uma descrição em texto. Responda sempre em português do " +
         "Brasil, com nomes de alimentos como um brasileiro diria no dia a dia " +
-        "(ex: \"arroz branco\", \"feijão carioca\", \"peito de frango grelhado\"). " +
-        "Suas estimativas são aproximações razoáveis, não medições de " +
-        "laboratório — está tudo bem arredondar. Sempre use a ferramenta " +
-        "log_meal_items para responder.",
+        "(ex: \"arroz branco cozido\", \"feijão carioca\", \"peito de frango grelhado\"). " +
+        "Método: (1) identifique cada ingrediente separadamente; (2) estime o " +
+        "peso total de cada ingrediente no prato em gramas, usando referências " +
+        "visuais (prato de ~26 cm, colher de sopa ~15 g de arroz, tamanho de " +
+        "fruta, embalagem); se for produto de marca com peso visível na " +
+        "embalagem, use esse peso; (3) informe kcal e macros POR 100 g coerentes " +
+        "com as tabelas TACO/USDA para aquele alimento no estado em que aparece " +
+        "(cozido, frito, cru). NUNCA invente calorias por porção: a energia por " +
+        "100 g deve ser consistente com os macros (4 kcal/g de proteína e " +
+        "carboidrato, 9 kcal/g de gordura). Quando o usuário citar quantidades, " +
+        "respeite-as. A pontuação de saúde (0 a 10, uma casa decimal) considera " +
+        "densidade nutricional, fibras, processamento e açúcar/sódio. A " +
+        "descrição tem 1 a 2 frases. Sempre use a ferramenta log_meal.",
       tools: [
         {
-          name: "log_meal_items",
+          name: "log_meal",
           description:
-            "Registra os alimentos identificados em uma refeição, com a " +
-            "estimativa de calorias e macronutrientes de cada um para a " +
-            "porção descrita ou visível (não por 100g).",
+            "Registra o prato identificado, com cada ingrediente, seu peso estimado em gramas e os valores nutricionais por 100 g.",
           input_schema: {
             type: "object",
             properties: {
+              dish_name: { type: "string", description: "Nome curto do prato (ex: \"Iogurte com banana\")." },
+              description: {
+                type: "string",
+                description: "1 a 2 frases em português do Brasil sobre a composição e o equilíbrio nutricional.",
+              },
+              health_score: { type: "number", description: "Pontuação de saúde de 0 a 10, uma casa decimal." },
+              meal_type_guess: {
+                type: "string",
+                enum: [...MEAL_TYPES],
+                description: "Tipo de refeição mais provável.",
+              },
               items: {
                 type: "array",
                 items: {
                   type: "object",
                   properties: {
-                    name: {
-                      type: "string",
-                      description: "Nome do alimento (ex: \"arroz branco\").",
+                    name: { type: "string", description: "Nome do ingrediente." },
+                    grams: {
+                      type: "number",
+                      description: "Estimativa do peso TOTAL do item no prato, em gramas.",
                     },
-                    quantity_desc: {
-                      type: "string",
-                      description:
-                        "Descrição curta da porção estimada (ex: \"2 colheres de servir\", \"1 filé médio\").",
+                    kcal_per_100g: { type: "number", description: "Calorias por 100 g." },
+                    protein_per_100g: { type: "number", description: "Proteína (g) por 100 g." },
+                    carb_per_100g: { type: "number", description: "Carboidrato (g) por 100 g." },
+                    fat_per_100g: { type: "number", description: "Gordura (g) por 100 g." },
+                    is_packaged_product: {
+                      type: "boolean",
+                      description: "true se for produto industrializado/de marca.",
                     },
-                    kcal: { type: "number", description: "Calorias estimadas da porção." },
-                    protein: { type: "number", description: "Proteína em gramas da porção." },
-                    carb: { type: "number", description: "Carboidrato em gramas da porção." },
-                    fat: { type: "number", description: "Gordura em gramas da porção." },
+                    source_note: {
+                      type: "string",
+                      description: "Base dos valores (ex: \"TACO\", \"USDA\", \"rótulo\") e como o peso foi estimado.",
+                    },
                   },
-                  required: ["name", "quantity_desc", "kcal", "protein", "carb", "fat"],
+                  required: [
+                    "name",
+                    "grams",
+                    "kcal_per_100g",
+                    "protein_per_100g",
+                    "carb_per_100g",
+                    "fat_per_100g",
+                    "is_packaged_product",
+                    "source_note",
+                  ],
                 },
               },
             },
-            required: ["items"],
+            required: ["dish_name", "description", "health_score", "meal_type_guess", "items"],
           },
         },
       ],
-      tool_choice: { type: "tool", name: "log_meal_items" },
-      messages: [
-        {
-          role: "user",
-          content: userContent,
-        },
-      ],
+      tool_choice: { type: "tool", name: "log_meal" },
+      messages: [{ role: "user", content: userContent }],
     });
 
     const toolUse = message.content.find(
@@ -142,22 +194,97 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: "ai_call_failed" }, { status: 502 });
     }
 
-    const parsedInput = toolUse.input as { items?: unknown };
-    const items = Array.isArray(parsedInput.items) ? parsedInput.items : [];
-
-    return NextResponse.json({ items });
+    return NextResponse.json(sanitizeDish(toolUse.input));
   } catch {
     return NextResponse.json({ error: "ai_call_failed" }, { status: 502 });
   }
 }
 
-type EstimarInput =
+function num(v: unknown): number | null {
+  const n = typeof v === "number" ? v : typeof v === "string" ? parseFloat(v) : NaN;
+  return Number.isFinite(n) ? n : null;
+}
+
+function clamp(n: number, min: number, max: number): number {
+  return Math.min(max, Math.max(min, n));
+}
+
+function round1(n: number): number {
+  return Math.round(n * 10) / 10;
+}
+
+function sanitizeItem(raw: unknown): EstimateItem | null {
+  if (typeof raw !== "object" || raw === null) return null;
+  const r = raw as Record<string, unknown>;
+  const name = typeof r.name === "string" ? r.name.trim().slice(0, 80) : "";
+  const gramsRaw = num(r.grams);
+  if (!name || gramsRaw === null) return null;
+  const grams = clamp(Math.round(gramsRaw), 1, 3000);
+
+  let protein = clamp(num(r.protein_per_100g) ?? 0, 0, 100);
+  let carb = clamp(num(r.carb_per_100g) ?? 0, 0, 100);
+  let fat = clamp(num(r.fat_per_100g) ?? 0, 0, 100);
+  // Macros per 100 g can't physically add up to more than 100 g.
+  const macroSum = protein + carb + fat;
+  if (macroSum > 100) {
+    const k = 100 / macroSum;
+    protein *= k;
+    carb *= k;
+    fat *= k;
+  }
+
+  let kcal = clamp(num(r.kcal_per_100g) ?? 0, 0, 900);
+  const fromMacros = 4 * protein + 4 * carb + 9 * fat;
+  // Coherence check: if the stated energy disagrees with the macros by more
+  // than 25%, trust the macros (the model is better at those).
+  if (fromMacros > 0 && (kcal === 0 || Math.abs(fromMacros - kcal) / kcal > 0.25)) {
+    kcal = fromMacros;
+  }
+  kcal = clamp(kcal, 0, 900);
+
+  return {
+    name,
+    grams,
+    kcal_per_100g: round1(kcal),
+    protein_per_100g: round1(protein),
+    carb_per_100g: round1(carb),
+    fat_per_100g: round1(fat),
+    is_packaged_product: r.is_packaged_product === true,
+    source_note: typeof r.source_note === "string" ? r.source_note.trim().slice(0, 120) : "",
+  };
+}
+
+function sanitizeDish(raw: unknown): EstimateDish {
+  const r = (typeof raw === "object" && raw !== null ? raw : {}) as Record<string, unknown>;
+  const items = (Array.isArray(r.items) ? r.items : [])
+    .map(sanitizeItem)
+    .filter((it): it is EstimateItem => it !== null)
+    .slice(0, 20);
+  const score = num(r.health_score);
+  return {
+    dish_name:
+      typeof r.dish_name === "string" && r.dish_name.trim() ? r.dish_name.trim().slice(0, 80) : "Refeição",
+    description: typeof r.description === "string" ? r.description.trim().slice(0, 400) : "",
+    health_score: round1(clamp(score ?? 5, 0, 10)),
+    meal_type_guess: MEAL_TYPES.find((m) => m === r.meal_type_guess) ?? null,
+    items,
+  };
+}
+
+type EstimarInput = (
   | { mode: "foto"; imageBase64: string; mediaType: "image/jpeg" | "image/png" | "image/gif" | "image/webp" }
-  | { mode: "texto"; description: string };
+  | { mode: "texto"; description: string }
+) & { correction?: string; previous?: EstimateDish };
 
 function parseInput(body: unknown): EstimarInput | null {
   if (typeof body !== "object" || body === null) return null;
   const b = body as Record<string, unknown>;
+
+  let correction: string | undefined;
+  if (typeof b.correction === "string" && b.correction.trim()) {
+    correction = b.correction.trim().slice(0, 600);
+  }
+  const previous = b.previous !== undefined && b.previous !== null ? sanitizeDish(b.previous) : undefined;
 
   if (b.mode === "foto") {
     if (typeof b.imageBase64 !== "string" || b.imageBase64.length === 0) return null;
@@ -165,12 +292,12 @@ function parseInput(body: unknown): EstimarInput | null {
     const allowed = ["image/jpeg", "image/png", "image/gif", "image/webp"] as const;
     const mediaType = allowed.find((m) => m === b.mediaType);
     if (!mediaType) return null;
-    return { mode: "foto", imageBase64: b.imageBase64, mediaType };
+    return { mode: "foto", imageBase64: b.imageBase64, mediaType, correction, previous };
   }
 
   if (b.mode === "texto") {
     if (typeof b.description !== "string" || b.description.trim().length === 0) return null;
-    return { mode: "texto", description: b.description.trim() };
+    return { mode: "texto", description: b.description.trim(), correction, previous };
   }
 
   return null;

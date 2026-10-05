@@ -88,6 +88,7 @@ export default async function MarmitasPage() {
             initialRecipes={recipeRows}
             initialPlan={planMap}
             initialExtras={extras ?? []}
+            dietType={profile.diet_type}
           />
 
           <div className="footer-note">PROJETO FÊNIX — a lista muda, o hábito fica.</div>

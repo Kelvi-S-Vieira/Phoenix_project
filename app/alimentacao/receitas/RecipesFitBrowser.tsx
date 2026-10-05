@@ -5,6 +5,8 @@ import { createClient } from "@/lib/supabase/client";
 import { todayBR } from "@/lib/date-br";
 import { SUPPLEMENT_RECIPES, SUPPLEMENT_RECIPE_GOALS, type SupplementRecipe } from "@/lib/supplement-recipes";
 import type { Meal } from "@/lib/database.types";
+import { mealFitsDiet, type DietType } from "@/lib/diet-types";
+import { DietFilterToggle, DietFitBadge, sortByDietFit } from "@/components/DietFit";
 
 const MEALS: { key: Meal; label: string }[] = [
   { key: "cafe", label: "Café da manhã" },
@@ -28,20 +30,29 @@ const MEALS: { key: Meal; label: string }[] = [
 export default function RecipesFitBrowser({
   profileId,
   recommendedNames = [],
+  dietType = null,
 }: {
   profileId: string;
   // Names recorded in plan_recommendation_picks (kind="receita_fit") for
   // the current user's plan — see app/montar-plano/PlanRecommendStep.tsx.
   recommendedNames?: string[];
+  // profiles.diet_type: orders compatible recipes first, badges them and
+  // offers an "only compatible" filter (on by default when set).
+  dietType?: DietType | null;
 }) {
   const [activeGoal, setActiveGoal] = useState("all");
+  const [onlyFit, setOnlyFit] = useState(dietType != null);
   const recommendedSet = new Set(recommendedNames);
 
   const [mealByRecipe, setMealByRecipe] = useState<Record<string, Meal>>({});
   const [busyRecipe, setBusyRecipe] = useState<string | null>(null);
   const [statusByRecipe, setStatusByRecipe] = useState<Record<string, string>>({});
 
-  const list = SUPPLEMENT_RECIPES.filter((r) => activeGoal === "all" || r.goal === activeGoal);
+  const fits = (r: SupplementRecipe) => mealFitsDiet({ carb: r.carb, protein: r.protein }, dietType);
+  const filtered = SUPPLEMENT_RECIPES.filter((r) => activeGoal === "all" || r.goal === activeGoal).filter(
+    (r) => !dietType || !onlyFit || fits(r)
+  );
+  const list = dietType ? sortByDietFit(filtered, fits) : filtered;
 
   function mealFor(name: string): Meal {
     return mealByRecipe[name] ?? "almoco";
@@ -115,11 +126,15 @@ export default function RecipesFitBrowser({
         ))}
       </div>
 
+      {dietType && <DietFilterToggle diet={dietType} on={onlyFit} onToggle={() => setOnlyFit((v) => !v)} />}
+
       <div className="suggestions-grid rs-grid">
         {list.map((r) => {
           const unitLabel = r.yield === 1 ? "porção" : "porções";
+          const recipeFits = fits(r);
           return (
-            <div className="rs-card" key={r.name}>
+            <div className={"rs-card" + (dietType && !recipeFits ? " fx-diet-mismatch" : "")} key={r.name}>
+              {dietType && <DietFitBadge fits={recipeFits} diet={dietType} />}
               {recommendedSet.has(r.name) && (
                 <span className="fx-rec-badge">⭐ Recomendado no seu plano</span>
               )}

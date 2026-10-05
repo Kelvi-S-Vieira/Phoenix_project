@@ -1,11 +1,15 @@
 "use client";
 
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import { FOOD_DB, type FoodDbItem } from "@/lib/food-database";
 import type { Meal } from "@/lib/database.types";
-import AiEstimateReview, { makeReviewItems, type AiReviewItem } from "./AiEstimateReview";
+import AiEstimateReview, {
+  type AiDishResponse,
+  type ReviewMealKey,
+  type ReviewSaveRow,
+} from "./AiEstimateReview";
 
 const MEALS: { key: Meal; label: string }[] = [
   { key: "cafe", label: "Café da manhã" },
@@ -15,7 +19,7 @@ const MEALS: { key: Meal; label: string }[] = [
   { key: "extra", label: "Extra" },
 ];
 
-type Mode = "db" | "manual" | "foto" | "texto";
+type Mode = "db" | "manual" | "foto" | "texto" | "barcode";
 
 // Server-side AI estimation (app/api/diario/estimar) backing the two new
 // "Foto (IA)"/"Descrever (IA)" modes added 2026-10-04 per MIGRATION_PLAN.md's
@@ -25,6 +29,16 @@ type Mode = "db" | "manual" | "foto" | "texto";
 // (AiEstimateReview) and one insert path below.
 const MAX_PHOTO_DIMENSION = 1024;
 const PHOTO_JPEG_QUALITY = 0.82;
+
+type EstimarPayload =
+  | { mode: "foto"; imageBase64: string; mediaType: string }
+  | { mode: "texto"; description: string };
+
+// Minimal typings for the (Chromium-only) Barcode Detection API.
+interface BarcodeDetectorLike {
+  detect: (source: HTMLVideoElement) => Promise<{ rawValue: string }[]>;
+}
+type BarcodeDetectorCtor = new (opts?: { formats?: string[] }) => BarcodeDetectorLike;
 
 interface SpeechRecognitionResultLike {
   resultIndex: number;
@@ -163,17 +177,44 @@ export default function AddFood({
     router.refresh();
   }
 
-  // --- Shared AI review state (foto + texto modes) ---
-  const [aiItems, setAiItems] = useState<AiReviewItem[]>([]);
+  // --- Shared review state (foto + texto + barcode modes) ---
+  // The review sheet (AiEstimateReview) is the same for all three; only the
+  // origin of the dish differs. `aiRequestRef` keeps the original photo/text so
+  // "Corrigir" can resend it together with the user's correction.
+  const [aiDish, setAiDish] = useState<AiDishResponse | null>(null);
+  const [aiSource, setAiSource] = useState<"photo" | "text" | "barcode" | null>(null);
+  const [aiImageUrl, setAiImageUrl] = useState<string | null>(null);
   const [aiLoading, setAiLoading] = useState(false);
   const [aiError, setAiError] = useState<string | null>(null);
+  const aiRequestRef = useRef<EstimarPayload | null>(null);
 
-  async function callEstimar(
-    payload: { mode: "foto"; imageBase64: string; mediaType: string } | { mode: "texto"; description: string }
-  ) {
-    setAiLoading(true);
+  function resetReview() {
+    setAiDish(null);
+    setAiSource(null);
+    setAiImageUrl(null);
     setAiError(null);
-    setAiItems([]);
+    aiRequestRef.current = null;
+  }
+
+  function changeMode(next: Mode) {
+    if (next !== mode) {
+      resetReview();
+      setBarcodeMsg(null);
+      setBarcodeNotFound(false);
+      setScanning(false);
+      streamRef.current?.getTracks().forEach((t) => t.stop());
+      streamRef.current = null;
+      setError(null);
+    }
+    setMode(next);
+  }
+
+  const AI_FAIL_MSG =
+    "Não foi possível estimar a refeição agora. Tente novamente ou use \"Digitar manualmente\".";
+
+  async function postEstimar(
+    payload: EstimarPayload & { correction?: string; previous?: AiDishResponse }
+  ): Promise<{ dish: AiDishResponse } | { error: string }> {
     try {
       const res = await fetch("/api/diario/estimar", {
         method: "POST",
@@ -183,40 +224,69 @@ export default function AddFood({
       const data = await res.json();
       if (!res.ok) {
         if (res.status === 503 && data?.error === "missing_api_key") {
-          setAiError(
-            "Recurso de IA ainda não configurado — peça para o administrador configurar."
-          );
-        } else {
-          setAiError("Não foi possível estimar a refeição agora. Tente novamente ou use \"Digitar manualmente\".");
+          return {
+            error: "Recurso de IA ainda não configurado — peça para o administrador configurar.",
+          };
         }
-        return;
+        return { error: AI_FAIL_MSG };
       }
-      setAiItems(makeReviewItems(data.items ?? []));
+      return { dish: data as AiDishResponse };
     } catch {
-      setAiError("Não foi possível estimar a refeição agora. Tente novamente ou use \"Digitar manualmente\".");
-    } finally {
-      setAiLoading(false);
+      return { error: AI_FAIL_MSG };
     }
   }
 
-  async function handleAddAiItems(source: "ai_photo" | "ai_text") {
-    const toInsert = aiItems.filter((it) => it.included);
-    if (toInsert.length === 0) return;
+  async function callEstimar(payload: EstimarPayload, source: "photo" | "text", imageUrl: string | null) {
+    setAiLoading(true);
+    setAiError(null);
+    setAiDish(null);
+    const result = await postEstimar(payload);
+    setAiLoading(false);
+    if ("error" in result) {
+      setAiError(result.error);
+      return;
+    }
+    if (result.dish.items.length === 0) {
+      setAiError("Nenhum alimento identificado. Tente outra foto/descrição ou use \"Digitar manualmente\".");
+      return;
+    }
+    aiRequestRef.current = payload;
+    setAiSource(source);
+    setAiImageUrl(imageUrl);
+    setAiDish(result.dish);
+  }
+
+  async function handleCorrect(correction: string, current: AiDishResponse): Promise<AiDishResponse | null> {
+    const base = aiRequestRef.current;
+    if (!base) return null;
+    const result = await postEstimar({ ...base, correction, previous: current });
+    if ("error" in result || result.dish.items.length === 0) return null;
+    return result.dish;
+  }
+
+  // The review's "Ceia" has no counterpart in the diary's Meal enum (the
+  // schema only knows cafe/almoco/lanche/jantar/extra), so it is stored as
+  // "extra" — which EntriesList already renders in its own group.
+  async function handleSaveReview(meal: ReviewMealKey, rows: ReviewSaveRow[]) {
+    if (!aiSource || rows.length === 0) return;
+    // Barcode products have no dedicated source value in the schema; they come
+    // from a food database (Open Food Facts), so they are stored as "db".
+    const source = aiSource === "photo" ? "ai_photo" : aiSource === "text" ? "ai_text" : "db";
     setSaving(true);
     setError(null);
     const supabase = createClient();
     const { error: insertError } = await supabase.from("diary_entries").insert(
-      toInsert.map((it) => ({
+      rows.map((r) => ({
         profile_id: profileId,
         logged_at: selectedDate,
-        meal: activeMeal,
-        food_name: it.name.trim() || "Item sem nome",
-        quantity: null,
-        unit: null,
-        kcal: Math.round(parseFloat(it.kcal) || 0),
-        protein: parseFloat(it.protein) || 0,
-        carb: parseFloat(it.carb) || 0,
-        fat: parseFloat(it.fat) || 0,
+        meal: (meal === "ceia" ? "extra" : meal) as Meal,
+        food_name: r.food_name,
+        quantity: r.quantity,
+        unit: r.unit,
+        kcal: r.kcal,
+        protein: r.protein,
+        carb: r.carb,
+        fat: r.fat,
         source,
       }))
     );
@@ -225,10 +295,154 @@ export default function AddFood({
       setError(insertError.message);
       return;
     }
-    setAiItems([]);
-    setAiError(null);
+    resetReview();
+    setBarcode("");
+    setBarcodeMsg(null);
     router.refresh();
   }
+
+  function renderReview(expected: "photo" | "text" | "barcode") {
+    if (!aiDish || aiSource !== expected) return null;
+    return (
+      <div style={{ marginTop: 14 }}>
+        <AiEstimateReview
+          // Remount for each new analysis so internal edit state starts fresh.
+          key={`${aiSource}-${aiDish.dish_name}-${aiDish.items.length}-${aiDish.items[0]?.grams}`}
+          dish={aiDish}
+          imageUrl={aiImageUrl}
+          source={aiSource}
+          onSave={handleSaveReview}
+          onCorrect={aiSource === "barcode" ? undefined : handleCorrect}
+          onDiscard={resetReview}
+          saving={saving}
+        />
+      </div>
+    );
+  }
+
+  // --- Código de barras mode ---
+  // Looks the EAN up on Open Food Facts straight from the browser (CORS is
+  // allowed), converts to per-100 g values + package weight and opens the SAME
+  // review sheet with a single packaged ingredient.
+  const [barcode, setBarcode] = useState("");
+  const [barcodeMsg, setBarcodeMsg] = useState<string | null>(null);
+  const [barcodeNotFound, setBarcodeNotFound] = useState(false);
+  const [barcodeLoading, setBarcodeLoading] = useState(false);
+  const [scanning, setScanning] = useState(false);
+  const [scanError, setScanError] = useState<string | null>(null);
+  const videoRef = useRef<HTMLVideoElement>(null);
+  const streamRef = useRef<MediaStream | null>(null);
+  const onCodeRef = useRef<(code: string) => void>(() => {});
+
+  const detectorCtor =
+    typeof window !== "undefined"
+      ? (window as unknown as { BarcodeDetector?: BarcodeDetectorCtor }).BarcodeDetector
+      : undefined;
+  const canScan =
+    !!detectorCtor && typeof navigator !== "undefined" && !!navigator.mediaDevices?.getUserMedia;
+
+  async function lookupBarcode(rawCode: string) {
+    const ean = rawCode.replace(/\D/g, "");
+    if (ean.length < 8) {
+      setBarcodeMsg("Digite um código de barras válido (8 a 14 números).");
+      setBarcodeNotFound(false);
+      return;
+    }
+    setBarcodeLoading(true);
+    setBarcodeMsg(null);
+    setBarcodeNotFound(false);
+    resetReview();
+    try {
+      const res = await fetch(
+        `https://world.openfoodfacts.org/api/v2/product/${ean}.json?fields=product_name,brands,quantity,serving_quantity,nutriments`
+      );
+      const data = await res.json();
+      const product = data?.status === 1 || data?.product ? data.product : null;
+      const dish = product ? offProductToDish(product) : null;
+      if (!dish) {
+        setBarcodeNotFound(true);
+        setBarcodeMsg(
+          "Não encontramos esse produto (ou ele não tem informação nutricional) na base Open Food Facts."
+        );
+        return;
+      }
+      setBarcode(ean);
+      setAiSource("barcode");
+      setAiImageUrl(null);
+      setAiDish(dish);
+    } catch {
+      setBarcodeMsg("Não foi possível consultar o produto agora. Verifique sua conexão e tente novamente.");
+    } finally {
+      setBarcodeLoading(false);
+    }
+  }
+
+  useEffect(() => {
+    onCodeRef.current = (code) => {
+      void lookupBarcode(code);
+    };
+  });
+
+  function stopStream() {
+    streamRef.current?.getTracks().forEach((t) => t.stop());
+    streamRef.current = null;
+  }
+
+  async function startScan() {
+    if (!canScan) return;
+    setScanError(null);
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({
+        video: { facingMode: "environment" },
+        audio: false,
+      });
+      streamRef.current = stream;
+      setScanning(true);
+    } catch {
+      setScanError("Não foi possível acessar a câmera. Digite o código manualmente abaixo.");
+    }
+  }
+
+  // Attach the stream to the <video> and poll the detector while scanning.
+  useEffect(() => {
+    if (!scanning || !detectorCtor) return;
+    const video = videoRef.current;
+    const stream = streamRef.current;
+    if (!video || !stream) return;
+    video.srcObject = stream;
+    void video.play().catch(() => {});
+    const detector = new detectorCtor({ formats: ["ean_13", "ean_8", "upc_a", "upc_e"] });
+    let busy = false;
+    const timer = window.setInterval(async () => {
+      if (busy || video.readyState < 2) return;
+      busy = true;
+      try {
+        const codes = await detector.detect(video);
+        if (codes.length > 0) {
+          window.clearInterval(timer);
+          setScanning(false);
+          stopStream();
+          onCodeRef.current(codes[0].rawValue);
+        }
+      } catch {
+        // transient detection failure: keep polling
+      } finally {
+        busy = false;
+      }
+    }, 350);
+    return () => {
+      window.clearInterval(timer);
+      video.srcObject = null;
+    };
+  }, [scanning, detectorCtor]);
+
+  // The camera is released in changeMode() when leaving this mode, and here on unmount.
+  useEffect(
+    () => () => {
+      streamRef.current?.getTracks().forEach((t) => t.stop());
+    },
+    []
+  );
 
   // --- Foto mode ---
   const fotoInputRef = useRef<HTMLInputElement>(null);
@@ -237,7 +451,7 @@ export default function AddFood({
     try {
       const dataUrl = await downscaleImageToJpeg(file, MAX_PHOTO_DIMENSION, PHOTO_JPEG_QUALITY);
       const imageBase64 = dataUrl.split(",")[1] ?? "";
-      await callEstimar({ mode: "foto", imageBase64, mediaType: "image/jpeg" });
+      await callEstimar({ mode: "foto", imageBase64, mediaType: "image/jpeg" }, "photo", dataUrl);
     } catch {
       setAiError("Não foi possível processar a foto. Tente outra foto ou use \"Digitar manualmente\".");
     }
@@ -286,7 +500,7 @@ export default function AddFood({
   async function handleEstimateText() {
     const description = textDesc.trim();
     if (!description) return;
-    await callEstimar({ mode: "texto", description });
+    await callEstimar({ mode: "texto", description }, "text", null);
   }
 
   return (
@@ -306,27 +520,33 @@ export default function AddFood({
       <div className="entry-mode">
         <div
           className={"mode-btn" + (mode === "db" ? " active" : "")}
-          onClick={() => setMode("db")}
+          onClick={() => changeMode("db")}
         >
           Buscar na lista
         </div>
         <div
           className={"mode-btn" + (mode === "manual" ? " active" : "")}
-          onClick={() => setMode("manual")}
+          onClick={() => changeMode("manual")}
         >
           Digitar manualmente
         </div>
         <div
           className={"mode-btn" + (mode === "foto" ? " active" : "")}
-          onClick={() => setMode("foto")}
+          onClick={() => changeMode("foto")}
         >
           Foto (IA)
         </div>
         <div
           className={"mode-btn" + (mode === "texto" ? " active" : "")}
-          onClick={() => setMode("texto")}
+          onClick={() => changeMode("texto")}
         >
           Descrever (IA)
+        </div>
+        <div
+          className={"mode-btn" + (mode === "barcode" ? " active" : "")}
+          onClick={() => changeMode("barcode")}
+        >
+          Código de barras
         </div>
       </div>
 
@@ -497,16 +717,7 @@ export default function AddFood({
             <div style={{ color: "var(--danger)", fontSize: 13, margin: "12px 0" }}>{aiError}</div>
           )}
 
-          {aiItems.length > 0 && (
-            <div style={{ marginTop: 14 }}>
-              <AiEstimateReview
-                items={aiItems}
-                onChange={setAiItems}
-                onConfirm={() => handleAddAiItems("ai_photo")}
-                saving={saving}
-              />
-            </div>
-          )}
+          {renderReview("photo")}
         </div>
       )}
 
@@ -547,16 +758,78 @@ export default function AddFood({
             <div style={{ color: "var(--danger)", fontSize: 13, margin: "12px 0" }}>{aiError}</div>
           )}
 
-          {aiItems.length > 0 && (
-            <div style={{ marginTop: 14 }}>
-              <AiEstimateReview
-                items={aiItems}
-                onChange={setAiItems}
-                onConfirm={() => handleAddAiItems("ai_text")}
-                saving={saving}
-              />
+          {renderReview("text")}
+        </div>
+      )}
+
+      {mode === "barcode" && (
+        <div>
+          {canScan ? (
+            scanning ? (
+              <div className="fx-aifc-scan">
+                <video ref={videoRef} playsInline muted />
+                <div className="fx-aifc-scan-frame" />
+                <button
+                  type="button"
+                  className="btn secondary small"
+                  onClick={() => {
+                    setScanning(false);
+                    stopStream();
+                  }}
+                >
+                  Cancelar leitura
+                </button>
+              </div>
+            ) : (
+              <button
+                type="button"
+                className="btn secondary"
+                style={{ marginBottom: 12 }}
+                onClick={startScan}
+                disabled={barcodeLoading}
+              >
+                📷 Ler código de barras com a câmera
+              </button>
+            )
+          ) : (
+            <div className="fx-aifc-hint">
+              Leitura pela câmera não disponível neste navegador — digite o número do código de barras.
             </div>
           )}
+          {scanError && <div className="fx-aifc-error">{scanError}</div>}
+
+          <div className="field">
+            <label>Código de barras (EAN)</label>
+            <div className="fx-aifc-ean">
+              <input
+                type="text"
+                inputMode="numeric"
+                placeholder="Ex: 7891000100103"
+                value={barcode}
+                onChange={(e) => setBarcode(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter") void lookupBarcode(barcode);
+                }}
+              />
+              <button
+                type="button"
+                className="btn"
+                disabled={barcodeLoading || barcode.replace(/\D/g, "").length < 8}
+                onClick={() => lookupBarcode(barcode)}
+              >
+                {barcodeLoading ? "Buscando..." : "Buscar"}
+              </button>
+            </div>
+          </div>
+
+          {barcodeMsg && <div className="fx-aifc-error">{barcodeMsg}</div>}
+          {barcodeNotFound && (
+            <button type="button" className="btn secondary small" onClick={() => changeMode("manual")}>
+              Digitar manualmente
+            </button>
+          )}
+
+          {renderReview("barcode")}
         </div>
       )}
     </div>
@@ -595,4 +868,75 @@ function downscaleImageToJpeg(file: File, maxDimension: number, quality: number)
     };
     reader.readAsDataURL(file);
   });
+}
+
+interface OffNutriments {
+  [key: string]: unknown;
+}
+interface OffProduct {
+  product_name?: string;
+  brands?: string;
+  quantity?: string;
+  serving_quantity?: number | string;
+  nutriments?: OffNutriments;
+}
+
+function offNum(v: unknown): number | null {
+  const n = typeof v === "number" ? v : typeof v === "string" ? parseFloat(v) : NaN;
+  return Number.isFinite(n) && n >= 0 ? n : null;
+}
+
+// Package weight in grams: serving_quantity when present, otherwise parsed
+// from the free-text `quantity` ("170 g", "1,5 kg", "500 ml", "6 x 100 g").
+// Falls back to 100 g so the per-100 g macros stay editable by the user.
+function offPackageGrams(p: OffProduct): number {
+  const serving = offNum(p.serving_quantity);
+  if (serving && serving > 0) return Math.min(3000, serving);
+  const q = (p.quantity ?? "").toLowerCase().replace(",", ".");
+  const multi = q.match(/(\d+)\s*[x×]\s*(\d+(?:\.\d+)?)\s*(kg|g|ml|l|cl)\b/);
+  const single = q.match(/(\d+(?:\.\d+)?)\s*(kg|g|ml|l|cl)\b/);
+  const mult = multi ? parseInt(multi[1], 10) : 1;
+  const m = multi ?? single;
+  if (m) {
+    const value = parseFloat(multi ? m[2] : m[1]);
+    const unit = multi ? m[3] : m[2];
+    const factor = unit === "kg" || unit === "l" ? 1000 : unit === "cl" ? 10 : 1;
+    const grams = value * factor * mult;
+    if (grams > 0) return Math.min(3000, Math.round(grams));
+  }
+  return 100;
+}
+
+function offProductToDish(p: OffProduct): AiDishResponse | null {
+  const n = p.nutriments ?? {};
+  let kcal = offNum(n["energy-kcal_100g"]);
+  if (kcal === null) {
+    const kj = offNum(n["energy_100g"]);
+    kcal = kj !== null ? kj / 4.184 : null;
+  }
+  const protein = offNum(n["proteins_100g"]);
+  const carb = offNum(n["carbohydrates_100g"]);
+  const fat = offNum(n["fat_100g"]);
+  if (kcal === null && protein === null && carb === null && fat === null) return null;
+  const name = (p.product_name ?? "").trim() || "Produto sem nome";
+  const brand = (p.brands ?? "").split(",")[0]?.trim();
+  const full = brand && !name.toLowerCase().includes(brand.toLowerCase()) ? `${name} ${brand}` : name;
+  return {
+    dish_name: full,
+    description: "",
+    health_score: 0,
+    meal_type_guess: null,
+    items: [
+      {
+        name: full,
+        grams: offPackageGrams(p),
+        kcal_per_100g: round1(kcal ?? 4 * (protein ?? 0) + 4 * (carb ?? 0) + 9 * (fat ?? 0)),
+        protein_per_100g: round1(protein ?? 0),
+        carb_per_100g: round1(carb ?? 0),
+        fat_per_100g: round1(fat ?? 0),
+        is_packaged_product: true,
+        source_note: "Open Food Facts",
+      },
+    ],
+  };
 }

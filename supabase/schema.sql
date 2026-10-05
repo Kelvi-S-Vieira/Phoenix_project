@@ -106,6 +106,11 @@ create table if not exists public.profiles (
   -- supabase/migration_dietary_preference.sql.
   dietary_preference text check (dietary_preference in ('onivoro', 'vegetariano', 'vegano')),
 
+  -- Diet type (macro split) + fasting window — see
+  -- supabase/migration_diet_type.sql.
+  diet_type text check (diet_type in ('equilibrada','mediterranea','lowcarb','cetogenica','altaproteina','jejum')),
+  fasting_window text,
+
   -- Anchors Calendário's rolling 84-day/12-week window when the profile has
   -- no active custom_plans row (set once, on first open — see
   -- app/calendario/page.tsx). Ignored once a Montar Plano exists; that

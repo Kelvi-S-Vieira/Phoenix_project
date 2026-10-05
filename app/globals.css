@@ -4579,3 +4579,738 @@ h1 {
 .tv-group-header-static:hover {
   background: none;
 }
+
+/* --------------------------------------------------------------------------
+   Diário — topo redesenhado: medidor barra-chama (.fx-flame-*) e tela do
+   dia (.fx-dday-*). Portado de modelo-barra-chama-v2.html e
+   modelo-diario-dieta.html.
+   -------------------------------------------------------------------------- */
+.fx-flame-card { background: var(--bg); border: 1px solid var(--border); border-radius: 20px; padding: 16px; margin-bottom: 14px; }
+.fx-flame-head { display: flex; justify-content: space-between; align-items: flex-end; gap: 10px; }
+.fx-flame-num { font-family: var(--font-display); font-weight: 600; font-size: 38px; color: var(--text); }
+.fx-flame-unit { color: var(--text-muted); font-size: 13px; }
+.fx-flame-headr { text-align: right; }
+.fx-flame-headr small { display: block; color: var(--text-muted); font-size: 12px; margin-top: 3px; }
+.fx-flame-streak { background: var(--surface); border: 1px solid var(--border); border-radius: 99px; padding: 5px 11px; font-size: 13px; white-space: nowrap; display: inline-block; }
+.fx-flame-svg { display: block; width: 100%; height: auto; overflow: visible; cursor: pointer; }
+.fx-flame-svg:focus-visible { outline: 2px solid var(--ember); outline-offset: 4px; border-radius: 12px; }
+.fx-flame-track { fill: var(--surface-2); stroke: var(--border); }
+.fx-flame-fl { transform-box: fill-box; transform-origin: left center; animation: fx-flame-flicker .9s ease-in-out infinite alternate; }
+.fx-flame-fl2 { animation-duration: .6s; animation-delay: -.3s; }
+@keyframes fx-flame-flicker { from { transform: scale(1, 1) skewY(-3deg); } to { transform: scale(1.12, .9) skewY(3deg); } }
+.fx-flame-em { animation: fx-flame-rise 2s linear infinite; }
+.fx-flame-em2 { animation-delay: -.7s; }
+.fx-flame-em3 { animation-delay: -1.3s; }
+@keyframes fx-flame-rise { from { transform: translateY(0); opacity: .9; } to { transform: translateY(-22px); opacity: 0; } }
+@media (prefers-reduced-motion: reduce) {
+  .fx-flame-fl, .fx-flame-em { animation: none; }
+  .fx-flame-svg rect { transition: none !important; }
+}
+.fx-flame-leg { display: flex; gap: 12px; justify-content: center; font-size: 11px; color: var(--text-muted); margin-top: 6px; }
+.fx-flame-leg i { display: inline-block; width: 9px; height: 9px; border-radius: 3px; margin-right: 4px; }
+.fx-flame-meals { display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px; margin-top: 8px; }
+.fx-flame-ml { background: var(--surface); border: 1px solid var(--border); border-radius: 10px; padding: 6px 4px; text-align: center; font-size: 10.5px; color: var(--text-muted); }
+.fx-flame-ml i { display: block; width: 9px; height: 9px; border-radius: 50%; margin: 0 auto 4px; background: #3a312a; }
+.fx-flame-ml.on i { background: var(--ember); box-shadow: 0 0 7px var(--ember); }
+.fx-flame-ml b { display: block; color: var(--text); font-family: var(--font-mono); font-size: 11.5px; font-weight: 500; }
+.fx-flame-status { margin-top: 10px; font-size: 12.5px; padding: 9px 11px; border-radius: 10px; background: var(--surface); border: 1px solid var(--border); line-height: 1.4; color: var(--text); }
+.fx-flame-status.ok { border-color: rgba(127, 184, 138, .5); color: var(--good); }
+.fx-flame-status.alert { border-color: rgba(224, 184, 92, .5); color: var(--warn); }
+.fx-flame-proj { margin-top: 8px; font-size: 12px; color: var(--text-muted); }
+.fx-flame-proj b { color: var(--text); }
+.fx-flame-macros { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin-top: 10px; }
+.fx-flame-m { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 8px; font-size: 11px; color: var(--text-muted); }
+.fx-flame-m b { display: block; color: var(--text); font-family: var(--font-mono); font-size: 14px; }
+.fx-flame-hint { font-size: 11px; color: var(--text-muted); text-align: center; margin-top: 6px; }
+
+.fx-dday-week { display: flex; gap: 6px; align-items: center; justify-content: space-between; margin-bottom: 4px; }
+.fx-dday-day { text-align: center; font-size: 11px; color: var(--text-muted); text-decoration: none; }
+.fx-dday-day i { display: flex; width: 38px; height: 38px; border-radius: 50%; border: 1.5px dashed var(--text-muted); align-items: center; justify-content: center; font-style: normal; color: var(--text); font-weight: 600; margin: 0 auto 3px; }
+.fx-dday-day.done i { border: 2px solid var(--good); }
+.fx-dday-day.on i { border: 2px solid var(--ember); background: rgba(255, 107, 53, .15); }
+.fx-dday-day.today { color: var(--text); }
+.fx-dday-streak { background: var(--surface); border: 1px solid var(--border); border-radius: 99px; padding: 8px 12px; font-size: 14px; white-space: nowrap; }
+.fx-dday-dietwrap { margin: 12px 0 14px; }
+.fx-dday-dietchip { display: flex; justify-content: space-between; align-items: center; background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 10px 12px; color: var(--text); font-size: 13px; text-decoration: none; }
+.fx-dday-dietchip b { color: var(--gold); }
+.fx-dday-muted { color: var(--text-muted); }
+.fx-dday-fast { margin-top: 8px; font-size: 12.5px; color: var(--text-muted); background: var(--surface); border: 1px solid var(--border); border-radius: 10px; padding: 8px 11px; }
+.fx-dday-fast.in { color: var(--good); border-color: rgba(127, 184, 138, .5); }
+.fx-dday-fast.out { color: var(--warn); border-color: rgba(224, 184, 92, .5); }
+.fx-dday-water { position: relative; margin: 0 0 14px; text-align: center; }
+.fx-dday-water-btn { background: none; border: 0; color: var(--text-muted); font-size: 12.5px; cursor: pointer; padding: 6px 10px; }
+.fx-dday-water-btn b { color: #6aa6e0; }
+.fx-dday-water-undo { background: var(--surface); border: 1px solid var(--border); color: var(--text); border-radius: 50%; width: 24px; height: 24px; cursor: pointer; line-height: 1; }
+.fx-dday-water-track { height: 4px; border-radius: 4px; background: var(--surface-2); overflow: hidden; margin-top: 4px; }
+.fx-dday-water-track i { display: block; height: 100%; background: #6aa6e0; transition: width .3s; }
+.fx-dday-macros { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin-bottom: 18px; }
+.fx-dday-m { background: var(--surface); border: 1px solid var(--border); border-radius: 14px; padding: 11px; }
+.fx-dday-m small { display: block; color: var(--text-muted); font-size: 11px; margin-bottom: 6px; }
+.fx-dday-m b { font-family: var(--font-mono); font-size: 17px; color: var(--text); }
+.fx-dday-m b s { text-decoration: none; color: var(--text-muted); font-size: 12px; font-weight: 400; }
+.fx-dday-bar { height: 4px; border-radius: 4px; background: var(--surface-2); margin-top: 8px; overflow: hidden; }
+.fx-dday-bar i { display: block; height: 100%; transition: width .3s; }
+@media (prefers-reduced-motion: reduce) {
+  .fx-dday-bar i, .fx-dday-water-track i { transition: none; }
+}
+@media (max-width: 480px) {
+  .fx-dday-macros { gap: 6px; }
+  .fx-dday-m { padding: 9px; }
+  .fx-dday-m b { font-size: 15px; }
+}
+
+/* ==========================================================================
+   Tipo de dieta (/dieta, onboarding, selo/filtro em Marmitas, Receitas Fit e
+   Montar Plano) — todas as classes .fx-diet-*
+   ========================================================================== */
+.fx-diet-current {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 10px 14px;
+  margin-bottom: 14px;
+  font-size: 13px;
+}
+.fx-diet-current b { color: var(--gold); }
+.fx-diet-warning {
+  background: rgba(224, 184, 92, 0.1);
+  border: 1px solid rgba(224, 184, 92, 0.35);
+  color: var(--text);
+  border-radius: 12px;
+  padding: 12px 14px;
+  font-size: 13px;
+  line-height: 1.5;
+}
+.fx-diet-warning a { color: var(--gold); font-weight: 600; }
+.fx-diet-car {
+  display: flex;
+  gap: 10px;
+  overflow-x: auto;
+  padding-bottom: 8px;
+  scroll-snap-type: x mandatory;
+}
+.fx-diet-card {
+  flex: 0 0 190px;
+  height: 104px;
+  border-radius: 14px;
+  padding: 12px;
+  position: relative;
+  cursor: pointer;
+  scroll-snap-align: start;
+  border: 2px solid transparent;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-end;
+  color: #fff;
+  text-align: left;
+  font-family: inherit;
+}
+.fx-diet-card .fx-diet-card-emoji {
+  position: absolute;
+  right: 10px;
+  top: 8px;
+  font-size: 34px;
+  opacity: 0.9;
+}
+.fx-diet-card b {
+  font-family: var(--font-display);
+  font-size: 17px;
+  font-weight: 600;
+}
+.fx-diet-card small { font-size: 11.5px; opacity: 0.88; }
+.fx-diet-card.sel { border-color: #fff; box-shadow: 0 0 0 2px var(--ember); }
+.fx-diet-card[data-diet="equilibrada"] { background: linear-gradient(135deg, #7a4a2a, #c1272d); }
+.fx-diet-card[data-diet="mediterranea"] { background: linear-gradient(135deg, #b58a1e, #e0b85c); }
+.fx-diet-card[data-diet="lowcarb"] { background: linear-gradient(135deg, #8a3a1e, #e05c5c); }
+.fx-diet-card[data-diet="cetogenica"] { background: linear-gradient(135deg, #2a4a7a, #6aa6e0); }
+.fx-diet-card[data-diet="altaproteina"] { background: linear-gradient(135deg, #3a6a4a, #7fb88a); }
+.fx-diet-card[data-diet="jejum"] { background: linear-gradient(135deg, #c1272d, #ff6b35); }
+.fx-diet-detail {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  padding: 14px;
+  margin-top: 10px;
+}
+.fx-diet-detail-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 8px;
+}
+.fx-diet-detail-head b { font-family: var(--font-display); font-size: 17px; }
+.fx-diet-detail-flag { font-size: 11px; color: var(--good); }
+.fx-diet-split {
+  display: flex;
+  height: 12px;
+  border-radius: 9px;
+  overflow: hidden;
+  margin: 10px 0 8px;
+}
+.fx-diet-split i { display: block; transition: width 0.3s; }
+.fx-diet-split .p { background: var(--danger); }
+.fx-diet-split .c { background: var(--gold); }
+.fx-diet-split .f { background: #6aa6e0; }
+.fx-diet-legend { display: flex; justify-content: space-between; font-size: 12px; }
+.fx-diet-legend > div { text-align: center; }
+.fx-diet-legend > div.p { color: var(--danger); }
+.fx-diet-legend > div.c { color: var(--gold); }
+.fx-diet-legend > div.f { color: #6aa6e0; }
+.fx-diet-legend b {
+  display: block;
+  font-family: var(--font-mono);
+  font-size: 15px;
+}
+.fx-diet-rules {
+  margin: 12px 0 0;
+  padding-left: 18px;
+  color: var(--text-muted);
+  font-size: 12.5px;
+  line-height: 1.55;
+}
+.fx-diet-fasting {
+  margin-top: 14px;
+  padding: 12px;
+  background: var(--surface-2);
+  border-radius: 10px;
+}
+.fx-diet-fasting-row { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
+.fx-diet-fasting-row input { width: auto; }
+.fx-diet-go { width: 100%; margin-top: 14px; padding: 13px; font-size: 14px; }
+.fx-diet-note { font-size: 11px; color: var(--text-muted); margin-top: 10px; text-align: center; }
+.fx-diet-ok { font-size: 12px; color: var(--good); margin-top: 10px; text-align: center; }
+
+/* Onboarding: cards de escolha com divisão % */
+.fx-diet-choice-split {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: var(--gold);
+  margin-top: 6px;
+}
+.fx-diet-suggested-tag {
+  display: inline-block;
+  margin-left: 6px;
+  font-family: var(--font-mono);
+  font-size: 9px;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  color: var(--good);
+  border: 1px solid rgba(127, 184, 138, 0.4);
+  border-radius: 6px;
+  padding: 1px 5px;
+  vertical-align: middle;
+}
+
+/* Marmitas / Receitas Fit / Montar Plano: selo, filtro e esmaecido */
+.fx-diet-badge {
+  display: inline-block;
+  align-self: flex-start;
+  font-family: var(--font-mono);
+  font-size: 9px;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  color: var(--good);
+  background: rgba(127, 184, 138, 0.1);
+  border: 1px solid rgba(127, 184, 138, 0.3);
+  border-radius: 6px;
+  padding: 2px 7px;
+  margin-bottom: 8px;
+}
+.fx-diet-badge.no {
+  color: var(--warn);
+  background: rgba(224, 184, 92, 0.1);
+  border-color: rgba(224, 184, 92, 0.35);
+}
+.fx-diet-mismatch { opacity: 0.62; }
+.fx-diet-mismatch:hover { opacity: 1; }
+.fx-diet-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 7px 14px;
+  margin: 0 8px 16px 0;
+  border-radius: 20px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  color: var(--text-muted);
+  font-family: var(--font-mono);
+  font-size: 11px;
+  cursor: pointer;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+}
+.fx-diet-toggle.active {
+  background: rgba(127, 184, 138, 0.14);
+  color: var(--good);
+  border-color: var(--good);
+}
+.fx-diet-planrec-tag { font-size: 11px; color: var(--good); margin-left: 6px; }
+.fx-diet-planrec-row-mismatch { opacity: 0.6; }
+
+/* --------------------------------------------------------------------------
+   Diário — revisão de refeição estilo FitCal (app/diario/AiEstimateReview.tsx)
+   e modo "Código de barras" (app/diario/AddFood.tsx). Apenas classes
+   .fx-aifc-*.
+   -------------------------------------------------------------------------- */
+.fx-aifc {
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 18px;
+  overflow: hidden;
+}
+.fx-aifc-photo {
+  height: 190px;
+  background: linear-gradient(135deg, #3a2a1e, #6b3a22 60%, var(--ember-deep));
+  background-size: cover;
+  background-position: center;
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  padding: 12px 12px 30px;
+  position: relative;
+}
+.fx-aifc-photo-icon {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 72px;
+  opacity: 0.9;
+}
+.fx-aifc-chip {
+  position: relative;
+  background: rgba(20, 17, 15, 0.75);
+  backdrop-filter: blur(6px);
+  border-radius: 99px;
+  padding: 5px 11px;
+  font-size: 12px;
+  color: var(--text);
+}
+.fx-aifc-sheet {
+  margin-top: -18px;
+  background: var(--bg);
+  border-radius: 20px 20px 0 0;
+  padding: 16px;
+  position: relative;
+}
+.fx-aifc-head,
+.fx-aifc-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+.fx-aifc-title {
+  flex: 1;
+  min-width: 0;
+  background: transparent;
+  border: 1px solid transparent;
+  border-radius: 8px;
+  color: var(--text);
+  font-family: var(--font-display, inherit);
+  font-weight: 600;
+  font-size: 19px;
+  padding: 4px 6px;
+  margin-left: -6px;
+}
+.fx-aifc-title:focus {
+  border-color: var(--border);
+  background: var(--surface);
+  outline: none;
+}
+.fx-aifc-stepper {
+  display: flex;
+  align-items: center;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 99px;
+  flex-shrink: 0;
+}
+.fx-aifc-stepper button {
+  background: none;
+  border: 0;
+  color: var(--text);
+  width: 32px;
+  height: 32px;
+  font-size: 17px;
+  cursor: pointer;
+}
+.fx-aifc-stepper button:disabled {
+  opacity: 0.35;
+  cursor: not-allowed;
+}
+.fx-aifc-stepper span {
+  min-width: 26px;
+  text-align: center;
+  font-size: 14px;
+}
+.fx-aifc-kcal {
+  margin-top: 14px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  padding: 14px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+.fx-aifc-kcal-ic {
+  font-size: 26px;
+}
+.fx-aifc-kcal small {
+  color: var(--text-muted);
+  font-size: 12px;
+  display: block;
+}
+.fx-aifc-kcal small.fx-aifc-inline {
+  display: inline;
+}
+.fx-aifc-kcal b {
+  font-size: 34px;
+  font-weight: 600;
+  color: var(--text);
+}
+.fx-aifc-macros {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 8px;
+  margin-top: 8px;
+}
+.fx-aifc-macro {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  padding: 10px;
+}
+.fx-aifc-macro small {
+  color: var(--text-muted);
+  font-size: 11px;
+  display: block;
+}
+.fx-aifc-macro b {
+  font-size: 17px;
+  font-family: var(--font-mono, monospace);
+  color: var(--text);
+}
+.fx-aifc-macro i {
+  display: block;
+  height: 3px;
+  border-radius: 3px;
+  margin-top: 6px;
+}
+.fx-aifc-health {
+  margin-top: 8px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  padding: 12px;
+  font-size: 13px;
+}
+.fx-aifc-bar {
+  height: 7px;
+  background: var(--surface-2);
+  border-radius: 9px;
+  margin-top: 8px;
+  overflow: hidden;
+}
+.fx-aifc-bar i {
+  display: block;
+  height: 100%;
+  background: linear-gradient(90deg, var(--ember), var(--good));
+}
+.fx-aifc-health p {
+  margin: 8px 0 0;
+  font-size: 12.5px;
+  color: var(--text-muted);
+  line-height: 1.45;
+}
+.fx-aifc-h {
+  font-size: 15px;
+  margin: 18px 0 8px;
+  font-weight: 600;
+  color: var(--text);
+}
+.fx-aifc-h span {
+  color: var(--text-muted);
+  font-size: 12px;
+  font-weight: 400;
+}
+.fx-aifc-empty,
+.fx-aifc-hint {
+  color: var(--text-muted);
+  font-size: 13px;
+  margin-bottom: 12px;
+}
+.fx-aifc-ing {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  padding: 11px 12px;
+  margin-bottom: 8px;
+}
+.fx-aifc-ing-top {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 8px;
+  font-size: 14px;
+}
+.fx-aifc-ing-top em {
+  font-style: normal;
+  color: var(--gold);
+  font-family: var(--font-mono, monospace);
+  white-space: nowrap;
+}
+.fx-aifc-ing-name {
+  flex: 1;
+  min-width: 0;
+  background: transparent;
+  border: 1px solid transparent;
+  border-radius: 8px;
+  color: var(--text);
+  font-size: 14px;
+  padding: 3px 6px;
+  margin-left: -6px;
+  font-family: inherit;
+}
+.fx-aifc-ing-name:focus {
+  border-color: var(--border);
+  background: var(--surface-2);
+  outline: none;
+}
+.fx-aifc-ing-bottom {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 8px;
+  font-size: 12px;
+  color: var(--text-muted);
+}
+.fx-aifc-ing-bottom input,
+.fx-aifc-custom input,
+.fx-aifc-addbox input,
+.fx-aifc-ean input,
+.fx-aifc-correct textarea {
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  border-radius: 9px;
+  color: var(--text);
+  padding: 6px 8px;
+  font-size: 14px;
+  font-family: inherit;
+}
+.fx-aifc-ing-bottom input {
+  width: 78px;
+}
+.fx-aifc-src {
+  font-size: 10.5px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  min-width: 0;
+}
+.fx-aifc-rm {
+  margin-left: auto;
+  background: none;
+  border: 0;
+  color: var(--danger);
+  cursor: pointer;
+  font-size: 12px;
+}
+.fx-aifc-custom {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 6px;
+  margin-top: 8px;
+}
+.fx-aifc-custom label {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  min-width: 0;
+}
+.fx-aifc-custom small {
+  font-size: 10px;
+  color: var(--text-muted);
+}
+.fx-aifc-custom input {
+  width: 100%;
+  padding: 5px 6px;
+  font-size: 13px;
+}
+.fx-aifc-add {
+  width: 100%;
+  background: none;
+  border: 1px dashed rgba(255, 107, 53, 0.5);
+  color: var(--ember);
+  border-radius: 12px;
+  padding: 10px;
+  cursor: pointer;
+  font-size: 13px;
+}
+.fx-aifc-addbox {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  border: 1px dashed rgba(255, 107, 53, 0.5);
+  border-radius: 12px;
+  padding: 10px;
+}
+.fx-aifc-opt {
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+  align-items: center;
+  text-align: left;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 9px;
+  color: var(--text);
+  padding: 8px 10px;
+  font-size: 13px;
+  cursor: pointer;
+}
+.fx-aifc-opt small {
+  color: var(--text-muted);
+  white-space: nowrap;
+}
+.fx-aifc-addbox-actions {
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+}
+.fx-aifc-link {
+  background: none;
+  border: 0;
+  color: var(--ember);
+  cursor: pointer;
+  font-size: 12.5px;
+  padding: 4px 0;
+}
+.fx-aifc-link-muted {
+  color: var(--text-muted);
+}
+.fx-aifc-meals {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+.fx-aifc-meals button {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  color: var(--text-muted);
+  border-radius: 99px;
+  padding: 7px 12px;
+  font-size: 12px;
+  cursor: pointer;
+}
+.fx-aifc-meals button.on {
+  background: rgba(255, 107, 53, 0.15);
+  border-color: var(--ember);
+  color: var(--text);
+}
+.fx-aifc-correct {
+  margin-top: 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.fx-aifc-correct label {
+  font-size: 13px;
+  color: var(--text);
+}
+.fx-aifc-correct textarea {
+  width: 100%;
+  resize: vertical;
+}
+.fx-aifc-correct-actions {
+  display: flex;
+  gap: 8px;
+  justify-content: flex-end;
+}
+.fx-aifc-error {
+  color: var(--danger);
+  font-size: 13px;
+  margin: 8px 0;
+}
+.fx-aifc-acts {
+  display: flex;
+  gap: 10px;
+  margin-top: 18px;
+}
+.fx-aifc-acts button {
+  flex: 1;
+  padding: 13px;
+  border-radius: 12px;
+  font-size: 14px;
+  cursor: pointer;
+  font-weight: 600;
+}
+.fx-aifc-acts button:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+.fx-aifc-ghost {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  color: var(--text);
+}
+.fx-aifc-main {
+  background: linear-gradient(135deg, var(--ember), var(--ember-deep));
+  border: 0;
+  color: #fff;
+}
+.fx-aifc-discard {
+  display: block;
+  margin: 8px auto 0;
+}
+.fx-aifc-foot {
+  font-size: 11px;
+  color: var(--text-muted);
+  margin-top: 10px;
+  text-align: center;
+}
+.fx-aifc-scan {
+  position: relative;
+  margin-bottom: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  align-items: center;
+}
+.fx-aifc-scan video {
+  width: 100%;
+  max-height: 260px;
+  object-fit: cover;
+  border-radius: 14px;
+  background: #000;
+}
+.fx-aifc-scan-frame {
+  position: absolute;
+  top: 18%;
+  left: 12%;
+  right: 12%;
+  height: 90px;
+  border: 2px solid var(--ember);
+  border-radius: 10px;
+  pointer-events: none;
+}
+.fx-aifc-ean {
+  display: flex;
+  gap: 8px;
+}
+.fx-aifc-ean input {
+  flex: 1;
+  min-width: 0;
+}
+@media (max-width: 420px) {
+  .fx-aifc-custom {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}

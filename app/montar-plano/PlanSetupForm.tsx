@@ -9,6 +9,7 @@ import type { Goal, Tier } from "@/lib/database.types";
 import type { DietaryPreference } from "@/lib/supplements";
 import { todayBR } from "@/lib/date-br";
 import PlanRecommendStep from "./PlanRecommendStep";
+import type { DietType } from "@/lib/diet-types";
 
 const TIER_ORDER: Tier[] = ["treino-basico", "treino-intermediario", "treino-avancado"];
 
@@ -28,11 +29,13 @@ export default function PlanSetupForm({
   profileId,
   goal,
   dietaryPreference,
+  dietType = null,
   hasPersonal,
 }: {
   profileId: string;
   goal: Goal | null;
   dietaryPreference?: DietaryPreference | null;
+  dietType?: DietType | null;
   hasPersonal: boolean;
 }) {
   const router = useRouter();
@@ -115,6 +118,7 @@ export default function PlanSetupForm({
         profileId={profileId}
         goal={goal}
         dietaryPreference={dietaryPreference}
+        dietType={dietType}
         createPlan={insertPlan}
         onBack={() => setStep("form")}
         onDone={() => router.refresh()}

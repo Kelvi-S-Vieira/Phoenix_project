@@ -60,6 +60,10 @@ export type Profile = {
   // Vegetarian/vegan flag for supplement recommendations (see
   // supabase/migration_dietary_preference.sql).
   dietary_preference: "onivoro" | "vegetariano" | "vegano" | null;
+  // Diet type (macro split) + intermittent-fasting window (see
+  // supabase/migration_diet_type.sql).
+  diet_type: "equilibrada" | "mediterranea" | "lowcarb" | "cetogenica" | "altaproteina" | "jejum" | null;
+  fasting_window: string | null;
   // Anchors Calendário's rolling window when there's no active custom_plans
   // row (see supabase/migration_plano.sql).
   calendar_start_date: string | null;

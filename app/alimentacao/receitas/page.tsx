@@ -59,7 +59,11 @@ export default async function ReceitasFitPage() {
             </div>
           </div>
 
-          <RecipesFitBrowser profileId={user.id} recommendedNames={recommendedNames} />
+          <RecipesFitBrowser
+            profileId={user.id}
+            recommendedNames={recommendedNames}
+            dietType={profile.diet_type}
+          />
 
           <div className="footer-note">
             PROJETO FÊNIX — proteína também pode ser gostosa.

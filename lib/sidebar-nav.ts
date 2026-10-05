@@ -36,6 +36,7 @@ export const ALUNO_SIDEBAR_SECTIONS: SidebarNavSection[] = [
     label: "Nutrição",
     items: [
       { href: "/diario", label: "Diário", icon: "🍽️" },
+      { href: "/dieta", label: "Dieta", icon: "🥗" },
       { href: "/alimentacao/marmitas", label: "Marmitas" },
       { href: "/alimentacao/suplementacao", label: "Suplementação" },
       { href: "/alimentacao/receitas", label: "Receitas Fit" },

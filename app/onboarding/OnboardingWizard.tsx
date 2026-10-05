@@ -12,6 +12,14 @@ import {
 } from "@/lib/fenix-domain";
 import type { ActivityLevel, Goal } from "@/lib/database.types";
 import type { DietaryPreference } from "@/lib/supplements";
+import {
+  DEFAULT_FASTING_WINDOW,
+  DIETS,
+  getDiet,
+  macrosForDiet,
+  suggestedDietForGoal,
+  type DietType,
+} from "@/lib/diet-types";
 import { getWeightUnit, toDisplayWeight, fromDisplayWeight } from "@/lib/weight-unit";
 import { getPaceSuggestions, getEndDateHint, getPaceFeedback } from "@/lib/pace-suggestions";
 
@@ -33,6 +41,10 @@ interface WizardState {
   activity: ActivityLevel | "";
   goal: Goal | "";
   dietaryPreference: DietaryPreference | "";
+  // "" = not answered yet, "later" = explicit "Decidir depois" (both save
+  // diet_type = null). A diet is only ever saved when the user picks one —
+  // the goal-based suggestion is just a highlight, never a default.
+  dietType: DietType | "later" | "";
   targetWeight: string;
   timeframeWeeks: string;
 }
@@ -46,6 +58,8 @@ export interface OnboardingInitialProfile {
   activity: ActivityLevel | null;
   goal: Goal | null;
   dietaryPreference?: DietaryPreference | null;
+  dietType?: DietType | null;
+  fastingWindow?: string | null;
   targetWeight: number | null;
 }
 
@@ -58,6 +72,7 @@ function stateFromProfile(p?: OnboardingInitialProfile): WizardState {
     activity: p?.activity ?? "",
     goal: p?.goal ?? "",
     dietaryPreference: p?.dietaryPreference ?? "",
+    dietType: p?.dietType ?? "",
     targetWeight: p?.targetWeight != null ? String(p.targetWeight) : "",
     // Not a stored profile column (only ever used to shape the deficit %
     // during this session) — always starts blank, even in edit mode.
@@ -124,8 +139,22 @@ export default function OnboardingWizard({
         })
       : null;
 
+  // Diet applied on top of computeTargets(): the calorie target stays, only
+  // the protein/carb/fat grams are re-split (lib/diet-types.ts). Nothing else
+  // in the DB needs recomputing — Diário, Montar Plano, Marmitas and Receitas
+  // read diet_type and the P/C/G targets straight from profiles.
+  const chosenDiet: DietType | null = state.dietType && state.dietType !== "later" ? state.dietType : null;
+  const chosenDietDef = getDiet(chosenDiet);
+  const finalMacros =
+    targets && chosenDiet
+      ? macrosForDiet(targets.calorieTarget, chosenDiet)
+      : targets
+        ? { proteinG: targets.proteinG, carbG: targets.carbG, fatG: targets.fatG }
+        : null;
+  const suggestedDiet = suggestedDietForGoal(state.goal || null);
+
   async function handleSave() {
-    if (!targets || !state.sex || !state.goal || !state.activity) return;
+    if (!targets || !finalMacros || !state.sex || !state.goal || !state.activity) return;
     setSaving(true);
     setError(null);
     const supabase = createClient();
@@ -151,12 +180,17 @@ export default function OnboardingWizard({
         goal: state.goal,
         // Optional: blank (never answered / deselected) saves as null.
         dietary_preference: state.dietaryPreference || null,
+        diet_type: chosenDiet,
+        // Keep an existing window when staying on "jejum" (editable in /dieta).
+        fasting_window:
+          chosenDiet === "jejum" ? (initialProfile?.fastingWindow ?? DEFAULT_FASTING_WINDOW) : null,
         calorie_target: targets.calorieTarget,
-        protein_target: targets.proteinG,
-        // Diário targets (see /diario) — computeTargets() already derives
-        // these with the prototype's exact formula; previously discarded.
-        carb_target: targets.carbG,
-        fat_target: targets.fatG,
+        protein_target: finalMacros.proteinG,
+        // Diário targets (see /diario) — computeTargets() derives them with
+        // the prototype's formula; macrosForDiet() overrides the split when
+        // a diet type was chosen.
+        carb_target: finalMacros.carbG,
+        fat_target: finalMacros.fatG,
         timeframe_weeks: timeframeWeeksNum,
         onboarding_completed: true,
       })
@@ -329,6 +363,40 @@ export default function OnboardingWizard({
                 ))}
               </div>
             </div>
+            <div className="field" style={{ marginTop: 20 }}>
+              <label>Qual tipo de dieta você quer seguir? (opcional)</label>
+              <div className="sub" style={{ marginBottom: 10 }}>
+                Muda só a divisão de proteína, carboidrato e gordura — as calorias continuam as
+                do seu objetivo. Você pode trocar depois em Dieta.
+              </div>
+              <div className="choice-grid">
+                {DIETS.map((d) => (
+                  <div
+                    key={d.key}
+                    className={"choice-card" + (state.dietType === d.key ? " selected" : "")}
+                    onClick={() => update("dietType", state.dietType === d.key ? "" : d.key)}
+                  >
+                    <div className="cc-title">
+                      {d.emoji} {d.label}
+                      {state.goal && d.key === suggestedDiet && (
+                        <span className="fx-diet-suggested-tag">sugerida p/ seu objetivo</span>
+                      )}
+                    </div>
+                    <div className="cc-desc">{d.description}</div>
+                    <div className="fx-diet-choice-split">
+                      P {d.split.p}% · C {d.split.c}% · G {d.split.f}%
+                    </div>
+                  </div>
+                ))}
+                <div
+                  className={"choice-card" + (state.dietType === "later" ? " selected" : "")}
+                  onClick={() => update("dietType", state.dietType === "later" ? "" : "later")}
+                >
+                  <div className="cc-title">Decidir depois</div>
+                  <div className="cc-desc">Usa a divisão padrão por objetivo, sem dieta específica.</div>
+                </div>
+              </div>
+            </div>
           </>
         )}
 
@@ -427,13 +495,16 @@ export default function OnboardingWizard({
               <div className="sum-card">
                 <div className="label">Proteína</div>
                 <div className="value">
-                  {targets.proteinG} <span className="unit">g ({targets.proteinPerKg}g/kg)</span>
+                  {finalMacros?.proteinG ?? targets.proteinG}{" "}
+                  <span className="unit">
+                    g{chosenDiet ? "" : ` (${targets.proteinPerKg}g/kg)`}
+                  </span>
                 </div>
               </div>
               <div className="sum-card">
                 <div className="label">Carboidrato / Gordura</div>
                 <div className="value" style={{ fontSize: 18 }}>
-                  {targets.carbG}g / {targets.fatG}g
+                  {finalMacros?.carbG ?? targets.carbG}g / {finalMacros?.fatG ?? targets.fatG}g
                 </div>
               </div>
               <div className="sum-card">
@@ -457,6 +528,10 @@ export default function OnboardingWizard({
               <div className="b-row">
                 <span>Nível de atividade</span>
                 <b>{activityLabel(state.activity)}</b>
+              </div>
+              <div className="b-row">
+                <span>Tipo de dieta</span>
+                <b>{chosenDietDef ? `${chosenDietDef.emoji} ${chosenDietDef.label}` : "A definir"}</b>
               </div>
               <hr />
               <div className="b-row">

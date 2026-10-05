@@ -2,20 +2,41 @@
 
 import { useState } from "react";
 import { MARMITA_CATEGORIES, MARMITA_SUGGESTIONS, type MarmitaSuggestion } from "@/lib/marmita-suggestions";
+import { mealFitsDiet, type DietType } from "@/lib/diet-types";
+import { marmitaCarbPerServing } from "@/lib/meal-carbs";
+import { DietFilterToggle, DietFitBadge, sortByDietFit } from "@/components/DietFit";
+
+// Marmitas have no `carb` in the catalog, so it is estimated from the
+// ingredients once (see lib/meal-carbs.ts) and fed to mealFitsDiet().
+function fitsDiet(s: MarmitaSuggestion, diet: DietType | null): boolean {
+  return mealFitsDiet({ carb: marmitaCarbPerServing(s), protein: s.protein }, diet);
+}
 
 // Ported from the prototype's `renderSuggestions()`/`renderSuggestionFilters()`
 // (projeto_fenix_app_final.html, ~lines 15020-15078). "Added" state is kept
 // per-card (by suggestion name) just for this render, like the prototype's
 // disabled "✓ Adicionada" button — it resets on tab switch, which is fine
 // since the suggestion can always be re-added (it has no identity to reuse).
-export default function SuggestionsTab({ onAdd }: { onAdd: (s: MarmitaSuggestion) => void }) {
+export default function SuggestionsTab({
+  onAdd,
+  dietType = null,
+}: {
+  onAdd: (s: MarmitaSuggestion) => void;
+  dietType?: DietType | null;
+}) {
   const [activeCategory, setActiveCategory] = useState("all");
   const [onlyFast, setOnlyFast] = useState(false);
+  // On by default whenever the profile has a diet_type.
+  const [onlyFit, setOnlyFit] = useState(dietType != null);
   const [added, setAdded] = useState<Set<string>>(new Set());
 
   const list = MARMITA_SUGGESTIONS.filter(
     (s) => activeCategory === "all" || s.category === activeCategory
-  ).filter((s) => !onlyFast || s.fast === true);
+  )
+    .filter((s) => !onlyFast || s.fast === true)
+    .filter((s) => !dietType || !onlyFit || fitsDiet(s, dietType));
+  // Compatible first (stable), incompatible ones stay visible but dimmed.
+  const shown = dietType ? sortByDietFit(list, (s) => fitsDiet(s, dietType)) : list;
 
   function handleAdd(s: MarmitaSuggestion) {
     onAdd(s);
@@ -50,10 +71,13 @@ export default function SuggestionsTab({ onAdd }: { onAdd: (s: MarmitaSuggestion
         >
           ⚡ Só rápidas (&lt;15 min)
         </div>
+        {dietType && (
+          <DietFilterToggle diet={dietType} on={onlyFit} onToggle={() => setOnlyFit((v) => !v)} />
+        )}
       </div>
 
       <div className="suggestions-grid">
-        {list.map((s) => {
+        {shown.map((s) => {
           const unitLabel =
             s.yield === 1
               ? "porção"
@@ -61,8 +85,10 @@ export default function SuggestionsTab({ onAdd }: { onAdd: (s: MarmitaSuggestion
                 ? "porções"
                 : "marmitas";
           const isAdded = added.has(s.name);
+          const fits = dietType ? fitsDiet(s, dietType) : true;
           return (
-            <div className="sugg-card" key={s.name}>
+            <div className={"sugg-card" + (dietType && !fits ? " fx-diet-mismatch" : "")} key={s.name}>
+              {dietType && <DietFitBadge fits={fits} diet={dietType} />}
               <div className="sugg-card-head">
                 <h4>{s.name}</h4>
                 <div style={{ display: "flex", gap: 4, flexShrink: 0 }}>
@@ -103,6 +129,9 @@ export default function SuggestionsTab({ onAdd }: { onAdd: (s: MarmitaSuggestion
           );
         })}
       </div>
+      {shown.length === 0 && (
+        <div className="empty-note">Nenhuma sugestão compatível com esse filtro. Desligue o filtro de dieta para ver todas.</div>
+      )}
     </div>
   );
 }

@@ -269,3 +269,14 @@ wizard, the aluno dashboard (weight + streak + chat preview), and the
 personal's roster + per-aluno evolution report + chat. Sprint 3 (training
 tiers, Medidas, Fotos, templates, streak/badges) and Sprint 4's kg/lb +
 color picker + Diário are now folded into the checklist above as done.
+
+## Fase 5 — Diário estilo FitCal + Tipo de dieta (2026-10-05, modelos aprovados)
+
+- [x] Análise por foto/texto no formato FitCal: gramas e valores por 100 g por ingrediente, nota de saúde, descrição, stepper, Corrigir/Salvar
+- [x] Leitura de código de barras (BarcodeDetector + Open Food Facts) — **não testado ao vivo**
+- [x] Diário com barra-chama v2 (7 melhorias), cards de macros, água, semana, chip de dieta
+- [x] Tipo de dieta (`diet_type`, `fasting_window`): onboarding, /dieta, metas P/C/G por dieta, filtro em marmitas/receitas fit/Montar Plano
+- [ ] Água ainda em localStorage (sem coluna no banco)
+- [ ] Carboidrato das marmitas é derivado por palavra-chave (lib/meal-carbs.ts) — aproximado
+- [ ] Ampliar banco de alimentos (TACO/USDA) — P3
+- [ ] Botões "+" por refeição no Diário; "Ceia" gravada como "extra"
