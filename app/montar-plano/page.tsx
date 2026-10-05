@@ -12,6 +12,7 @@ import PlanActions from "./PlanActions";
 import PlanChart from "@/components/PlanChart";
 import PlanWeekTable from "@/components/PlanWeekTable";
 import PlanCompleteCard from "@/components/PlanCompleteCard";
+import type { DietaryPreference } from "@/lib/supplements";
 import PlanNutritionSummary from "@/components/PlanNutritionSummary";
 
 export default async function MontarPlanoPage() {
@@ -63,6 +64,7 @@ export default async function MontarPlanoPage() {
             <PlanSetupForm
               profileId={user.id}
               goal={profile.goal}
+              dietaryPreference={profile.dietary_preference}
               hasPersonal={profile.linked_personal_id != null}
             />
           ) : (
@@ -75,6 +77,7 @@ export default async function MontarPlanoPage() {
               sex={profile.sex}
               activityLevel={profile.activity_level}
               goal={profile.goal}
+              dietaryPreference={profile.dietary_preference}
               calorieTarget={profile.calorie_target}
               proteinTarget={profile.protein_target}
               carbTarget={profile.carb_target}
@@ -98,6 +101,7 @@ async function PlanProgressView({
   sex,
   activityLevel,
   goal,
+  dietaryPreference,
   calorieTarget,
   proteinTarget,
   carbTarget,
@@ -113,6 +117,7 @@ async function PlanProgressView({
   sex: "M" | "F" | null;
   activityLevel: ActivityLevel | null;
   goal: Goal | null;
+  dietaryPreference: DietaryPreference | null;
   calorieTarget: number | null;
   proteinTarget: number | null;
   carbTarget: number | null;
@@ -168,6 +173,7 @@ async function PlanProgressView({
       <PlanNutritionSummary
         weight={currentWeight}
         goal={goal}
+        dietaryPreference={dietaryPreference}
         activity={activityLevel}
         calorieTarget={calorieTarget}
         proteinTarget={proteinTarget}

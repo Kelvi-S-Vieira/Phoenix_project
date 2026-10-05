@@ -94,6 +94,18 @@ create table if not exists public.profiles (
   -- supabase/migration_avancado_level.sql.
   avancado_level text,
 
+  -- Avançado tier's equipment filter, persisted as a profile-level
+  -- preference so it survives a plan reset instead of starting over —
+  -- see supabase/migration_avancado_equipment_pref.sql. Null means "no
+  -- saved preference yet" (falls back to defaultEquipmentFilter(), all
+  -- true). Shape mirrors Record<string, boolean> keyed by EQUIPMENT_TYPES.
+  avancado_equipment_filter jsonb,
+
+  -- Vegetarian/vegan flag, used to swap in a plant-based protein pick in
+  -- supplement recommendations instead of whey — see
+  -- supabase/migration_dietary_preference.sql.
+  dietary_preference text check (dietary_preference in ('onivoro', 'vegetariano', 'vegano')),
+
   -- Anchors Calendário's rolling 84-day/12-week window when the profile has
   -- no active custom_plans row (set once, on first open — see
   -- app/calendario/page.tsx). Ignored once a Montar Plano exists; that

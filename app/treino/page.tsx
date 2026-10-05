@@ -14,7 +14,7 @@ import * as treinoAvancado from "@/lib/treino-avancado-data";
 import type { Tier } from "@/lib/database.types";
 import { TIER_LABELS } from "@/lib/fenix-domain";
 import AvancadoBuilder from "./avancado/AvancadoBuilder";
-import { defaultPlan, normalizePlan, levelFilterForLevel, type AvancadoPlan } from "@/lib/treino-avancado-builder";
+import { defaultPlan, defaultEquipmentFilter, normalizePlan, levelFilterForLevel, type AvancadoPlan } from "@/lib/treino-avancado-builder";
 import { getServerWeightUnit } from "@/lib/weight-unit-server";
 import TerceiraIdadeBoard from "./terceira-idade/TerceiraIdadeBoard";
 import type { SeniorSessionTypeId } from "@/lib/terceira-idade-data";
@@ -121,6 +121,7 @@ export default async function TreinoPage() {
             tier={profile.current_tier as Tier}
             tierData={tierData}
             avancadoLevel={profile.avancado_level}
+            avancadoEquipmentFilter={profile.avancado_equipment_filter}
           />
         )}
       </div>
@@ -288,12 +289,14 @@ async function TreinoTierPage({
   tier,
   tierData,
   avancadoLevel,
+  avancadoEquipmentFilter,
 }: {
   profileId: string;
   profile: { current_split: string | null; senior_freq_goal: number };
   tier: Tier;
   tierData: TierWorkoutData;
   avancadoLevel: string | null;
+  avancadoEquipmentFilter: Record<string, boolean> | null;
 }) {
   const splitKey = profile.current_split;
   const split = splitKey ? tierData.SPLITS[splitKey] : null;
@@ -320,7 +323,11 @@ async function TreinoTierPage({
             </div>
           </details>
         </div>
-        <AvancadoTreino profileId={profileId} avancadoLevel={avancadoLevel} />
+        <AvancadoTreino
+          profileId={profileId}
+          avancadoLevel={avancadoLevel}
+          avancadoEquipmentFilter={avancadoEquipmentFilter}
+        />
       </>
     );
   }
@@ -619,7 +626,15 @@ async function TreinoContent({
 // weekdays; see lib/treino-shared-types.ts and lib/treino-avancado-builder.ts
 // for why plan vs. log are kept separate here).
 // =============================================================================
-async function AvancadoTreino({ profileId, avancadoLevel }: { profileId: string; avancadoLevel: string | null }) {
+async function AvancadoTreino({
+  profileId,
+  avancadoLevel,
+  avancadoEquipmentFilter,
+}: {
+  profileId: string;
+  avancadoLevel: string | null;
+  avancadoEquipmentFilter: Record<string, boolean> | null;
+}) {
   const supabase = await createClient();
 
   const { data: planRow } = await supabase
@@ -639,6 +654,14 @@ async function AvancadoTreino({ profileId, avancadoLevel }: { profileId: string;
     if (avancadoLevel) {
       fresh.levelFilter = levelFilterForLevel(avancadoLevel);
     }
+    // Same for equipmentFilter: seed from the profile-level preference
+    // (profiles.avancado_equipment_filter, written through by
+    // AvancadoBuilder's toggle/reset) when set, else the all-true default.
+    // Merged over the default so any equipment key missing from the saved
+    // preference stays enabled.
+    fresh.equipmentFilter = avancadoEquipmentFilter
+      ? { ...defaultEquipmentFilter(), ...avancadoEquipmentFilter }
+      : defaultEquipmentFilter();
     const { data: inserted } = await supabase
       .from("avancado_plans")
       .insert({ profile_id: profileId, week: fresh as unknown as Record<string, unknown> })
@@ -681,6 +704,17 @@ async function AvancadoTreino({ profileId, avancadoLevel }: { profileId: string;
     };
   }
 
+  // Light read-only weekly stat: distinct activity_days dates this BRT week
+  // (AvancadoBuilder upserts one per day when an exercise is checked).
+  const { data: weekActivityRows } = await supabase
+    .from("activity_days")
+    .select("activity_date")
+    .eq("profile_id", profileId)
+    .gte("activity_date", weekStart)
+    .lte("activity_date", weekEnd);
+  const weekTrainedDays = new Set((weekActivityRows ?? []).map((r) => r.activity_date)).size;
+  const trainedToday = (weekActivityRows ?? []).some((r) => r.activity_date === today);
+
   // Training-log history (1RM/PR/progression) — exercise_set_logs, one row
   // per logged set, keyed by the day-independent exerciseKey(). Fetched
   // once here and grouped client-side; see lib/treino-progression.ts.
@@ -705,6 +739,8 @@ async function AvancadoTreino({ profileId, avancadoLevel }: { profileId: string;
       initialLog={initialLog}
       initialSetLogs={initialSetLogs}
       initialAvancadoLevel={avancadoLevel}
+      weekTrainedDays={weekTrainedDays}
+      trainedToday={trainedToday}
     />
   );
 }

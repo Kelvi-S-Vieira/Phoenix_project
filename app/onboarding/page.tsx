@@ -13,7 +13,7 @@ export default async function OnboardingPage() {
   const { data: profile } = await supabase
     .from("profiles")
     .select(
-      "role, onboarding_completed, sex, age, height, current_weight, target_weight, activity_level, goal"
+      "role, onboarding_completed, sex, age, height, current_weight, target_weight, activity_level, goal, dietary_preference"
     )
     .eq("id", user.id)
     .single();
@@ -41,6 +41,7 @@ export default async function OnboardingPage() {
             weight: profile.current_weight,
             activity: profile.activity_level,
             goal: profile.goal,
+            dietaryPreference: profile.dietary_preference,
             targetWeight: profile.target_weight,
           }}
         />

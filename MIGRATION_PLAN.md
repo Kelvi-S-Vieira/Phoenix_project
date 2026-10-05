@@ -242,19 +242,22 @@ separada da tela "só configuração", nem um item de dia no menu lateral
   `PlanRecommendStep.tsx` — os dois lugares mostram a mesma lista agora.
 
 ### Recomendações adicionais (sugestões minhas, fora do que você pediu)
-- [ ] Persistir o filtro de equipamento como preferência do perfil (define
+- [x] Persistir o filtro de equipamento como preferência do perfil (define
   uma vez, aplica em todos os dias/treinos) em vez de reiniciar a cada
   sessão.
-- [ ] Resumo semanal no topo da nova tela de acompanhamento diário (ex.
+- [x] Resumo semanal no topo da nova tela de acompanhamento diário (ex.
   "3/5 treinos feitos essa semana") — Básico/Intermediário e Terceira
   Idade já têm algo parecido, Avançado hoje não tem nenhum resumo rápido.
-- [ ] Cronômetro de descanso iniciar automaticamente ao marcar uma série
+- [x] Cronômetro de descanso iniciar automaticamente ao marcar uma série
   como concluída, em vez de precisar apertar "iniciar" toda vez.
-- [ ] Diversificação de suplementos: se o perfil tiver alguma preferência
+- [x] Diversificação de suplementos: se o perfil tiver alguma preferência
   alimentar registrada (ex. vegano/vegetariano), priorizar proteína
-  vegetal no lugar de whey na recomendação — hoje não há esse campo no
-  perfil, então isso depende de adicionar a pergunta no onboarding
-  primeiro (pode ficar pra depois).
+  vegetal no lugar de whey na recomendação — pergunta "Alguma preferência
+  alimentar?" (opcional, passo do objetivo) no onboarding grava
+  `profiles.dietary_preference`; `pickRecommendedSupplements(goal,
+  dietaryPreference)` troca a proteína por "Proteína vegetal" p/ vegetariano
+  e vegano, e p/ vegano troca Ômega-3 (EPA/DHA, óleo de peixe) por
+  Multivitamínico.
 
 ---
 

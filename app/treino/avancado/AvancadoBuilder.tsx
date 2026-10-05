@@ -97,6 +97,8 @@ export default function AvancadoBuilder({
   initialLog,
   initialSetLogs,
   initialAvancadoLevel,
+  weekTrainedDays,
+  trainedToday,
 }: {
   profileId: string;
   initialPlan: AvancadoPlan;
@@ -104,6 +106,8 @@ export default function AvancadoBuilder({
   initialLog: Record<string, LogEntry>;
   initialSetLogs: Record<string, SetLogEntry[]>;
   initialAvancadoLevel: string | null;
+  weekTrainedDays: number;
+  trainedToday: boolean;
 }) {
   const [plan, setPlan] = useState<AvancadoPlan>(initialPlan);
   const [body, setBody] = useState<BodyInfo>(initialBody);
@@ -120,6 +124,13 @@ export default function AvancadoBuilder({
   const [mode, setMode] = useState<"montar" | "treino">("montar");
   const [avancadoLevel, setAvancadoLevel] = useState<string | null>(initialAvancadoLevel);
   const [levelPickerOpen, setLevelPickerOpen] = useState(false);
+  // Bumped by toggleDone only when an exercise becomes checked; RestTimer
+  // auto-starts on each change (treino mode only — it's only mounted there).
+  const [restAutoStartSignal, setRestAutoStartSignal] = useState(0);
+  // Seeded from the server (distinct activity_days this week); bumped
+  // locally the first time today gets an activity row so the stat stays live.
+  const [trainedDaysCount, setTrainedDaysCount] = useState(weekTrainedDays);
+  const countedToday = useRef(trainedToday);
 
   const saveTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const latestPlan = useRef(plan);
@@ -198,12 +209,19 @@ export default function AvancadoBuilder({
   }
 
   function toggleDone(id: string) {
-    setLog((prev) => {
-      const current = prev[id] ?? EMPTY_LOG;
-      const updated = { ...current, checked: !current.checked };
-      persistLogEntry(id, updated);
-      return { ...prev, [id]: updated };
-    });
+    // Decide from the committed `log` (not inside the setLog updater, which
+    // React may double-invoke in dev) so side effects fire exactly once.
+    const current = log[id] ?? EMPTY_LOG;
+    const updated = { ...current, checked: !current.checked };
+    persistLogEntry(id, updated);
+    setLog((prev) => ({ ...prev, [id]: updated }));
+    if (updated.checked) {
+      setRestAutoStartSignal((n) => n + 1);
+      if (!countedToday.current) {
+        countedToday.current = true;
+        setTrainedDaysCount((n) => n + 1);
+      }
+    }
   }
 
   function entryFor(id: string): LogEntry {
@@ -460,21 +478,31 @@ export default function AvancadoBuilder({
     updateDay(dayKey, (day) => ({ ...day, sports: day.sports.map((e) => (e.id === id ? { ...e, ...patch } : e)) }));
   }
 
+  // Profile-level equipment preference (profiles.avancado_equipment_filter):
+  // written through (fire-and-forget) whenever the user changes the filter, so
+  // a recreated plan seeds from it instead of resetting to all-true. Only the
+  // user's own toggle/reset reach here — never an automatic or existing-plan
+  // rewrite.
+  function persistEquipmentPref(filter: Record<string, boolean>) {
+    createClient()
+      .from("profiles")
+      .update({ avancado_equipment_filter: filter })
+      .eq("id", profileId)
+      .then(() => {});
+  }
   function toggleEquipment(key: string) {
-    setPlan((prev) => {
-      const next = { ...prev, equipmentFilter: { ...prev.equipmentFilter, [key]: prev.equipmentFilter[key] === false } };
-      latestPlan.current = next;
-      return next;
-    });
+    const next = { ...latestPlan.current, equipmentFilter: { ...latestPlan.current.equipmentFilter, [key]: latestPlan.current.equipmentFilter[key] === false } };
+    latestPlan.current = next;
+    setPlan(next);
     scheduleSave(true);
+    persistEquipmentPref(next.equipmentFilter);
   }
   function resetEquipment() {
-    setPlan((prev) => {
-      const next = { ...prev, equipmentFilter: defaultEquipmentFilter() };
-      latestPlan.current = next;
-      return next;
-    });
+    const next = { ...latestPlan.current, equipmentFilter: defaultEquipmentFilter() };
+    latestPlan.current = next;
+    setPlan(next);
     scheduleSave(true);
+    persistEquipmentPref(next.equipmentFilter);
   }
   function updateBodyField(field: keyof BodyInfo, value: string) {
     const v = field === "sex" ? (value || null) : value === "" ? null : Number(value);
@@ -789,6 +817,10 @@ export default function AvancadoBuilder({
       ) : (
         <div className="card">
           <h2>Treino do dia {dayInfo ? <span className="sub">— {dayInfo.label}</span> : null}</h2>
+          <div className="tv-week-stat">
+            <span className="num">{trainedDaysCount}</span>{" "}
+            {trainedDaysCount === 1 ? "dia treinado" : "dias treinados"} esta semana
+          </div>
           <div className="tv-compact-day-strip">
             {DAYS.map((d) => {
               const dp = plan.week[d.key];
@@ -828,7 +860,7 @@ export default function AvancadoBuilder({
                 ))}
               </div>
 
-              <RestTimer suggestedSeconds={suggestedRestSeconds} />
+              <RestTimer suggestedSeconds={suggestedRestSeconds} autoStartSignal={restAutoStartSignal} />
 
               {tabPane}
 
@@ -873,7 +905,7 @@ function computeSuggestedRestSeconds(day: DayPlan, activeTab: string): number | 
 // stays reachable while scrolling the exercise list, instead of scrolling
 // out of view with the rest of the page.
 // =============================================================================
-function RestTimer({ suggestedSeconds }: { suggestedSeconds?: number }) {
+function RestTimer({ suggestedSeconds, autoStartSignal }: { suggestedSeconds?: number; autoStartSignal?: number }) {
   const initial = suggestedSeconds ?? 60;
   const [total, setTotal] = useState(initial);
   const [remaining, setRemaining] = useState(initial);
@@ -950,6 +982,19 @@ function RestTimer({ suggestedSeconds }: { suggestedSeconds?: number }) {
     setRemaining(total);
   }
   useEffect(() => () => clearTimer(), []);
+
+  // Auto-start when the parent bumps `autoStartSignal` (an exercise was just
+  // checked off). `lastSignal` is initialised to the prop value at mount, so
+  // the first run (and a remount, e.g. switching back to "treino") never
+  // fires — only a later change does. start() only touches setters/refs, so
+  // the effect can depend solely on the signal.
+  const lastSignal = useRef(autoStartSignal);
+  useEffect(() => {
+    if (autoStartSignal === lastSignal.current) return;
+    lastSignal.current = autoStartSignal;
+    start(suggestedSeconds);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [autoStartSignal]);
 
   const m = Math.floor(remaining / 60);
   const s = remaining % 60;

@@ -4457,6 +4457,16 @@ h1 {
 .tv-mode-card {
   margin-bottom: 18px;
 }
+.tv-week-stat {
+  font-size: 13px;
+  color: var(--text-muted);
+  margin: -4px 0 12px;
+}
+.tv-week-stat .num {
+  font-size: 1.1rem;
+  font-weight: 700;
+  color: var(--gold);
+}
 .tv-mode-toggle {
   display: flex;
   gap: 8px;

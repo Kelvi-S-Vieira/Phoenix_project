@@ -3,7 +3,7 @@
 import { useMemo, useState } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { MARMITA_SUGGESTIONS, type MarmitaSuggestion } from "@/lib/marmita-suggestions";
-import { pickRecommendedSupplements, type Supplement } from "@/lib/supplements";
+import { pickRecommendedSupplements, type DietaryPreference, type Supplement } from "@/lib/supplements";
 import { SUPPLEMENT_RECIPES, type SupplementRecipe } from "@/lib/supplement-recipes";
 import type { Goal } from "@/lib/database.types";
 import type { InsertPlanResult } from "./PlanSetupForm";
@@ -43,8 +43,8 @@ function pickMarmitas(goal: Goal | null): MarmitaSuggestion[] {
 // safe, and reads better here than the item's raw category tag.
 const SUPPLEMENT_ROLE_LABELS = ["Fonte de proteína", "Força/performance", "Pré-treino/energia", "Recuperação/saúde"];
 
-function pickSupplements(goal: Goal | null): Supplement[] {
-  return pickRecommendedSupplements(goal);
+function pickSupplements(goal: Goal | null, dietaryPreference?: DietaryPreference | null): Supplement[] {
+  return pickRecommendedSupplements(goal, dietaryPreference);
 }
 
 function pickReceitasFit(goal: Goal | null): SupplementRecipe[] {
@@ -59,18 +59,20 @@ function pickReceitasFit(goal: Goal | null): SupplementRecipe[] {
 export default function PlanRecommendStep({
   profileId,
   goal,
+  dietaryPreference,
   createPlan,
   onBack,
   onDone,
 }: {
   profileId: string;
   goal: Goal | null;
+  dietaryPreference?: DietaryPreference | null;
   createPlan: () => Promise<InsertPlanResult>;
   onBack: () => void;
   onDone: () => void;
 }) {
   const marmitas = useMemo(() => pickMarmitas(goal), [goal]);
-  const supplements = useMemo(() => pickSupplements(goal), [goal]);
+  const supplements = useMemo(() => pickSupplements(goal, dietaryPreference), [goal, dietaryPreference]);
   const receitasFit = useMemo(() => pickReceitasFit(goal), [goal]);
 
   const [marmitaChecked, setMarmitaChecked] = useState<Set<string>>(

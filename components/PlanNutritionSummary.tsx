@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { computeWaterTargetMl } from "@/lib/fenix-domain";
-import { pickRecommendedSupplements } from "@/lib/supplements";
+import { pickRecommendedSupplements, type DietaryPreference } from "@/lib/supplements";
 import type { ActivityLevel, Goal } from "@/lib/database.types";
 
 // "Resumo nutricional do plano" — added per user feedback (2026-10-04):
@@ -17,6 +17,7 @@ import type { ActivityLevel, Goal } from "@/lib/database.types";
 export default function PlanNutritionSummary({
   weight,
   goal,
+  dietaryPreference,
   activity,
   calorieTarget,
   proteinTarget,
@@ -25,6 +26,7 @@ export default function PlanNutritionSummary({
 }: {
   weight: number | null;
   goal: Goal | null;
+  dietaryPreference?: DietaryPreference | null;
   activity: ActivityLevel | null;
   calorieTarget: number | null;
   proteinTarget: number | null;
@@ -32,7 +34,7 @@ export default function PlanNutritionSummary({
   fatTarget: number | null;
 }) {
   const waterMl = weight != null ? computeWaterTargetMl(weight, activity) : null;
-  const recommendedSupplements = pickRecommendedSupplements(goal);
+  const recommendedSupplements = pickRecommendedSupplements(goal, dietaryPreference);
 
   const hasFoodTargets = calorieTarget != null;
 

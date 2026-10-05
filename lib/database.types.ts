@@ -52,6 +52,14 @@ export type Profile = {
   // "avancado"/"idoso"), decided once at cadastro instead of a live filter
   // box (see supabase/migration_avancado_level.sql).
   avancado_level: string | null;
+  // Avançado tier's equipment filter, persisted as a profile-level
+  // preference (see supabase/migration_avancado_equipment_pref.sql).
+  // Record<string, boolean> keyed by EQUIPMENT_TYPES keys, or null if
+  // never saved.
+  avancado_equipment_filter: Record<string, boolean> | null;
+  // Vegetarian/vegan flag for supplement recommendations (see
+  // supabase/migration_dietary_preference.sql).
+  dietary_preference: "onivoro" | "vegetariano" | "vegano" | null;
   // Anchors Calendário's rolling window when there's no active custom_plans
   // row (see supabase/migration_plano.sql).
   calendar_start_date: string | null;

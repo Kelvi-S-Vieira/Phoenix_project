@@ -11,10 +11,19 @@ import {
   activityLabel,
 } from "@/lib/fenix-domain";
 import type { ActivityLevel, Goal } from "@/lib/database.types";
+import type { DietaryPreference } from "@/lib/supplements";
 import { getWeightUnit, toDisplayWeight, fromDisplayWeight } from "@/lib/weight-unit";
 import { getPaceSuggestions, getEndDateHint, getPaceFeedback } from "@/lib/pace-suggestions";
 
 const TOTAL_STEPS = 5;
+
+// Optional question on the goal step; drives plant-based supplement picks
+// (lib/supplements.ts). Stored as profiles.dietary_preference.
+const DIETARY_OPTIONS: { key: DietaryPreference; title: string }[] = [
+  { key: "onivoro", title: "Onívoro" },
+  { key: "vegetariano", title: "Vegetariano" },
+  { key: "vegano", title: "Vegano" },
+];
 
 interface WizardState {
   sex: "M" | "F" | "";
@@ -23,6 +32,7 @@ interface WizardState {
   weight: string;
   activity: ActivityLevel | "";
   goal: Goal | "";
+  dietaryPreference: DietaryPreference | "";
   targetWeight: string;
   timeframeWeeks: string;
 }
@@ -35,6 +45,7 @@ export interface OnboardingInitialProfile {
   weight: number | null;
   activity: ActivityLevel | null;
   goal: Goal | null;
+  dietaryPreference?: DietaryPreference | null;
   targetWeight: number | null;
 }
 
@@ -46,6 +57,7 @@ function stateFromProfile(p?: OnboardingInitialProfile): WizardState {
     weight: p?.weight != null ? String(p.weight) : "",
     activity: p?.activity ?? "",
     goal: p?.goal ?? "",
+    dietaryPreference: p?.dietaryPreference ?? "",
     targetWeight: p?.targetWeight != null ? String(p.targetWeight) : "",
     // Not a stored profile column (only ever used to shape the deficit %
     // during this session) — always starts blank, even in edit mode.
@@ -137,6 +149,8 @@ export default function OnboardingWizard({
         target_weight: parseFloat(state.targetWeight),
         activity_level: state.activity,
         goal: state.goal,
+        // Optional: blank (never answered / deselected) saves as null.
+        dietary_preference: state.dietaryPreference || null,
         calorie_target: targets.calorieTarget,
         protein_target: targets.proteinG,
         // Diário targets (see /diario) — computeTargets() already derives
@@ -298,6 +312,22 @@ export default function OnboardingWizard({
                   <div className="cc-desc">{g.desc}</div>
                 </div>
               ))}
+            </div>
+            <div className="field" style={{ marginTop: 20 }}>
+              <label>Alguma preferência alimentar? (opcional)</label>
+              <div className="choice-grid cols2">
+                {DIETARY_OPTIONS.map((d) => (
+                  <div
+                    key={d.key}
+                    className={"choice-card" + (state.dietaryPreference === d.key ? " selected" : "")}
+                    onClick={() =>
+                      update("dietaryPreference", state.dietaryPreference === d.key ? "" : d.key)
+                    }
+                  >
+                    <div className="cc-title">{d.title}</div>
+                  </div>
+                ))}
+              </div>
             </div>
           </>
         )}

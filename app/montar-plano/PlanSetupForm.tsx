@@ -6,6 +6,7 @@ import { createClient } from "@/lib/supabase/client";
 import { DIET_OPTIONS } from "@/lib/plan-generation";
 import { TIER_LABELS, SPLIT_OPTIONS } from "@/lib/fenix-domain";
 import type { Goal, Tier } from "@/lib/database.types";
+import type { DietaryPreference } from "@/lib/supplements";
 import { todayBR } from "@/lib/date-br";
 import PlanRecommendStep from "./PlanRecommendStep";
 
@@ -26,10 +27,12 @@ export type InsertPlanResult = { ok: true } | { ok: false; message: string };
 export default function PlanSetupForm({
   profileId,
   goal,
+  dietaryPreference,
   hasPersonal,
 }: {
   profileId: string;
   goal: Goal | null;
+  dietaryPreference?: DietaryPreference | null;
   hasPersonal: boolean;
 }) {
   const router = useRouter();
@@ -111,6 +114,7 @@ export default function PlanSetupForm({
       <PlanRecommendStep
         profileId={profileId}
         goal={goal}
+        dietaryPreference={dietaryPreference}
         createPlan={insertPlan}
         onBack={() => setStep("form")}
         onDone={() => router.refresh()}

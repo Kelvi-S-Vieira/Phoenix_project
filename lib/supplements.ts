@@ -757,9 +757,31 @@ const RECOVERY_PICK_BY_GOAL: Record<string, string> = {
 const CREATINE_NAME = "Creatina Monohidratada";
 const CAFFEINE_NAME = "Cafeína Anidra";
 
-export function pickRecommendedSupplements(goal: string | null | undefined): Supplement[] {
+// Dietary preference (profiles.dietary_preference, set in onboarding).
+// "vegetariano"/"vegano" swap the whey/mass-gainer protein pick for the
+// plant-based protein for every goal. Creatine (synthetic) and caffeine are
+// unaffected.
+//
+// Recovery pick: Ômega-3's catalog entry is EPA/DHA, which in practice is
+// fish oil (the desc doesn't mention an algae source), so for "vegano" ONLY
+// (strict: no animal products) it is swapped for Multivitamínico, which is
+// already in the catalog with the same "recuperacao" tag. "vegetariano" keeps
+// the goal's normal pick (lacto-ovo-vegetarian definition used here; fish-free
+// vegetarians are not distinguished by the 3-value preference). Multivitamínico's
+// desc makes no animal-free claim, so this is a best-effort catalog choice.
+export type DietaryPreference = "onivoro" | "vegetariano" | "vegano";
+const PLANT_PROTEIN_NAME = "Proteína vegetal (ervilha/arroz)";
+
+export function pickRecommendedSupplements(
+  goal: string | null | undefined,
+  dietaryPreference?: DietaryPreference | null
+): Supplement[] {
   const g = goal && goal in PROTEIN_PICK_BY_GOAL ? goal : "manter";
-  const names = [PROTEIN_PICK_BY_GOAL[g], CREATINE_NAME, CAFFEINE_NAME, RECOVERY_PICK_BY_GOAL[g]];
+  const plantBased = dietaryPreference === "vegetariano" || dietaryPreference === "vegano";
+  const protein = plantBased ? PLANT_PROTEIN_NAME : PROTEIN_PICK_BY_GOAL[g];
+  let recovery = RECOVERY_PICK_BY_GOAL[g];
+  if (dietaryPreference === "vegano" && recovery === "Ômega-3") recovery = "Multivitamínico";
+  const names = [protein, CREATINE_NAME, CAFFEINE_NAME, recovery];
   const byName = new Map(SUPPLEMENTS.map((s) => [s.name, s]));
   return names.map((n) => byName.get(n)).filter((s): s is Supplement => !!s);
 }
