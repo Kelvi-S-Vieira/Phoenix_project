@@ -19,6 +19,31 @@ const MEALS: { key: Meal; label: string }[] = [
 // delete pattern, since this is a low-stakes, easily re-added row like a
 // template, not a photo (app/fotos/Gallery.tsx does confirm before deleting
 // a photo, since that's harder to replace).
+// pt-BR number, at most 1 decimal, no trailing zero ("13,3", "6", "0,5").
+function fmt(n: number | null | undefined): string {
+  const v = Math.round((n ?? 0) * 10) / 10;
+  return v.toLocaleString("pt-BR", { maximumFractionDigits: 1 });
+}
+
+// Three labeled macro chips (colored dot + name + grams) — replaces the old
+// one-line "P13.3g · C1.3g · G15.2g" string, which wasn't readable at a
+// glance (user feedback 2026-10-05). Same colors as the Diário's macro cards.
+function MacroChips({ protein, carb, fat, small }: { protein: number; carb: number; fat: number; small?: boolean }) {
+  return (
+    <div className={"fe2-chips" + (small ? " small" : "")}>
+      <span className="fe2-chip p">
+        <i /> Proteína <b>{fmt(protein)} g</b>
+      </span>
+      <span className="fe2-chip c">
+        <i /> Carbo <b>{fmt(carb)} g</b>
+      </span>
+      <span className="fe2-chip f">
+        <i /> Gordura <b>{fmt(fat)} g</b>
+      </span>
+    </div>
+  );
+}
+
 export default function EntriesList({ entries }: { entries: DiaryEntry[] }) {
   const router = useRouter();
 
@@ -47,23 +72,29 @@ export default function EntriesList({ entries }: { entries: DiaryEntry[] }) {
           <div className="meal-group" key={meal.key}>
             <div className="meal-group-title">
               <span>{meal.label}</span>
-              <span>{kcalSum} kcal</span>
+              <span>{Math.round(kcalSum)} kcal</span>
             </div>
+            <MacroChips
+              small
+              protein={items.reduce((a, e) => a + (e.protein || 0), 0)}
+              carb={items.reduce((a, e) => a + (e.carb || 0), 0)}
+              fat={items.reduce((a, e) => a + (e.fat || 0), 0)}
+            />
             {items.map((e) => (
-              <div className="food-entry" key={e.id}>
-                <div>
-                  <span className="fe-name">{e.food_name}</span>
-                  {e.quantity != null && (
-                    <span className="fe-qty">
-                      {e.quantity}
-                      {e.unit === "g" ? "g" : ` ${e.unit}`}
-                    </span>
-                  )}
-                </div>
-                <div className="fe-macro">
-                  <span>
-                    {e.kcal} kcal · P{e.protein}g · C{e.carb || 0}g · G{e.fat || 0}g
-                  </span>
+              <div className="food-entry fe2" key={e.id}>
+                <div className="fe2-top">
+                  <div className="fe2-name">
+                    <span className="fe-name">{e.food_name}</span>
+                    {e.quantity != null && (
+                      <span className="fe-qty">
+                        {fmt(e.quantity)}
+                        {e.unit === "g" ? " g" : ` ${e.unit}`}
+                      </span>
+                    )}
+                  </div>
+                  <div className="fe2-kcal">
+                    <b>{Math.round(e.kcal)}</b> kcal
+                  </div>
                   <button
                     type="button"
                     className="fe-del"
@@ -73,6 +104,7 @@ export default function EntriesList({ entries }: { entries: DiaryEntry[] }) {
                     ×
                   </button>
                 </div>
+                <MacroChips protein={e.protein || 0} carb={e.carb || 0} fat={e.fat || 0} />
               </div>
             ))}
           </div>

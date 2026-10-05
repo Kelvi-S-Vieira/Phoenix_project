@@ -5314,3 +5314,66 @@ h1 {
     grid-template-columns: repeat(2, 1fr);
   }
 }
+
+/* ---- Diário: lista de lançamentos mais legível (fe2-*) ---- */
+.food-entry.fe2 {
+  display: block;
+}
+.fe2-top {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+.fe2-name {
+  flex: 1;
+  min-width: 0;
+}
+.fe2-kcal {
+  font-size: 12px;
+  color: var(--text-muted);
+  white-space: nowrap;
+}
+.fe2-kcal b {
+  font-family: var(--font-display, "Oswald", sans-serif);
+  font-size: 20px;
+  font-weight: 600;
+  color: var(--gold);
+}
+.fe2-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 8px;
+}
+.fe2-chips.small {
+  margin: 2px 0 8px;
+}
+.fe2-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 99px;
+  padding: 3px 10px;
+  font-size: 12px;
+  color: var(--text-muted);
+}
+.fe2-chip b {
+  color: var(--text);
+  font-weight: 600;
+  font-family: var(--font-mono, "JetBrains Mono", monospace);
+  font-size: 12px;
+}
+.fe2-chip i {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  display: inline-block;
+}
+.fe2-chip.p i { background: var(--danger); }
+.fe2-chip.c i { background: var(--gold); }
+.fe2-chip.f i { background: #6aa6e0; }
+.fe2-chips.small .fe2-chip { font-size: 11px; padding: 2px 8px; }
+
+.food-entry.fe2 .fe-name { font-size: 14px; font-weight: 500; }
