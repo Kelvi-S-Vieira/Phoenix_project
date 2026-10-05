@@ -16,6 +16,7 @@ import {
   exercisePassesFilters,
   defaultEquipmentFilter,
   levelFilterForLevel,
+  defaultLevelFilter,
   WEEKLY_VOLUME_TARGETS,
   HIGH_VOLUME_GROUPS,
   suggestWorkSets,
@@ -343,8 +344,20 @@ export default function AvancadoBuilder({
   // profile's own avancado_level (so TierPicker/future sessions remember
   // it) and the current plan's levelFilter (so it actually takes effect).
   async function changeLevel(level: string) {
-    setAvancadoLevel(level);
     setLevelPickerOpen(false);
+    if (level === ALL_LEVELS_KEY) {
+      // "Todos os níveis": a VIEW option, not a level — shows exercises of
+      // every level at once (the single-level mode stays available). The
+      // profile's own avancado_level is deliberately left untouched.
+      setPlan((prev) => {
+        const next = { ...prev, levelFilter: defaultLevelFilter() };
+        latestPlan.current = next;
+        return next;
+      });
+      scheduleSave(true);
+      return;
+    }
+    setAvancadoLevel(level);
     setPlan((prev) => {
       const next = { ...prev, levelFilter: levelFilterForLevel(level) };
       latestPlan.current = next;
@@ -517,7 +530,12 @@ export default function AvancadoBuilder({
   // -------------------------------------------------------------------------
   const dayInfo = selectedDay ? DAYS.find((d) => d.key === selectedDay) : null;
   const day = selectedDay ? plan.week[selectedDay] : null;
-  const levelLabel = avancadoLevel ? TRAINING_LEVELS[avancadoLevel] ?? avancadoLevel : null;
+  const showingAllLevels = ALL_LEVEL_KEYS.every((k) => plan.levelFilter[k] !== false);
+  const levelLabel = showingAllLevels
+    ? ALL_LEVELS_LABEL
+    : avancadoLevel
+      ? TRAINING_LEVELS[avancadoLevel] ?? avancadoLevel
+      : null;
   const suggestedRestSeconds = day ? computeSuggestedRestSeconds(day, activeTab) : undefined;
 
   const tabPane = day && selectedDay && (
@@ -1082,6 +1100,9 @@ function EquipmentFilterBox({
   );
 }
 
+const ALL_LEVELS_KEY = "todos";
+const ALL_LEVELS_LABEL = "Todos os níveis";
+
 // =============================================================================
 // Training level — decided once at cadastro (TierPicker.tsx) instead of a
 // live filter box (Fase 4, point 5). Shown as a read-only line with a
@@ -1113,10 +1134,23 @@ function LevelMiniPicker({
       {pickerOpen && (
         <div className="tv-pill-row" style={{ marginTop: 10 }}>
           {ALL_LEVEL_KEYS.map((key) => (
-            <div key={key} className="tv-pill" role="button" onClick={() => onChangeLevel(key)}>
+            <div
+              key={key}
+              className={"tv-pill" + (levelLabel === TRAINING_LEVELS[key] ? " active" : "")}
+              role="button"
+              onClick={() => onChangeLevel(key)}
+            >
               {TRAINING_LEVELS[key]}
             </div>
           ))}
+          <div
+            className={"tv-pill" + (levelLabel === ALL_LEVELS_LABEL ? " active" : "")}
+            role="button"
+            title="Mostra os exercícios de todos os níveis de uma vez"
+            onClick={() => onChangeLevel(ALL_LEVELS_KEY)}
+          >
+            👁 {ALL_LEVELS_LABEL}
+          </div>
         </div>
       )}
       {!levelLabel && (
