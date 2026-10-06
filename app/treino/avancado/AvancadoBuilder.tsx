@@ -1277,7 +1277,7 @@ function ExerciseLogBox({
     <div
       className="tv-log-box"
       onClick={(e) => e.stopPropagation()}
-      style={{ width: "100%", marginTop: 8, padding: "8px 10px", background: "rgba(255,255,255,0.03)", borderRadius: 8, fontSize: 13 }}
+      style={{ width: "100%", marginTop: 8, padding: "8px 10px", background: "var(--surface-2)", borderRadius: 8, fontSize: 13 }}
     >
       <div style={{ opacity: 0.85, marginBottom: 6 }}>
         {progression.stage === "dor" || progression.stage === "swap" || progression.stage === "rezone" ? "" : "📈 "}
@@ -1318,7 +1318,7 @@ function ExerciseLogBox({
             </div>
           )}
           {needsDeload(log) && (
-            <div style={{ color: "#e8a33d", fontSize: 12, marginBottom: 6 }}>
+            <div style={{ color: "var(--warn)", fontSize: 12, marginBottom: 6 }}>
               ⚠️ 1RM estimado sem subir há 3 registros seguidos — considere uma semana de deload (reduza ~40% do volume
               ou da carga) antes de tentar progredir de novo.
             </div>

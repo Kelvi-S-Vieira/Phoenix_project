@@ -280,3 +280,16 @@ color picker + Diário are now folded into the checklist above as done.
 - [ ] Carboidrato das marmitas é derivado por palavra-chave (lib/meal-carbs.ts) — aproximado
 - [ ] Ampliar banco de alimentos (TACO/USDA) — P3
 - [ ] Botões "+" por refeição no Diário; "Ceia" gravada como "extra"
+
+## Fase 6 — Pendências de produto, responsividade e modo claro (2026-10-05)
+
+- [x] Água no banco (`water_logs`, migration_water_logs.sql)
+- [x] Ceia como refeição própria (migration_diary_meal_ceia.sql)
+- [x] Botões "+" por refeição no Diário
+- [x] P3: FOOD_DB 204→496, marmitas 145→194, receitas fit 53→78 (valores de memória TACO/USDA, validados por scripts/validate-nutrition-data.mjs); `gramsPerUnit`; carbo das marmitas casado com FOOD_DB
+- [x] Responsividade: sidebar vira drawer < 900 px, alvos de toque 44 px, inputs 16 px, safe-area, viewport
+- [x] Modo claro v2 "papel quente/brasa" (tokens, contraste AA, FlameBar sem cores fixas, segue prefers-color-scheme)
+- [ ] Não verificado em tela real (exigem login): páginas de alimentação, AddFood, perfil, personal, lightbox, onboarding/dieta no claro
+- [ ] Busca do AddFood mostra só 8 resultados por substring (ranquear por relevância)
+- [ ] Trocar `#6aa6e0` inline em SummaryCards/AiEstimateReview por `var(--macro-f)`
+- [ ] Cobrança (aguardando decisões: gateway, planos, teste, pós-teste, CNPJ/MEI)

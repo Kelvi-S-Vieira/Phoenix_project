@@ -5,13 +5,7 @@ import { usePathname, useRouter } from "next/navigation";
 import { useState } from "react";
 import { createClient } from "@/lib/supabase/client";
 
-function readSavedTheme(): "dark" | "light" {
-  try {
-    return localStorage.getItem("fenix_theme") === "light" ? "light" : "dark";
-  } catch {
-    return "dark";
-  }
-}
+import { applyTheme, readTheme } from "@/lib/theme";
 
 export interface TopBarNavLink {
   href: string;
@@ -32,17 +26,12 @@ export default function TopBar({
   // render — no effect needed (and the saved theme was already applied
   // before paint by the inline script in app/layout.tsx, so this just
   // keeps the toggle button's icon in sync with it).
-  const [theme, setTheme] = useState<"dark" | "light">(readSavedTheme);
+  const [theme, setTheme] = useState<"dark" | "light">(readTheme);
 
   function toggleTheme() {
     const next = theme === "dark" ? "light" : "dark";
     setTheme(next);
-    document.documentElement.setAttribute("data-theme", next);
-    try {
-      localStorage.setItem("fenix_theme", next);
-    } catch {
-      // best-effort only
-    }
+    applyTheme(next);
   }
 
   async function handleLogout() {

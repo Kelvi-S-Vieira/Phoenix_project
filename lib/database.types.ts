@@ -246,7 +246,15 @@ export type WeeklyCardio = {
   updated_at: string;
 };
 
-export type Meal = "cafe" | "almoco" | "lanche" | "jantar" | "extra";
+export type Meal = "cafe" | "almoco" | "lanche" | "jantar" | "ceia" | "extra";
+
+// Água por dia (Diário → WaterTracker). See supabase/migration_water_logs.sql.
+export type WaterLog = {
+  profile_id: string;
+  logged_at: string;
+  ml: number;
+  updated_at: string;
+};
 
 // Diário (food diary) entries — one row per logged food item. See
 // app/diario and supabase/migration_diary.sql.
@@ -391,6 +399,7 @@ export type Database = {
       lifts: Table<Lift>;
       weekly_cardio: Table<WeeklyCardio>;
       diary_entries: Table<DiaryEntry>;
+      water_logs: Table<WaterLog>;
       plan_recommendation_picks: Table<PlanRecommendationPick>;
       user_recipes: Table<UserRecipe>;
       meal_prep_plan: Table<MealPrepPlan>;

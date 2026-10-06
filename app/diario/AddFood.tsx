@@ -16,6 +16,7 @@ const MEALS: { key: Meal; label: string }[] = [
   { key: "almoco", label: "Almoço" },
   { key: "lanche", label: "Lanche" },
   { key: "jantar", label: "Jantar" },
+  { key: "ceia", label: "Ceia" },
   { key: "extra", label: "Extra" },
 ];
 
@@ -65,12 +66,32 @@ interface SpeechRecognitionLike {
 export default function AddFood({
   profileId,
   selectedDate,
+  defaultMeal,
 }: {
   profileId: string;
   selectedDate: string;
+  /** Refeição pré-selecionada ao montar (padrão: café da manhã). */
+  defaultMeal?: Meal;
 }) {
   const router = useRouter();
-  const [activeMeal, setActiveMeal] = useState<Meal>("cafe");
+  const [activeMeal, setActiveMeal] = useState<Meal>(defaultMeal ?? "cafe");
+
+  // Botões "+" por refeição (EntriesList) disparam este evento: seleciona a
+  // refeição e leva o foco/rolagem até o formulário (#adicionar).
+  useEffect(() => {
+    function onPick(ev: Event) {
+      const meal = (ev as CustomEvent<Meal>).detail;
+      if (!MEALS.some((m) => m.key === meal)) return;
+      setActiveMeal(meal);
+      const card = document.getElementById("adicionar");
+      card?.scrollIntoView({ behavior: "smooth", block: "start" });
+      window.setTimeout(() => {
+        card?.querySelector<HTMLElement>("input, textarea")?.focus({ preventScroll: true });
+      }, 350);
+    }
+    window.addEventListener("fx-add-meal", onPick);
+    return () => window.removeEventListener("fx-add-meal", onPick);
+  }, []);
   const [mode, setMode] = useState<Mode>("db");
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -264,9 +285,7 @@ export default function AddFood({
     return result.dish;
   }
 
-  // The review's "Ceia" has no counterpart in the diary's Meal enum (the
-  // schema only knows cafe/almoco/lanche/jantar/extra), so it is stored as
-  // "extra" — which EntriesList already renders in its own group.
+  // "Ceia" agora é uma refeição própria do diário (migration_diary_meal_ceia.sql).
   async function handleSaveReview(meal: ReviewMealKey, rows: ReviewSaveRow[]) {
     if (!aiSource || rows.length === 0) return;
     // Barcode products have no dedicated source value in the schema; they come
@@ -279,7 +298,7 @@ export default function AddFood({
       rows.map((r) => ({
         profile_id: profileId,
         logged_at: selectedDate,
-        meal: (meal === "ceia" ? "extra" : meal) as Meal,
+        meal: meal as Meal,
         food_name: r.food_name,
         quantity: r.quantity,
         unit: r.unit,

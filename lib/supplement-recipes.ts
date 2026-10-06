@@ -42,7 +42,7 @@ export const SUPPLEMENT_RECIPE_GOALS: { key: string; label: string }[] = [
   { key: "geral", label: "Geral / Manutenção" },
 ];
 
-export const SUPPLEMENT_RECIPES: SupplementRecipe[] = [
+const SUPPLEMENT_RECIPES_BASE: SupplementRecipe[] = [
   {
     name: "Vitamina de whey com banana e aveia",
     goal: "geral",
@@ -2160,3 +2160,1007 @@ export const SUPPLEMENT_RECIPES: SupplementRecipe[] = [
     ]
   }
 ];
+
+/**
+ * EXTRA block — 25 additional fit recipes. Macros are PER SERVING (same as the
+ * original entries) and were computed offline by summing FOOD_DB values over the
+ * ingredient quantities and dividing by `yield`.
+ * HONESTY NOTE: the underlying nutrient values come from the author's knowledge of
+ * TACO/USDA tables and typical supplement labels (whey ~24 g protein per scoop,
+ * collagen/plant protein doses assumed), NOT from an online lookup; check your own
+ * product's label for exact numbers.
+ */
+const SUPPLEMENT_RECIPES_EXTRA: SupplementRecipe[] = [
+  {
+    name: "Shake de whey com pasta de amendoim e banana",
+    goal: "ganho",
+    yield: 1,
+    kcal: 565,
+    protein: 41,
+    carb: 57,
+    fat: 21,
+    supplements: [
+      "Whey Protein"
+    ],
+    ingredients: [
+      {
+        qty: 1,
+        unit: "dose",
+        name: "Whey protein (sabor baunilha ou chocolate)"
+      },
+      {
+        qty: 1,
+        unit: "unid",
+        name: "Banana"
+      },
+      {
+        qty: 1,
+        unit: "colher sopa",
+        name: "Pasta de amendoim"
+      },
+      {
+        qty: 300,
+        unit: "ml",
+        name: "Leite integral"
+      },
+      {
+        qty: 2,
+        unit: "colher sopa",
+        name: "Aveia em flocos"
+      }
+    ],
+    prep: [
+      "Bata todos os ingredientes no liquidificador até ficar cremoso.",
+      "Sirva gelado logo após o treino."
+    ]
+  },
+  {
+    name: "Vitamina de whey com mamão e linhaça",
+    goal: "emagrecimento",
+    yield: 1,
+    kcal: 329,
+    protein: 35,
+    carb: 35,
+    fat: 6,
+    supplements: [
+      "Whey Protein"
+    ],
+    ingredients: [
+      {
+        qty: 1,
+        unit: "dose",
+        name: "Whey protein (sabor baunilha ou chocolate)"
+      },
+      {
+        qty: 150,
+        unit: "g",
+        name: "Mamão"
+      },
+      {
+        qty: 1,
+        unit: "colher sopa",
+        name: "Linhaça"
+      },
+      {
+        qty: 250,
+        unit: "ml",
+        name: "Leite desnatado"
+      }
+    ],
+    prep: [
+      "Bata tudo no liquidificador com gelo.",
+      "A linhaça ajuda na saciedade e no trânsito intestinal."
+    ]
+  },
+  {
+    name: "Cappuccino proteico gelado",
+    goal: "emagrecimento",
+    yield: 1,
+    kcal: 176,
+    protein: 29,
+    carb: 10,
+    fat: 1,
+    supplements: [
+      "Whey Protein",
+      "Cafeína (do café)"
+    ],
+    ingredients: [
+      {
+        qty: 1,
+        unit: "dose",
+        name: "Whey protein (sabor baunilha ou chocolate)"
+      },
+      {
+        qty: 100,
+        unit: "ml",
+        name: "Café forte frio"
+      },
+      {
+        qty: 150,
+        unit: "ml",
+        name: "Leite desnatado"
+      },
+      {
+        qty: 4,
+        unit: "pedra",
+        name: "Gelo"
+      }
+    ],
+    prep: [
+      "Bata o café frio, o leite, o gelo e o whey no liquidificador.",
+      "Sirva imediatamente; ótimo como pré-treino leve."
+    ]
+  },
+  {
+    name: "Pudim proteico de iogurte grego e chocolate",
+    goal: "geral",
+    yield: 2,
+    kcal: 217,
+    protein: 22,
+    carb: 10,
+    fat: 10,
+    supplements: [
+      "Whey Protein"
+    ],
+    ingredients: [
+      {
+        qty: 1,
+        unit: "dose",
+        name: "Whey protein (sabor baunilha ou chocolate)"
+      },
+      {
+        qty: 200,
+        unit: "g",
+        name: "Iogurte grego natural"
+      },
+      {
+        qty: 20,
+        unit: "g",
+        name: "Chocolate amargo 70%"
+      }
+    ],
+    prep: [
+      "Derreta o chocolate e misture ao iogurte e ao whey até ficar liso.",
+      "Divida em 2 potes e leve à geladeira por 2 horas."
+    ]
+  },
+  {
+    name: "Panqueca proteica de aveia, claras e whey",
+    goal: "emagrecimento",
+    yield: 2,
+    kcal: 256,
+    protein: 24,
+    carb: 33,
+    fat: 3,
+    supplements: [
+      "Whey Protein"
+    ],
+    ingredients: [
+      {
+        qty: 6,
+        unit: "colher sopa",
+        name: "Aveia em flocos"
+      },
+      {
+        qty: 4,
+        unit: "unid",
+        name: "Claras de ovo"
+      },
+      {
+        qty: 1,
+        unit: "dose",
+        name: "Whey protein (sabor baunilha ou chocolate)"
+      },
+      {
+        qty: 1,
+        unit: "unid",
+        name: "Banana"
+      }
+    ],
+    prep: [
+      "Bata aveia, claras, whey e banana no liquidificador.",
+      "Cozinhe em frigideira antiaderente, dos dois lados, em 2 porções.",
+      "Sirva com frutas."
+    ]
+  },
+  {
+    name: "Waffle proteico de whey e aveia",
+    goal: "geral",
+    yield: 2,
+    kcal: 252,
+    protein: 21,
+    carb: 27,
+    fat: 7,
+    supplements: [
+      "Whey Protein"
+    ],
+    ingredients: [
+      {
+        qty: 2,
+        unit: "unid",
+        name: "Ovos"
+      },
+      {
+        qty: 4,
+        unit: "colher sopa",
+        name: "Aveia em flocos"
+      },
+      {
+        qty: 1,
+        unit: "dose",
+        name: "Whey protein (sabor baunilha ou chocolate)"
+      },
+      {
+        qty: 1,
+        unit: "unid",
+        name: "Banana"
+      }
+    ],
+    prep: [
+      "Bata todos os ingredientes.",
+      "Despeje na máquina de waffle untada e asse até dourar."
+    ]
+  },
+  {
+    name: "Overnight de caseína com cacau e morango",
+    goal: "geral",
+    yield: 1,
+    kcal: 384,
+    protein: 36,
+    carb: 43,
+    fat: 8,
+    supplements: [
+      "Caseína"
+    ],
+    ingredients: [
+      {
+        qty: 1,
+        unit: "dose",
+        name: "Caseína"
+      },
+      {
+        qty: 150,
+        unit: "ml",
+        name: "Leite desnatado"
+      },
+      {
+        qty: 3,
+        unit: "colher sopa",
+        name: "Aveia em flocos"
+      },
+      {
+        qty: 100,
+        unit: "g",
+        name: "Morango"
+      },
+      {
+        qty: 1,
+        unit: "colher sopa",
+        name: "Chia"
+      }
+    ],
+    prep: [
+      "Misture caseína, leite, aveia e chia num pote e leve à geladeira por 6 horas.",
+      "Cubra com morangos antes de servir."
+    ]
+  },
+  {
+    name: "Smoothie de albumina com abacaxi e hortelã",
+    goal: "emagrecimento",
+    yield: 1,
+    kcal: 239,
+    protein: 25,
+    carb: 36,
+    fat: 0,
+    supplements: [
+      "Albumina"
+    ],
+    ingredients: [
+      {
+        qty: 1,
+        unit: "dose",
+        name: "Albumina"
+      },
+      {
+        qty: 150,
+        unit: "g",
+        name: "Abacaxi"
+      },
+      {
+        qty: 200,
+        unit: "ml",
+        name: "Água de coco"
+      },
+      {
+        qty: 5,
+        unit: "folha",
+        name: "Hortelã"
+      }
+    ],
+    prep: [
+      "Bata todos os ingredientes com gelo.",
+      "Albumina rende melhor batida: evite aquecer."
+    ]
+  },
+  {
+    name: "Sorvete proteico de açaí e whey",
+    goal: "geral",
+    yield: 2,
+    kcal: 180,
+    protein: 15,
+    carb: 22,
+    fat: 5,
+    supplements: [
+      "Whey Protein"
+    ],
+    ingredients: [
+      {
+        qty: 200,
+        unit: "g",
+        name: "Açaí congelado (sem açúcar)"
+      },
+      {
+        qty: 1,
+        unit: "dose",
+        name: "Whey protein (sabor baunilha ou chocolate)"
+      },
+      {
+        qty: 1,
+        unit: "unid",
+        name: "Banana congelada"
+      },
+      {
+        qty: 100,
+        unit: "ml",
+        name: "Leite desnatado"
+      }
+    ],
+    prep: [
+      "Bata o açaí congelado, a banana, o whey e o leite até cremoso.",
+      "Divida em 2 taças."
+    ]
+  },
+  {
+    name: "Shake de recuperação com whey, banana e mel",
+    goal: "ganho",
+    yield: 1,
+    kcal: 545,
+    protein: 36,
+    carb: 80,
+    fat: 11,
+    supplements: [
+      "Whey Protein"
+    ],
+    ingredients: [
+      {
+        qty: 1,
+        unit: "dose",
+        name: "Whey protein (sabor baunilha ou chocolate)"
+      },
+      {
+        qty: 2,
+        unit: "unid",
+        name: "Banana"
+      },
+      {
+        qty: 1,
+        unit: "colher sopa",
+        name: "Mel"
+      },
+      {
+        qty: 300,
+        unit: "ml",
+        name: "Leite integral"
+      }
+    ],
+    prep: [
+      "Bata tudo no liquidificador.",
+      "Carboidrato rápido do mel e da banana ajuda a repor o glicogênio."
+    ]
+  },
+  {
+    name: "Mingau de aveia com colágeno e canela",
+    goal: "geral",
+    yield: 1,
+    kcal: 280,
+    protein: 23,
+    carb: 39,
+    fat: 3,
+    supplements: [
+      "Colágeno"
+    ],
+    ingredients: [
+      {
+        qty: 4,
+        unit: "colher sopa",
+        name: "Aveia em flocos"
+      },
+      {
+        qty: 250,
+        unit: "ml",
+        name: "Leite desnatado"
+      },
+      {
+        qty: 1,
+        unit: "dose",
+        name: "Colágeno hidrolisado (10 g)"
+      },
+      {
+        qty: 1,
+        unit: "pitada",
+        name: "Canela"
+      }
+    ],
+    prep: [
+      "Cozinhe a aveia com o leite em fogo baixo até engrossar.",
+      "Fora do fogo, misture o colágeno e a canela."
+    ]
+  },
+  {
+    name: "Creme de abacate proteico com whey e mel",
+    goal: "ganho",
+    yield: 1,
+    kcal: 546,
+    protein: 34,
+    carb: 43,
+    fat: 30,
+    supplements: [
+      "Whey Protein"
+    ],
+    ingredients: [
+      {
+        qty: 1,
+        unit: "dose",
+        name: "Whey protein (sabor baunilha ou chocolate)"
+      },
+      {
+        qty: 150,
+        unit: "g",
+        name: "Abacate"
+      },
+      {
+        qty: 200,
+        unit: "ml",
+        name: "Leite integral"
+      },
+      {
+        qty: 1,
+        unit: "colher sopa",
+        name: "Mel"
+      }
+    ],
+    prep: [
+      "Bata o abacate com o leite, o whey e o mel até ficar um creme liso.",
+      "Sirva gelado."
+    ]
+  },
+  {
+    name: "Shake de proteína vegetal com banana e pasta de amendoim",
+    goal: "geral",
+    yield: 1,
+    kcal: 434,
+    protein: 37,
+    carb: 41,
+    fat: 16,
+    supplements: [
+      "Proteína vegetal (ervilha/arroz)"
+    ],
+    ingredients: [
+      {
+        qty: 1,
+        unit: "dose",
+        name: "Proteína vegetal (ervilha/arroz)"
+      },
+      {
+        qty: 1,
+        unit: "unid",
+        name: "Banana"
+      },
+      {
+        qty: 1,
+        unit: "colher sopa",
+        name: "Pasta de amendoim"
+      },
+      {
+        qty: 300,
+        unit: "ml",
+        name: "Bebida de soja"
+      }
+    ],
+    prep: [
+      "Bata todos os ingredientes até ficar homogêneo.",
+      "Opção sem lactose e sem whey."
+    ]
+  },
+  {
+    name: "Panqueca de proteína vegetal e banana",
+    goal: "geral",
+    yield: 2,
+    kcal: 202,
+    protein: 16,
+    carb: 28,
+    fat: 3,
+    supplements: [
+      "Proteína vegetal (ervilha/arroz)"
+    ],
+    ingredients: [
+      {
+        qty: 1,
+        unit: "dose",
+        name: "Proteína vegetal (ervilha/arroz)"
+      },
+      {
+        qty: 1,
+        unit: "unid",
+        name: "Banana"
+      },
+      {
+        qty: 4,
+        unit: "colher sopa",
+        name: "Aveia em flocos"
+      },
+      {
+        qty: 100,
+        unit: "ml",
+        name: "Leite de soja"
+      }
+    ],
+    prep: [
+      "Bata tudo no liquidificador.",
+      "Cozinhe 2 panquecas em frigideira antiaderente."
+    ]
+  },
+  {
+    name: "Bolo de caneca de whey e cacau (low carb)",
+    goal: "emagrecimento",
+    yield: 1,
+    kcal: 212,
+    protein: 30,
+    carb: 7,
+    fat: 7,
+    supplements: [
+      "Whey Protein"
+    ],
+    ingredients: [
+      {
+        qty: 1,
+        unit: "dose",
+        name: "Whey protein (sabor baunilha ou chocolate)"
+      },
+      {
+        qty: 1,
+        unit: "unid",
+        name: "Ovo"
+      },
+      {
+        qty: 1,
+        unit: "colher sopa",
+        name: "Cacau em pó"
+      },
+      {
+        qty: 50,
+        unit: "ml",
+        name: "Leite de amêndoas"
+      },
+      {
+        qty: 1,
+        unit: "pitada",
+        name: "Fermento em pó"
+      }
+    ],
+    prep: [
+      "Misture tudo numa caneca grande.",
+      "Micro-ondas por 1 minuto a 1 minuto e meio."
+    ]
+  },
+  {
+    name: "Iogurte grego com whey, banana e creatina",
+    goal: "ganho",
+    yield: 1,
+    kcal: 343,
+    protein: 31,
+    carb: 32,
+    fat: 11,
+    supplements: [
+      "Whey Protein",
+      "Creatina"
+    ],
+    ingredients: [
+      {
+        qty: 200,
+        unit: "g",
+        name: "Iogurte grego natural"
+      },
+      {
+        qty: 0.5,
+        unit: "dose",
+        name: "Whey protein (sabor baunilha ou chocolate)"
+      },
+      {
+        qty: 1,
+        unit: "unid",
+        name: "Banana"
+      },
+      {
+        qty: 5,
+        unit: "g",
+        name: "Creatina monoidratada"
+      }
+    ],
+    prep: [
+      "Misture o iogurte com o whey e a creatina.",
+      "Cubra com banana fatiada.",
+      "A creatina é sem calorias relevantes; tome diariamente na mesma dose."
+    ]
+  },
+  {
+    name: "Shake hipercalórico de aveia, banana e pasta de amendoim",
+    goal: "ganho",
+    yield: 1,
+    kcal: 966,
+    protein: 55,
+    carb: 114,
+    fat: 35,
+    supplements: [
+      "Whey Protein",
+      "Hipercalórico ou aveia extra"
+    ],
+    ingredients: [
+      {
+        qty: 1,
+        unit: "dose",
+        name: "Whey protein (sabor baunilha ou chocolate)"
+      },
+      {
+        qty: 6,
+        unit: "colher sopa",
+        name: "Aveia em flocos"
+      },
+      {
+        qty: 2,
+        unit: "unid",
+        name: "Banana"
+      },
+      {
+        qty: 2,
+        unit: "colher sopa",
+        name: "Pasta de amendoim"
+      },
+      {
+        qty: 400,
+        unit: "ml",
+        name: "Leite integral"
+      }
+    ],
+    prep: [
+      "Bata tudo até ficar bem cremoso.",
+      "Tome entre as refeições para aumentar a ingestão calórica."
+    ]
+  },
+  {
+    name: "Vitamina verde proteica com couve e maçã",
+    goal: "emagrecimento",
+    yield: 1,
+    kcal: 290,
+    protein: 25,
+    carb: 45,
+    fat: 2,
+    supplements: [
+      "Whey Protein"
+    ],
+    ingredients: [
+      {
+        qty: 1,
+        unit: "dose",
+        name: "Whey protein (sabor baunilha ou chocolate)"
+      },
+      {
+        qty: 40,
+        unit: "g",
+        name: "Couve crua"
+      },
+      {
+        qty: 1,
+        unit: "unid",
+        name: "Maçã"
+      },
+      {
+        qty: 200,
+        unit: "ml",
+        name: "Água de coco"
+      },
+      {
+        qty: 5,
+        unit: "g",
+        name: "Gengibre"
+      }
+    ],
+    prep: [
+      "Bata a couve, a maçã, o gengibre e a água de coco; por último o whey.",
+      "Coe se preferir mais líquido."
+    ]
+  },
+  {
+    name: "Pão de queijo proteico de tapioca e whey",
+    goal: "geral",
+    yield: 8,
+    kcal: 99,
+    protein: 7,
+    carb: 12,
+    fat: 3,
+    supplements: [
+      "Whey Protein"
+    ],
+    ingredients: [
+      {
+        qty: 100,
+        unit: "g",
+        name: "Goma de tapioca"
+      },
+      {
+        qty: 40,
+        unit: "g",
+        name: "Queijo parmesão ralado"
+      },
+      {
+        qty: 2,
+        unit: "unid",
+        name: "Ovos"
+      },
+      {
+        qty: 1,
+        unit: "dose",
+        name: "Whey protein (sabor baunilha ou chocolate)"
+      },
+      {
+        qty: 60,
+        unit: "ml",
+        name: "Leite desnatado"
+      }
+    ],
+    prep: [
+      "Misture tudo até formar uma massa que desgrude das mãos.",
+      "Modele 8 bolinhas e asse a 200 °C por 20 a 25 minutos."
+    ]
+  },
+  {
+    name: "Muffin salgado de albumina e legumes",
+    goal: "emagrecimento",
+    yield: 6,
+    kcal: 109,
+    protein: 14,
+    carb: 4,
+    fat: 4,
+    supplements: [
+      "Albumina"
+    ],
+    ingredients: [
+      {
+        qty: 2,
+        unit: "dose",
+        name: "Albumina"
+      },
+      {
+        qty: 4,
+        unit: "unid",
+        name: "Ovos"
+      },
+      {
+        qty: 150,
+        unit: "g",
+        name: "Abobrinha ralada"
+      },
+      {
+        qty: 100,
+        unit: "g",
+        name: "Cenoura ralada"
+      },
+      {
+        qty: 100,
+        unit: "g",
+        name: "Queijo cottage"
+      }
+    ],
+    prep: [
+      "Misture todos os ingredientes e tempere.",
+      "Distribua em forminhas e asse a 180 °C por 25 minutos."
+    ]
+  },
+  {
+    name: "Cookie proteico de aveia e whey",
+    goal: "geral",
+    yield: 10,
+    kcal: 126,
+    protein: 8,
+    carb: 15,
+    fat: 4,
+    supplements: [
+      "Whey Protein"
+    ],
+    ingredients: [
+      {
+        qty: 120,
+        unit: "g",
+        name: "Aveia em flocos"
+      },
+      {
+        qty: 2,
+        unit: "dose",
+        name: "Whey protein (sabor baunilha ou chocolate)"
+      },
+      {
+        qty: 2,
+        unit: "unid",
+        name: "Banana madura"
+      },
+      {
+        qty: 2,
+        unit: "colher sopa",
+        name: "Pasta de amendoim"
+      },
+      {
+        qty: 30,
+        unit: "g",
+        name: "Chocolate amargo em gotas"
+      }
+    ],
+    prep: [
+      "Amasse as bananas e misture com os demais ingredientes.",
+      "Modele 10 cookies e asse a 180 °C por 15 minutos."
+    ]
+  },
+  {
+    name: "Mousse de maracujá proteico",
+    goal: "emagrecimento",
+    yield: 2,
+    kcal: 158,
+    protein: 24,
+    carb: 13,
+    fat: 2,
+    supplements: [
+      "Whey Protein"
+    ],
+    ingredients: [
+      {
+        qty: 300,
+        unit: "g",
+        name: "Iogurte proteico (skyr)"
+      },
+      {
+        qty: 100,
+        unit: "g",
+        name: "Polpa de maracujá"
+      },
+      {
+        qty: 0.5,
+        unit: "dose",
+        name: "Whey protein (sabor baunilha ou chocolate)"
+      }
+    ],
+    prep: [
+      "Misture o skyr com a polpa de maracujá e o whey de baunilha.",
+      "Leve à geladeira por 1 hora e sirva em 2 taças."
+    ]
+  },
+  {
+    name: "Omelete de claras com espinafre e cottage",
+    goal: "emagrecimento",
+    yield: 1,
+    kcal: 219,
+    protein: 31,
+    carb: 5,
+    fat: 8,
+    supplements: [
+      "Albumina"
+    ],
+    ingredients: [
+      {
+        qty: 5,
+        unit: "unid",
+        name: "Claras de ovo"
+      },
+      {
+        qty: 1,
+        unit: "unid",
+        name: "Ovo"
+      },
+      {
+        qty: 50,
+        unit: "g",
+        name: "Espinafre refogado"
+      },
+      {
+        qty: 50,
+        unit: "g",
+        name: "Queijo cottage"
+      }
+    ],
+    prep: [
+      "Bata claras e ovo com sal.",
+      "Cozinhe na frigideira antiaderente, recheie com espinafre e cottage e dobre."
+    ]
+  },
+  {
+    name: "Shake noturno de caseína com pasta de amendoim",
+    goal: "ganho",
+    yield: 1,
+    kcal: 489,
+    protein: 39,
+    carb: 43,
+    fat: 20,
+    supplements: [
+      "Caseína"
+    ],
+    ingredients: [
+      {
+        qty: 1,
+        unit: "dose",
+        name: "Caseína"
+      },
+      {
+        qty: 300,
+        unit: "ml",
+        name: "Leite integral"
+      },
+      {
+        qty: 1,
+        unit: "colher sopa",
+        name: "Pasta de amendoim"
+      },
+      {
+        qty: 1,
+        unit: "unid",
+        name: "Banana"
+      }
+    ],
+    prep: [
+      "Bata tudo no liquidificador.",
+      "A caseína digere devagar: boa opção antes de dormir."
+    ]
+  },
+  {
+    name: "Picolé de whey com frutas vermelhas",
+    goal: "emagrecimento",
+    yield: 4,
+    kcal: 76,
+    protein: 8,
+    carb: 9,
+    fat: 1,
+    supplements: [
+      "Whey Protein"
+    ],
+    ingredients: [
+      {
+        qty: 1,
+        unit: "dose",
+        name: "Whey protein (sabor baunilha ou chocolate)"
+      },
+      {
+        qty: 150,
+        unit: "g",
+        name: "Morango"
+      },
+      {
+        qty: 100,
+        unit: "g",
+        name: "Framboesa"
+      },
+      {
+        qty: 150,
+        unit: "g",
+        name: "Iogurte natural desnatado"
+      },
+      {
+        qty: 100,
+        unit: "ml",
+        name: "Água"
+      }
+    ],
+    prep: [
+      "Bata todos os ingredientes.",
+      "Despeje em forminhas de picolé e leve ao freezer por 4 horas."
+    ]
+  }
+];
+
+export const SUPPLEMENT_RECIPES: SupplementRecipe[] = [...SUPPLEMENT_RECIPES_BASE, ...SUPPLEMENT_RECIPES_EXTRA];

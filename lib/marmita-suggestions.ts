@@ -42,7 +42,7 @@ export const MARMITA_CATEGORIES: { key: string; label: string }[] = [
   { key: "sobremesa", label: "🍰 Sobremesas Fit" },
 ];
 
-export const MARMITA_SUGGESTIONS: MarmitaSuggestion[] = [
+const MARMITA_BASE: MarmitaSuggestion[] = [
   {
     category: "almoco",
     name: "Frango grelhado, batata-doce e brócolis",
@@ -5055,3 +5055,1742 @@ export const MARMITA_SUGGESTIONS: MarmitaSuggestion[] = [
     ]
   }
 ];
+
+/**
+ * EXTRA block — 49 additional marmitas (low carb, keto, high protein, vegetarian/vegan, snacks, desserts).
+ * HONESTY NOTE: `kcal` and `protein` per serving were computed offline by summing
+ * FOOD_DB values (lib/food-database.ts, themselves written from the author's
+ * knowledge of TACO/USDA tables, NOT looked up online) over the ingredient
+ * quantities and dividing by `yield`. They are estimates for typical preparation;
+ * cooking oil absorption, trimming and brand differences are not modeled.
+ */
+const MARMITA_EXTRA: MarmitaSuggestion[] = [
+  {
+    category: "almoco",
+    name: "Low carb: frango grelhado com purê de couve-flor e brócolis",
+    yield: 4,
+    kcal: 479,
+    protein: 69,
+    ingredients: [
+      {
+        name: "Peito de frango grelhado",
+        qty: 800,
+        unit: "g"
+      },
+      {
+        name: "Couve-flor cozida",
+        qty: 800,
+        unit: "g"
+      },
+      {
+        name: "Brócolis cozido",
+        qty: 400,
+        unit: "g"
+      },
+      {
+        name: "Azeite",
+        qty: 2,
+        unit: "colher sopa"
+      },
+      {
+        name: "Alho",
+        qty: 3,
+        unit: "dente"
+      }
+    ],
+    prep: [
+      "Tempere o frango com sal, pimenta e alho e grelhe até dourar.",
+      "Cozinhe a couve-flor e bata com um fio de azeite até virar um purê cremoso.",
+      "Cozinhe o brócolis al dente e refogue rapidamente no alho.",
+      "Monte 4 potes com frango, purê e brócolis."
+    ]
+  },
+  {
+    category: "almoco",
+    name: "Keto: salmão ao forno com aspargos e manteiga de ervas",
+    yield: 3,
+    kcal: 538,
+    protein: 42,
+    ingredients: [
+      {
+        name: "Filé de salmão",
+        qty: 600,
+        unit: "g"
+      },
+      {
+        name: "Aspargos",
+        qty: 300,
+        unit: "g"
+      },
+      {
+        name: "Manteiga",
+        qty: 3,
+        unit: "colher sopa"
+      },
+      {
+        name: "Ervas frescas",
+        qty: 1,
+        unit: "pitada"
+      }
+    ],
+    prep: [
+      "Misture a manteiga amolecida com ervas picadas, sal e raspas de limão.",
+      "Disponha o salmão e os aspargos numa assadeira e cubra com a manteiga de ervas.",
+      "Asse a 200 °C por 15 a 18 minutos.",
+      "Divida em 3 potes."
+    ]
+  },
+  {
+    category: "almoco",
+    name: "Keto: picanha grelhada com salada de rúcula e tomate cereja",
+    yield: 3,
+    kcal: 476,
+    protein: 44,
+    ingredients: [
+      {
+        name: "Picanha grelhada",
+        qty: 450,
+        unit: "g"
+      },
+      {
+        name: "Rúcula",
+        qty: 150,
+        unit: "g"
+      },
+      {
+        name: "Tomate cereja",
+        qty: 200,
+        unit: "g"
+      },
+      {
+        name: "Azeite",
+        qty: 2,
+        unit: "colher sopa"
+      },
+      {
+        name: "Queijo parmesão ralado",
+        qty: 30,
+        unit: "g"
+      }
+    ],
+    prep: [
+      "Tempere a picanha só com sal grosso e grelhe até o ponto desejado.",
+      "Deixe descansar 5 minutos e fatie contra a fibra.",
+      "Misture rúcula, tomate cereja, azeite e parmesão.",
+      "Guarde a carne e a salada em compartimentos separados para a salada não murchar."
+    ]
+  },
+  {
+    category: "almoco",
+    name: "Low carb: strogonoff de frango com abobrinha em fitas",
+    yield: 4,
+    kcal: 470,
+    protein: 67,
+    ingredients: [
+      {
+        name: "Peito de frango em cubos",
+        qty: 800,
+        unit: "g"
+      },
+      {
+        name: "Creme de leite",
+        qty: 8,
+        unit: "colher sopa"
+      },
+      {
+        name: "Champignon fatiado",
+        qty: 200,
+        unit: "g"
+      },
+      {
+        name: "Molho de tomate",
+        qty: 4,
+        unit: "colher sopa"
+      },
+      {
+        name: "Abobrinha",
+        qty: 800,
+        unit: "g"
+      },
+      {
+        name: "Cebola",
+        qty: 100,
+        unit: "g"
+      }
+    ],
+    prep: [
+      "Refogue a cebola, junte o frango em cubos e doure bem.",
+      "Acrescente o champignon e o molho de tomate e cozinhe por 5 minutos.",
+      "Desligue o fogo e misture o creme de leite.",
+      "Corte a abobrinha em fitas com um descascador e salteie por 2 minutos; sirva com o strogonoff."
+    ]
+  },
+  {
+    category: "almoco",
+    name: "Low carb: escondidinho de carne moída com abobrinha e queijo",
+    yield: 4,
+    kcal: 581,
+    protein: 76,
+    ingredients: [
+      {
+        name: "Patinho moído magro",
+        qty: 800,
+        unit: "g"
+      },
+      {
+        name: "Abobrinha",
+        qty: 800,
+        unit: "g"
+      },
+      {
+        name: "Queijo mussarela",
+        qty: 150,
+        unit: "g"
+      },
+      {
+        name: "Molho de tomate",
+        qty: 6,
+        unit: "colher sopa"
+      },
+      {
+        name: "Cebola",
+        qty: 100,
+        unit: "g"
+      }
+    ],
+    prep: [
+      "Refogue a cebola e a carne moída com o molho de tomate e tempere a gosto.",
+      "Corte a abobrinha em rodelas finas e cozinhe rapidamente.",
+      "Monte em camadas: carne, abobrinha e queijo.",
+      "Leve ao forno até gratinar e divida em 4 potes."
+    ]
+  },
+  {
+    category: "almoco",
+    name: "Keto: fraldinha com ovo frito e couve refogada",
+    yield: 3,
+    kcal: 629,
+    protein: 71,
+    ingredients: [
+      {
+        name: "Fraldinha",
+        qty: 600,
+        unit: "g"
+      },
+      {
+        name: "Ovos",
+        qty: 6,
+        unit: "unid"
+      },
+      {
+        name: "Couve",
+        qty: 400,
+        unit: "g"
+      },
+      {
+        name: "Alho",
+        qty: 3,
+        unit: "dente"
+      }
+    ],
+    prep: [
+      "Grelhe a fraldinha até o ponto e fatie.",
+      "Refogue a couve com o alho.",
+      "Frite os ovos na frigideira antiaderente.",
+      "Monte 3 potes com carne, couve e 2 ovos cada (ovo fica melhor aquecido na hora)."
+    ]
+  },
+  {
+    category: "almoco",
+    name: "Alta proteína: patinho grelhado, arroz branco e feijão preto",
+    yield: 4,
+    kcal: 759,
+    protein: 83,
+    ingredients: [
+      {
+        name: "Patinho",
+        qty: 800,
+        unit: "g"
+      },
+      {
+        name: "Arroz branco cozido",
+        qty: 600,
+        unit: "g"
+      },
+      {
+        name: "Feijão preto cozido",
+        qty: 600,
+        unit: "g"
+      },
+      {
+        name: "Salada verde",
+        qty: 200,
+        unit: "g"
+      }
+    ],
+    prep: [
+      "Tempere os bifes de patinho e grelhe em frigideira bem quente.",
+      "Cozinhe o arroz e o feijão preto (pode usar feijão pronto da semana).",
+      "Monte 4 potes com bife, arroz, feijão e salada separada."
+    ]
+  },
+  {
+    category: "almoco",
+    name: "Alta proteína: sassami com macarrão e molho de tomate caseiro",
+    yield: 4,
+    kcal: 576,
+    protein: 71,
+    ingredients: [
+      {
+        name: "Filé de frango (sassami)",
+        qty: 800,
+        unit: "g"
+      },
+      {
+        name: "Macarrão cozido",
+        qty: 600,
+        unit: "g"
+      },
+      {
+        name: "Molho de tomate",
+        qty: 8,
+        unit: "colher sopa"
+      },
+      {
+        name: "Queijo parmesão ralado",
+        qty: 4,
+        unit: "colher sopa"
+      }
+    ],
+    prep: [
+      "Cozinhe o macarrão al dente.",
+      "Grelhe o sassami em tiras e junte ao molho de tomate.",
+      "Misture o macarrão ao molho com o frango.",
+      "Finalize com parmesão e divida em 4 potes."
+    ]
+  },
+  {
+    category: "almoco",
+    name: "Atum selado com arroz integral e brócolis ao shoyu",
+    yield: 3,
+    kcal: 521,
+    protein: 54,
+    ingredients: [
+      {
+        name: "Atum fresco",
+        qty: 450,
+        unit: "g"
+      },
+      {
+        name: "Arroz integral cozido",
+        qty: 450,
+        unit: "g"
+      },
+      {
+        name: "Brócolis",
+        qty: 300,
+        unit: "g"
+      },
+      {
+        name: "Molho shoyu",
+        qty: 3,
+        unit: "colher sopa"
+      },
+      {
+        name: "Gergelim",
+        qty: 15,
+        unit: "g"
+      }
+    ],
+    prep: [
+      "Sele o atum 1 minuto de cada lado em frigideira muito quente.",
+      "Cozinhe o brócolis no vapor e regue com shoyu.",
+      "Fatie o atum, monte com o arroz integral e salpique gergelim."
+    ]
+  },
+  {
+    category: "almoco",
+    name: "Tilápia ao forno com batata rústica e salada",
+    yield: 4,
+    kcal: 534,
+    protein: 46,
+    ingredients: [
+      {
+        name: "Filé de tilápia",
+        qty: 800,
+        unit: "g"
+      },
+      {
+        name: "Batata inglesa",
+        qty: 800,
+        unit: "g"
+      },
+      {
+        name: "Salada verde",
+        qty: 300,
+        unit: "g"
+      },
+      {
+        name: "Azeite",
+        qty: 2,
+        unit: "colher sopa"
+      }
+    ],
+    prep: [
+      "Corte as batatas em gomos, tempere e asse a 220 °C por 30 minutos.",
+      "Tempere a tilápia com limão e ervas e asse nos últimos 15 minutos.",
+      "Monte os potes com a salada em compartimento separado."
+    ]
+  },
+  {
+    category: "almoco",
+    name: "Carne de sol com mandioca cozida e vinagrete",
+    yield: 4,
+    kcal: 566,
+    protein: 49,
+    ingredients: [
+      {
+        name: "Carne de sol",
+        qty: 600,
+        unit: "g"
+      },
+      {
+        name: "Mandioca",
+        qty: 800,
+        unit: "g"
+      },
+      {
+        name: "Vinagrete",
+        qty: 300,
+        unit: "g"
+      },
+      {
+        name: "Manteiga",
+        qty: 2,
+        unit: "colher sopa"
+      }
+    ],
+    prep: [
+      "Dessalgue a carne de sol, cozinhe na pressão e desfie ou corte em cubos.",
+      "Cozinhe a mandioca até ficar macia.",
+      "Doure a carne na manteiga.",
+      "Monte os potes com vinagrete à parte."
+    ]
+  },
+  {
+    category: "almoco",
+    name: "Arroz carreteiro fit com charque desfiado",
+    yield: 4,
+    kcal: 558,
+    protein: 41,
+    ingredients: [
+      {
+        name: "Charque dessalgado",
+        qty: 400,
+        unit: "g"
+      },
+      {
+        name: "Arroz branco cozido",
+        qty: 800,
+        unit: "g"
+      },
+      {
+        name: "Cebola",
+        qty: 100,
+        unit: "g"
+      },
+      {
+        name: "Tomate",
+        qty: 150,
+        unit: "g"
+      },
+      {
+        name: "Azeite",
+        qty: 1,
+        unit: "colher sopa"
+      }
+    ],
+    prep: [
+      "Dessalgue o charque e desfie.",
+      "Refogue cebola e tomate no azeite, junte o charque.",
+      "Misture o arroz já cozido e aqueça por 3 minutos.",
+      "Divida em 4 potes."
+    ]
+  },
+  {
+    category: "almoco",
+    name: "Galinhada fit de peito de frango com arroz integral",
+    yield: 4,
+    kcal: 570,
+    protein: 62,
+    ingredients: [
+      {
+        name: "Peito de frango cozido",
+        qty: 700,
+        unit: "g"
+      },
+      {
+        name: "Arroz integral cozido",
+        qty: 800,
+        unit: "g"
+      },
+      {
+        name: "Milho verde",
+        qty: 100,
+        unit: "g"
+      },
+      {
+        name: "Ervilha",
+        qty: 100,
+        unit: "g"
+      }
+    ],
+    prep: [
+      "Cozinhe e desfie o peito de frango.",
+      "Refogue com cebola, alho e cúrcuma e misture o arroz integral.",
+      "Junte o milho e a ervilha e aqueça.",
+      "Divida em 4 potes."
+    ]
+  },
+  {
+    category: "almoco",
+    name: "Moqueca de camarão com leite de coco e arroz",
+    yield: 4,
+    kcal: 599,
+    protein: 54,
+    ingredients: [
+      {
+        name: "Camarão limpo",
+        qty: 800,
+        unit: "g"
+      },
+      {
+        name: "Leite de coco",
+        qty: 200,
+        unit: "ml"
+      },
+      {
+        name: "Pimentão",
+        qty: 200,
+        unit: "g"
+      },
+      {
+        name: "Tomate",
+        qty: 300,
+        unit: "g"
+      },
+      {
+        name: "Cebola",
+        qty: 100,
+        unit: "g"
+      },
+      {
+        name: "Arroz branco cozido",
+        qty: 600,
+        unit: "g"
+      },
+      {
+        name: "Azeite",
+        qty: 2,
+        unit: "colher sopa"
+      }
+    ],
+    prep: [
+      "Refogue cebola, pimentão e tomate no azeite.",
+      "Junte o leite de coco e deixe levantar fervura.",
+      "Acrescente o camarão e cozinhe por 4 minutos, sem passar do ponto.",
+      "Sirva com arroz e finalize com coentro."
+    ]
+  },
+  {
+    category: "almoco",
+    name: "Bacalhau com grão-de-bico e espinafre",
+    yield: 4,
+    kcal: 489,
+    protein: 51,
+    ingredients: [
+      {
+        name: "Bacalhau dessalgado",
+        qty: 800,
+        unit: "g"
+      },
+      {
+        name: "Grão-de-bico cozido",
+        qty: 500,
+        unit: "g"
+      },
+      {
+        name: "Espinafre",
+        qty: 400,
+        unit: "g"
+      },
+      {
+        name: "Azeite",
+        qty: 3,
+        unit: "colher sopa"
+      }
+    ],
+    prep: [
+      "Refogue alho e cebola no azeite.",
+      "Junte o grão-de-bico e o bacalhau em lascas e aqueça por 5 minutos.",
+      "Acrescente o espinafre e mexa até murchar.",
+      "Divida em 4 potes."
+    ]
+  },
+  {
+    category: "almoco",
+    name: "Frango ao molho de iogurte com arroz basmati e cenoura",
+    yield: 4,
+    kcal: 584,
+    protein: 70,
+    ingredients: [
+      {
+        name: "Peito de frango",
+        qty: 800,
+        unit: "g"
+      },
+      {
+        name: "Iogurte natural desnatado",
+        qty: 300,
+        unit: "g"
+      },
+      {
+        name: "Arroz basmati cozido",
+        qty: 600,
+        unit: "g"
+      },
+      {
+        name: "Cenoura",
+        qty: 300,
+        unit: "g"
+      }
+    ],
+    prep: [
+      "Marine o frango no iogurte com alho, cominho e páprica por 30 minutos.",
+      "Asse em forno quente ou grelhe até dourar.",
+      "Cozinhe o arroz basmati e a cenoura no vapor.",
+      "Monte 4 potes."
+    ]
+  },
+  {
+    category: "almoco",
+    name: "Lasanha fit de berinjela com carne moída e ricota",
+    yield: 4,
+    kcal: 590,
+    protein: 67,
+    ingredients: [
+      {
+        name: "Berinjela",
+        qty: 800,
+        unit: "g"
+      },
+      {
+        name: "Patinho moído",
+        qty: 600,
+        unit: "g"
+      },
+      {
+        name: "Ricota",
+        qty: 250,
+        unit: "g"
+      },
+      {
+        name: "Molho de tomate",
+        qty: 10,
+        unit: "colher sopa"
+      },
+      {
+        name: "Queijo mussarela",
+        qty: 150,
+        unit: "g"
+      }
+    ],
+    prep: [
+      "Fatie a berinjela no sentido do comprimento e grelhe até amaciar.",
+      "Refogue a carne moída com o molho de tomate.",
+      "Monte camadas de berinjela, carne, ricota e mussarela.",
+      "Asse a 200 °C por 20 minutos e divida em 4 porções."
+    ]
+  },
+  {
+    category: "almoco",
+    name: "Peru desfiado com purê de abóbora e feijão-fradinho",
+    yield: 4,
+    kcal: 407,
+    protein: 62,
+    ingredients: [
+      {
+        name: "Peito de peru assado",
+        qty: 700,
+        unit: "g"
+      },
+      {
+        name: "Abóbora cozida",
+        qty: 800,
+        unit: "g"
+      },
+      {
+        name: "Feijão-fradinho cozido",
+        qty: 400,
+        unit: "g"
+      }
+    ],
+    prep: [
+      "Cozinhe e desfie o peito de peru com temperos.",
+      "Amasse a abóbora cozida até virar purê.",
+      "Refogue o feijão-fradinho com alho.",
+      "Monte 4 potes."
+    ]
+  },
+  {
+    category: "cafe",
+    name: "Low carb: omelete de forno com queijo, tomate e espinafre",
+    yield: 3,
+    kcal: 398,
+    protein: 29,
+    ingredients: [
+      {
+        name: "Ovos",
+        qty: 9,
+        unit: "unid"
+      },
+      {
+        name: "Queijo mussarela",
+        qty: 120,
+        unit: "g"
+      },
+      {
+        name: "Tomate",
+        qty: 200,
+        unit: "g"
+      },
+      {
+        name: "Espinafre cru",
+        qty: 150,
+        unit: "g"
+      },
+      {
+        name: "Azeite",
+        qty: 1,
+        unit: "colher sopa"
+      }
+    ],
+    prep: [
+      "Bata os ovos com sal e pimenta.",
+      "Misture o espinafre picado, o tomate em cubos e o queijo.",
+      "Despeje em forma untada e asse a 200 °C por 20 minutos.",
+      "Corte em 3 porções."
+    ]
+  },
+  {
+    category: "cafe",
+    name: "Keto: ovos mexidos com bacon e abacate",
+    yield: 2,
+    kcal: 582,
+    protein: 31,
+    fast: true,
+    ingredients: [
+      {
+        name: "Ovos",
+        qty: 6,
+        unit: "unid"
+      },
+      {
+        name: "Bacon",
+        qty: 60,
+        unit: "g"
+      },
+      {
+        name: "Abacate",
+        qty: 200,
+        unit: "g"
+      },
+      {
+        name: "Manteiga",
+        qty: 1,
+        unit: "colher sopa"
+      }
+    ],
+    prep: [
+      "Frite o bacon até ficar crocante e reserve.",
+      "Mexa os ovos na manteiga em fogo baixo.",
+      "Sirva com o abacate fatiado e o bacon esfarelado."
+    ]
+  },
+  {
+    category: "cafe",
+    name: "Crepioca de queijo e peito de peru",
+    yield: 2,
+    kcal: 264,
+    protein: 16,
+    fast: true,
+    ingredients: [
+      {
+        name: "Ovos",
+        qty: 2,
+        unit: "unid"
+      },
+      {
+        name: "Goma de tapioca",
+        qty: 60,
+        unit: "g"
+      },
+      {
+        name: "Queijo mussarela",
+        qty: 2,
+        unit: "fatia"
+      },
+      {
+        name: "Peito de peru fatiado",
+        qty: 60,
+        unit: "g"
+      }
+    ],
+    prep: [
+      "Misture os ovos com a goma de tapioca e uma pitada de sal.",
+      "Despeje na frigideira antiaderente e cozinhe dos dois lados.",
+      "Recheie com queijo e peito de peru e dobre ao meio."
+    ]
+  },
+  {
+    category: "cafe",
+    name: "Pão integral com ovo mexido e tomate",
+    yield: 2,
+    kcal: 290,
+    protein: 19,
+    fast: true,
+    ingredients: [
+      {
+        name: "Pão integral",
+        qty: 4,
+        unit: "fatia"
+      },
+      {
+        name: "Ovos",
+        qty: 4,
+        unit: "unid"
+      },
+      {
+        name: "Tomate",
+        qty: 100,
+        unit: "g"
+      }
+    ],
+    prep: [
+      "Torre as fatias de pão integral.",
+      "Mexa os ovos em fogo baixo até ficarem cremosos.",
+      "Monte com o tomate fatiado."
+    ]
+  },
+  {
+    category: "cafe",
+    name: "Mingau de aveia com leite e banana",
+    yield: 2,
+    kcal: 332,
+    protein: 15,
+    fast: true,
+    ingredients: [
+      {
+        name: "Aveia em flocos",
+        qty: 80,
+        unit: "g"
+      },
+      {
+        name: "Leite desnatado",
+        qty: 500,
+        unit: "ml"
+      },
+      {
+        name: "Banana",
+        qty: 2,
+        unit: "unid"
+      },
+      {
+        name: "Canela",
+        qty: 1,
+        unit: "pitada"
+      }
+    ],
+    prep: [
+      "Cozinhe a aveia com o leite em fogo baixo, mexendo, por 5 minutos.",
+      "Amasse metade da banana no mingau e fatie o restante por cima.",
+      "Finalize com canela."
+    ]
+  },
+  {
+    category: "cafe",
+    name: "Cuscuz com ovo e queijo coalho",
+    yield: 2,
+    kcal: 601,
+    protein: 28,
+    ingredients: [
+      {
+        name: "Flocão de milho (cuscuz)",
+        qty: 140,
+        unit: "g"
+      },
+      {
+        name: "Ovos",
+        qty: 4,
+        unit: "unid"
+      },
+      {
+        name: "Queijo coalho",
+        qty: 100,
+        unit: "g"
+      },
+      {
+        name: "Manteiga",
+        qty: 1,
+        unit: "colher sopa"
+      }
+    ],
+    prep: [
+      "Hidrate o flocão com água e uma pitada de sal e cozinhe no vapor por 10 minutos.",
+      "Grelhe o queijo coalho e prepare os ovos mexidos ou fritos.",
+      "Sirva o cuscuz com a manteiga, o ovo e o queijo."
+    ]
+  },
+  {
+    category: "cafe",
+    name: "Bowl de açaí proteico com whey e granola",
+    yield: 1,
+    kcal: 494,
+    protein: 33,
+    fast: true,
+    ingredients: [
+      {
+        name: "Açaí (polpa sem açúcar)",
+        qty: 200,
+        unit: "g"
+      },
+      {
+        name: "Banana",
+        qty: 1,
+        unit: "unid"
+      },
+      {
+        name: "Whey protein",
+        qty: 1,
+        unit: "scoop"
+      },
+      {
+        name: "Granola",
+        qty: 2,
+        unit: "colher sopa"
+      },
+      {
+        name: "Leite desnatado",
+        qty: 100,
+        unit: "ml"
+      }
+    ],
+    prep: [
+      "Bata o açaí congelado com a banana, o whey e o leite até ficar cremoso e espesso.",
+      "Despeje numa tigela e finalize com a granola."
+    ]
+  },
+  {
+    category: "cafe",
+    name: "Skyr com frutas vermelhas e castanhas",
+    yield: 1,
+    kcal: 321,
+    protein: 32,
+    fast: true,
+    ingredients: [
+      {
+        name: "Iogurte proteico (skyr)",
+        qty: 250,
+        unit: "g"
+      },
+      {
+        name: "Mirtilo",
+        qty: 80,
+        unit: "g"
+      },
+      {
+        name: "Castanha de caju",
+        qty: 20,
+        unit: "g"
+      }
+    ],
+    prep: [
+      "Coloque o iogurte numa tigela.",
+      "Cubra com os mirtilos e as castanhas picadas."
+    ]
+  },
+  {
+    category: "lanche",
+    name: "Low carb: rolinhos de peito de peru com queijo e rúcula",
+    yield: 2,
+    kcal: 197,
+    protein: 19,
+    fast: true,
+    ingredients: [
+      {
+        name: "Peito de peru fatiado",
+        qty: 120,
+        unit: "g"
+      },
+      {
+        name: "Queijo branco",
+        qty: 100,
+        unit: "g"
+      },
+      {
+        name: "Rúcula",
+        qty: 40,
+        unit: "g"
+      }
+    ],
+    prep: [
+      "Disponha uma fatia de peru, uma tira de queijo e algumas folhas de rúcula.",
+      "Enrole firme e prenda com palito."
+    ]
+  },
+  {
+    category: "lanche",
+    name: "Keto: chips crocantes de parmesão",
+    yield: 4,
+    kcal: 167,
+    protein: 14,
+    fast: true,
+    ingredients: [
+      {
+        name: "Queijo parmesão ralado",
+        qty: 160,
+        unit: "g"
+      }
+    ],
+    prep: [
+      "Faça montinhos de parmesão ralado sobre papel manteiga, bem espaçados.",
+      "Asse a 200 °C por 5 a 7 minutos até dourar e deixe esfriar para ficarem crocantes."
+    ]
+  },
+  {
+    category: "lanche",
+    name: "Palitos de pepino com guacamole e atum",
+    yield: 2,
+    kcal: 210,
+    protein: 18,
+    fast: true,
+    ingredients: [
+      {
+        name: "Pepino",
+        qty: 300,
+        unit: "g"
+      },
+      {
+        name: "Guacamole",
+        qty: 150,
+        unit: "g"
+      },
+      {
+        name: "Atum em lata (água)",
+        qty: 120,
+        unit: "g"
+      }
+    ],
+    prep: [
+      "Corte o pepino em palitos.",
+      "Misture o atum escorrido ao guacamole.",
+      "Sirva os palitos com a pasta."
+    ]
+  },
+  {
+    category: "lanche",
+    name: "Mix de castanhas com chocolate amargo e uva-passa",
+    yield: 6,
+    kcal: 225,
+    protein: 5,
+    fast: true,
+    ingredients: [
+      {
+        name: "Castanhas (mix)",
+        qty: 150,
+        unit: "g"
+      },
+      {
+        name: "Chocolate amargo 70%",
+        qty: 50,
+        unit: "g"
+      },
+      {
+        name: "Uva-passa",
+        qty: 50,
+        unit: "g"
+      }
+    ],
+    prep: [
+      "Pique o chocolate em pedaços pequenos.",
+      "Misture tudo e divida em 6 potinhos."
+    ]
+  },
+  {
+    category: "lanche",
+    name: "Low carb: wrap de crepe de ovo com frango",
+    yield: 2,
+    kcal: 341,
+    protein: 38,
+    ingredients: [
+      {
+        name: "Ovos",
+        qty: 4,
+        unit: "unid"
+      },
+      {
+        name: "Frango desfiado",
+        qty: 150,
+        unit: "g"
+      },
+      {
+        name: "Requeijão cremoso",
+        qty: 2,
+        unit: "colher sopa"
+      },
+      {
+        name: "Alface",
+        qty: 60,
+        unit: "g"
+      }
+    ],
+    prep: [
+      "Bata os ovos e faça 2 crepes finos na frigideira antiaderente.",
+      "Recheie com frango desfiado, requeijão e alface.",
+      "Enrole e corte ao meio."
+    ]
+  },
+  {
+    category: "lanche",
+    name: "Iogurte grego com nozes e mel",
+    yield: 2,
+    kcal: 283,
+    protein: 16,
+    fast: true,
+    ingredients: [
+      {
+        name: "Iogurte grego natural",
+        qty: 300,
+        unit: "g"
+      },
+      {
+        name: "Nozes",
+        qty: 30,
+        unit: "g"
+      },
+      {
+        name: "Mel",
+        qty: 1,
+        unit: "colher sopa"
+      }
+    ],
+    prep: [
+      "Divida o iogurte em 2 potes.",
+      "Cubra com as nozes picadas e um fio de mel."
+    ]
+  },
+  {
+    category: "lanche",
+    name: "Torrada integral com abacate e ovo cozido",
+    yield: 2,
+    kcal: 254,
+    protein: 10,
+    fast: true,
+    ingredients: [
+      {
+        name: "Torrada integral",
+        qty: 6,
+        unit: "unid"
+      },
+      {
+        name: "Abacate",
+        qty: 150,
+        unit: "g"
+      },
+      {
+        name: "Ovo cozido",
+        qty: 2,
+        unit: "unid"
+      }
+    ],
+    prep: [
+      "Amasse o abacate com sal e limão.",
+      "Espalhe sobre as torradas e cubra com o ovo cozido fatiado."
+    ]
+  },
+  {
+    category: "lanche",
+    name: "Edamame com sal marinho",
+    yield: 2,
+    kcal: 182,
+    protein: 18,
+    fast: true,
+    vegan: true,
+    ingredients: [
+      {
+        name: "Edamame cozido",
+        qty: 300,
+        unit: "g"
+      }
+    ],
+    prep: [
+      "Cozinhe o edamame na vagem por 5 minutos.",
+      "Escorra e tempere com sal marinho; leve em pote."
+    ]
+  },
+  {
+    category: "sanduiche",
+    name: "Low carb: wrap de alface com frango e abacate",
+    yield: 2,
+    kcal: 309,
+    protein: 33,
+    fast: true,
+    ingredients: [
+      {
+        name: "Frango desfiado",
+        qty: 200,
+        unit: "g"
+      },
+      {
+        name: "Alface",
+        qty: 80,
+        unit: "g"
+      },
+      {
+        name: "Abacate",
+        qty: 100,
+        unit: "g"
+      },
+      {
+        name: "Tomate",
+        qty: 100,
+        unit: "g"
+      },
+      {
+        name: "Maionese",
+        qty: 1,
+        unit: "colher sopa"
+      }
+    ],
+    prep: [
+      "Misture o frango desfiado com a maionese.",
+      "Use folhas grandes de alface como wrap.",
+      "Recheie com frango, abacate e tomate e enrole."
+    ]
+  },
+  {
+    category: "sanduiche",
+    name: "Sanduíche aberto de salmão defumado com cream cheese e pepino",
+    yield: 2,
+    kcal: 320,
+    protein: 16,
+    fast: true,
+    ingredients: [
+      {
+        name: "Pão de centeio",
+        qty: 4,
+        unit: "fatia"
+      },
+      {
+        name: "Salmão defumado",
+        qty: 100,
+        unit: "g"
+      },
+      {
+        name: "Cream cheese",
+        qty: 4,
+        unit: "colher sopa"
+      },
+      {
+        name: "Pepino",
+        qty: 80,
+        unit: "g"
+      }
+    ],
+    prep: [
+      "Espalhe o cream cheese nas fatias de pão.",
+      "Cubra com o salmão e o pepino em fatias finas."
+    ]
+  },
+  {
+    category: "sanduiche",
+    name: "Hambúrguer bovino com ovo e queijo no pão (alta proteína)",
+    yield: 2,
+    kcal: 641,
+    protein: 48,
+    ingredients: [
+      {
+        name: "Pão de hambúrguer",
+        qty: 2,
+        unit: "unid"
+      },
+      {
+        name: "Hambúrguer bovino",
+        qty: 240,
+        unit: "g"
+      },
+      {
+        name: "Ovo frito",
+        qty: 2,
+        unit: "unid"
+      },
+      {
+        name: "Alface",
+        qty: 30,
+        unit: "g"
+      },
+      {
+        name: "Tomate",
+        qty: 100,
+        unit: "g"
+      },
+      {
+        name: "Queijo prato",
+        qty: 2,
+        unit: "fatia"
+      }
+    ],
+    prep: [
+      "Grelhe o hambúrguer e o ovo.",
+      "Monte no pão com queijo, alface e tomate."
+    ]
+  },
+  {
+    category: "vegetariana",
+    name: "Vegano: feijoada vegana de feijão preto com cogumelos",
+    yield: 4,
+    kcal: 267,
+    protein: 12,
+    vegan: true,
+    ingredients: [
+      {
+        name: "Feijão preto cozido",
+        qty: 800,
+        unit: "g"
+      },
+      {
+        name: "Cogumelos",
+        qty: 300,
+        unit: "g"
+      },
+      {
+        name: "Cenoura",
+        qty: 200,
+        unit: "g"
+      },
+      {
+        name: "Cebola",
+        qty: 100,
+        unit: "g"
+      },
+      {
+        name: "Alho",
+        qty: 3,
+        unit: "dente"
+      },
+      {
+        name: "Azeite",
+        qty: 2,
+        unit: "colher sopa"
+      }
+    ],
+    prep: [
+      "Refogue cebola e alho no azeite e doure os cogumelos.",
+      "Junte a cenoura em cubos e o feijão preto com um pouco de água.",
+      "Cozinhe em fogo baixo por 20 minutos até encorpar.",
+      "Divida em 4 potes e sirva com arroz e couve (à parte)."
+    ]
+  },
+  {
+    category: "vegetariana",
+    name: "Vegano: curry de grão-de-bico e espinafre com arroz integral",
+    yield: 4,
+    kcal: 562,
+    protein: 21,
+    vegan: true,
+    ingredients: [
+      {
+        name: "Grão-de-bico cozido",
+        qty: 600,
+        unit: "g"
+      },
+      {
+        name: "Espinafre",
+        qty: 300,
+        unit: "g"
+      },
+      {
+        name: "Leite de coco",
+        qty: 200,
+        unit: "ml"
+      },
+      {
+        name: "Arroz integral cozido",
+        qty: 600,
+        unit: "g"
+      },
+      {
+        name: "Tomate",
+        qty: 200,
+        unit: "g"
+      }
+    ],
+    prep: [
+      "Refogue cebola, alho, curry e tomate picado.",
+      "Junte o grão-de-bico e o leite de coco e cozinhe por 10 minutos.",
+      "Acrescente o espinafre no final.",
+      "Sirva com arroz integral."
+    ]
+  },
+  {
+    category: "vegetariana",
+    name: "Vegano: tofu mexido com cúrcuma e legumes",
+    yield: 2,
+    kcal: 246,
+    protein: 18,
+    fast: true,
+    vegan: true,
+    ingredients: [
+      {
+        name: "Tofu firme",
+        qty: 400,
+        unit: "g"
+      },
+      {
+        name: "Pimentão",
+        qty: 150,
+        unit: "g"
+      },
+      {
+        name: "Cogumelos",
+        qty: 100,
+        unit: "g"
+      },
+      {
+        name: "Azeite",
+        qty: 1,
+        unit: "colher sopa"
+      },
+      {
+        name: "Cúrcuma",
+        qty: 1,
+        unit: "pitada"
+      }
+    ],
+    prep: [
+      "Esfarele o tofu com as mãos.",
+      "Refogue os legumes no azeite, junte o tofu e a cúrcuma.",
+      "Cozinhe por 5 minutos e tempere com sal e pimenta."
+    ]
+  },
+  {
+    category: "vegetariana",
+    name: "Vegano: bowl de quinoa, tempeh e legumes assados",
+    yield: 3,
+    kcal: 576,
+    protein: 32,
+    vegan: true,
+    ingredients: [
+      {
+        name: "Quinoa cozida",
+        qty: 450,
+        unit: "g"
+      },
+      {
+        name: "Tempeh",
+        qty: 300,
+        unit: "g"
+      },
+      {
+        name: "Abóbora",
+        qty: 300,
+        unit: "g"
+      },
+      {
+        name: "Brócolis",
+        qty: 300,
+        unit: "g"
+      },
+      {
+        name: "Azeite",
+        qty: 2,
+        unit: "colher sopa"
+      },
+      {
+        name: "Tahine",
+        qty: 2,
+        unit: "colher sopa"
+      }
+    ],
+    prep: [
+      "Asse a abóbora e o brócolis com azeite a 200 °C por 20 minutos.",
+      "Doure o tempeh em cubos na frigideira.",
+      "Monte os bowls com quinoa, tempeh e legumes e regue com tahine diluído em água e limão."
+    ]
+  },
+  {
+    category: "vegetariana",
+    name: "Low carb vegetariana: berinjela recheada com ricota e nozes",
+    yield: 3,
+    kcal: 431,
+    protein: 24,
+    ingredients: [
+      {
+        name: "Berinjela",
+        qty: 900,
+        unit: "g"
+      },
+      {
+        name: "Ricota",
+        qty: 300,
+        unit: "g"
+      },
+      {
+        name: "Nozes",
+        qty: 40,
+        unit: "g"
+      },
+      {
+        name: "Molho de tomate",
+        qty: 6,
+        unit: "colher sopa"
+      },
+      {
+        name: "Queijo mussarela",
+        qty: 90,
+        unit: "g"
+      }
+    ],
+    prep: [
+      "Corte as berinjelas ao meio e asse até amaciarem.",
+      "Retire parte da polpa e misture com ricota, nozes picadas e temperos.",
+      "Recheie, cubra com molho e mussarela e gratine por 10 minutos."
+    ]
+  },
+  {
+    category: "vegetariana",
+    name: "Vegano: macarrão integral com molho de tomate e soja texturizada",
+    yield: 4,
+    kcal: 333,
+    protein: 24,
+    vegan: true,
+    ingredients: [
+      {
+        name: "Macarrão integral cozido",
+        qty: 600,
+        unit: "g"
+      },
+      {
+        name: "Proteína de soja texturizada (PTS)",
+        qty: 120,
+        unit: "g"
+      },
+      {
+        name: "Molho de tomate",
+        qty: 10,
+        unit: "colher sopa"
+      },
+      {
+        name: "Cebola",
+        qty: 100,
+        unit: "g"
+      }
+    ],
+    prep: [
+      "Hidrate a PTS em água quente com shoyu por 10 minutos e escorra.",
+      "Refogue a cebola e a PTS e junte o molho de tomate.",
+      "Misture ao macarrão cozido e divida em 4 potes."
+    ]
+  },
+  {
+    category: "vegetariana",
+    name: "Omelete de forno de abobrinha e ricota",
+    yield: 3,
+    kcal: 286,
+    protein: 24,
+    ingredients: [
+      {
+        name: "Ovos",
+        qty: 8,
+        unit: "unid"
+      },
+      {
+        name: "Abobrinha",
+        qty: 500,
+        unit: "g"
+      },
+      {
+        name: "Ricota",
+        qty: 150,
+        unit: "g"
+      }
+    ],
+    prep: [
+      "Rale a abobrinha e esprema para tirar o excesso de água.",
+      "Misture com os ovos batidos e a ricota em pedaços.",
+      "Asse a 180 °C por 30 minutos e corte em 3 porções."
+    ]
+  },
+  {
+    category: "vegetariana",
+    name: "Vegano: salada de feijão-fradinho, milho e tomate",
+    yield: 3,
+    kcal: 323,
+    protein: 14,
+    fast: true,
+    vegan: true,
+    ingredients: [
+      {
+        name: "Feijão-fradinho cozido",
+        qty: 450,
+        unit: "g"
+      },
+      {
+        name: "Milho verde",
+        qty: 150,
+        unit: "g"
+      },
+      {
+        name: "Tomate",
+        qty: 200,
+        unit: "g"
+      },
+      {
+        name: "Cebola",
+        qty: 50,
+        unit: "g"
+      },
+      {
+        name: "Azeite",
+        qty: 2,
+        unit: "colher sopa"
+      }
+    ],
+    prep: [
+      "Misture o feijão-fradinho cozido e frio com o milho.",
+      "Acrescente tomate e cebola picados.",
+      "Tempere com azeite, limão, sal e coentro."
+    ]
+  },
+  {
+    category: "sobremesa",
+    name: "Mousse proteico de skyr e chocolate amargo",
+    yield: 3,
+    kcal: 197,
+    protein: 17,
+    fast: true,
+    ingredients: [
+      {
+        name: "Iogurte proteico (skyr)",
+        qty: 450,
+        unit: "g"
+      },
+      {
+        name: "Chocolate amargo 70%",
+        qty: 30,
+        unit: "g"
+      },
+      {
+        name: "Mel",
+        qty: 2,
+        unit: "colher sopa"
+      }
+    ],
+    prep: [
+      "Derreta o chocolate em banho-maria e deixe amornar.",
+      "Misture ao skyr e ao mel até ficar homogêneo.",
+      "Divida em 3 potinhos e leve à geladeira por 1 hora."
+    ]
+  },
+  {
+    category: "sobremesa",
+    name: "Low carb: pudim de chia com leite de amêndoas e morango",
+    yield: 3,
+    kcal: 158,
+    protein: 5,
+    vegan: true,
+    ingredients: [
+      {
+        name: "Chia",
+        qty: 6,
+        unit: "colher sopa"
+      },
+      {
+        name: "Leite de amêndoas sem açúcar",
+        qty: 400,
+        unit: "ml"
+      },
+      {
+        name: "Morango",
+        qty: 150,
+        unit: "g"
+      }
+    ],
+    prep: [
+      "Misture a chia com o leite de amêndoas e deixe hidratar na geladeira por 4 horas.",
+      "Sirva com morangos picados por cima."
+    ]
+  },
+  {
+    category: "sobremesa",
+    name: "Sorvete de banana e morango (nice cream)",
+    yield: 2,
+    kcal: 158,
+    protein: 2,
+    fast: true,
+    vegan: true,
+    ingredients: [
+      {
+        name: "Banana congelada",
+        qty: 3,
+        unit: "unid"
+      },
+      {
+        name: "Morango congelado",
+        qty: 150,
+        unit: "g"
+      }
+    ],
+    prep: [
+      "Bata as bananas e os morangos congelados no processador até ficar cremoso.",
+      "Sirva na hora ou leve ao freezer por 30 minutos."
+    ]
+  },
+  {
+    category: "sobremesa",
+    name: "Bolo de caneca de aveia e cacau",
+    yield: 1,
+    kcal: 331,
+    protein: 13,
+    fast: true,
+    ingredients: [
+      {
+        name: "Aveia em flocos",
+        qty: 4,
+        unit: "colher sopa"
+      },
+      {
+        name: "Ovo",
+        qty: 1,
+        unit: "unid"
+      },
+      {
+        name: "Banana",
+        qty: 0.5,
+        unit: "unid"
+      },
+      {
+        name: "Chocolate amargo",
+        qty: 10,
+        unit: "g"
+      }
+    ],
+    prep: [
+      "Misture a aveia, o ovo e a banana amassada numa caneca.",
+      "Acrescente o chocolate picado.",
+      "Leve ao micro-ondas por 1 minuto e 30 segundos."
+    ]
+  }
+];
+
+export const MARMITA_SUGGESTIONS: MarmitaSuggestion[] = [...MARMITA_BASE, ...MARMITA_EXTRA];

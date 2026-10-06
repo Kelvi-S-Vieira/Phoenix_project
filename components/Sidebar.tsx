@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
-import { useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { createClient } from "@/lib/supabase/client";
 import {
   formatWeight,
@@ -10,13 +10,7 @@ import {
   type WeightUnit,
 } from "@/lib/weight-unit";
 
-function readSavedTheme(): "dark" | "light" {
-  try {
-    return localStorage.getItem("fenix_theme") === "light" ? "light" : "dark";
-  } catch {
-    return "dark";
-  }
-}
+import { applyTheme, readTheme } from "@/lib/theme";
 
 // "ember" is the default accent (no data-accent attribute needed).
 export type AccentKey = "ember" | "aco" | "verde";
@@ -69,19 +63,73 @@ export default function Sidebar({
 }) {
   const router = useRouter();
   const pathname = usePathname();
-  const [theme, setTheme] = useState<"dark" | "light">(readSavedTheme);
+  const [theme, setTheme] = useState<"dark" | "light">(readTheme);
   const [accent, setAccent] = useState<AccentKey>(readSavedAccent);
   const [weightUnit, setWeightUnitState] = useState<WeightUnit>(unit);
+  // Mobile/tablet drawer (<900px). On wider screens the sidebar is persistent
+  // and this state is ignored by CSS.
+  const [open, setOpen] = useState(false);
+  const [openedFor, setOpenedFor] = useState(pathname);
+  const toggleRef = useRef<HTMLButtonElement>(null);
+  const drawerRef = useRef<HTMLElement>(null);
+
+  // Close when the route changes (adjusting state during render, per React docs).
+  if (openedFor !== pathname) {
+    setOpenedFor(pathname);
+    setOpen(false);
+  }
+
+  const closeDrawer = useCallback(() => {
+    setOpen(false);
+    toggleRef.current?.focus();
+  }, []);
+
+  useEffect(() => {
+    if (!open) return;
+    function onKey(e: KeyboardEvent) {
+      if (e.key === "Escape") {
+        closeDrawer();
+        return;
+      }
+      if (e.key === "Tab" && drawerRef.current) {
+        // Simple focus trap inside the open drawer.
+        const f = drawerRef.current.querySelectorAll<HTMLElement>(
+          'a[href], button:not([disabled])',
+        );
+        if (!f.length) return;
+        const first = f[0];
+        const last = f[f.length - 1];
+        if (e.shiftKey && document.activeElement === first) {
+          e.preventDefault();
+          last.focus();
+        } else if (!e.shiftKey && document.activeElement === last) {
+          e.preventDefault();
+          first.focus();
+        }
+      }
+    }
+    document.addEventListener("keydown", onKey);
+    document.body.classList.add("fx-drawer-open");
+    // Move focus into the drawer.
+    const raf = requestAnimationFrame(() =>
+      drawerRef.current?.querySelector<HTMLElement>(".sidebar-close")?.focus(),
+    );
+    // If the viewport grows to the persistent-sidebar width, reset.
+    const mq = window.matchMedia("(min-width: 900px)");
+    const onMq = () => mq.matches && setOpen(false);
+    mq.addEventListener("change", onMq);
+    return () => {
+      cancelAnimationFrame(raf);
+      document.removeEventListener("keydown", onKey);
+      document.body.classList.remove("fx-drawer-open");
+      mq.removeEventListener("change", onMq);
+    };
+  }, [open, closeDrawer]);
 
   function toggleTheme() {
     const next = theme === "dark" ? "light" : "dark";
     setTheme(next);
-    document.documentElement.setAttribute("data-theme", next);
-    try {
-      localStorage.setItem("fenix_theme", next);
-    } catch {
-      // best-effort only
-    }
+    applyTheme(next);
   }
 
   function handleAccentClick(next: AccentKey) {
@@ -136,6 +184,7 @@ export default function Sidebar({
               key={item.href}
               href={item.href}
               className={"nav-item" + (pathname === item.href ? " active" : "")}
+              aria-current={pathname === item.href ? "page" : undefined}
             >
               <span className="dot"></span>
               {item.icon ? `${item.icon} ` : ""}
@@ -148,7 +197,37 @@ export default function Sidebar({
   );
 
   return (
-    <aside className="sidebar">
+    <>
+    <button
+      ref={toggleRef}
+      type="button"
+      className="sidebar-toggle"
+      aria-label={open ? "Fechar menu" : "Abrir menu"}
+      aria-expanded={open}
+      aria-controls="fx-sidebar"
+      onClick={() => setOpen((o) => !o)}
+    >
+      <span className="sidebar-toggle-bars" aria-hidden="true"></span>
+    </button>
+    <div
+      className={"sidebar-overlay" + (open ? " open" : "")}
+      onClick={closeDrawer}
+      aria-hidden="true"
+    />
+    <aside
+      id="fx-sidebar"
+      ref={drawerRef}
+      className={"sidebar" + (open ? " open" : "")}
+      aria-label="Menu principal"
+    >
+      <button
+        type="button"
+        className="sidebar-close"
+        aria-label="Fechar menu"
+        onClick={closeDrawer}
+      >
+        ×
+      </button>
       <div className="brand">
         <div className="brand-eyebrow">{eyebrow}</div>
         <div className="brand-title">Projeto Fênix</div>
@@ -160,19 +239,28 @@ export default function Sidebar({
       <div className="sidebar-nav">{nav}</div>
 
       <div className="sidebar-footer">
-        <div className="nav-item" onClick={toggleTheme} style={{ marginTop: 14 }}>
+        <button
+          type="button"
+          className="nav-item nav-item-btn"
+          onClick={toggleTheme}
+          style={{ marginTop: 14 }}
+          aria-label={theme === "dark" ? "Mudar para o tema claro" : "Mudar para o tema escuro"}
+        >
           <span className="dot"></span>
           {theme === "dark" ? "🌙 Tema escuro" : "☀️ Tema claro"}
-        </div>
+        </button>
 
         <div className="fx-accent-picker-sidebar fx-accent-picker">
           <span className="fx-accent-picker-label">Cor:</span>
           {ACCENTS.map((a) => (
-            <div
+            <button
+              type="button"
               key={a.key}
               className={"fx-accent-swatch-mini" + (accent === a.key ? " selected" : "")}
               data-accent={a.key}
               title={a.title}
+              aria-label={`Cor ${a.title}`}
+              aria-pressed={accent === a.key}
               onClick={() => handleAccentClick(a.key)}
             />
           ))}
@@ -182,29 +270,39 @@ export default function Sidebar({
           <div className="fx-unit-toggle">
             <span className="fx-unit-toggle-label">Unidade:</span>
             <div className="fx-unit-toggle-pill">
-              <span
+              <button
+                type="button"
                 className={"fx-unit-opt" + (weightUnit === "kg" ? " active" : "")}
                 data-unit="kg"
+                aria-pressed={weightUnit === "kg"}
                 onClick={() => handleUnitClick("kg")}
               >
                 kg
-              </span>
-              <span
+              </button>
+              <button
+                type="button"
                 className={"fx-unit-opt" + (weightUnit === "lb" ? " active" : "")}
                 data-unit="lb"
+                aria-pressed={weightUnit === "lb"}
                 onClick={() => handleUnitClick("lb")}
               >
                 lb
-              </span>
+              </button>
             </div>
           </div>
         )}
 
-        <div className="nav-item" onClick={handleLogout} style={{ marginTop: 6 }}>
+        <button
+          type="button"
+          className="nav-item nav-item-btn"
+          onClick={handleLogout}
+          style={{ marginTop: 6 }}
+        >
           <span className="dot"></span>
           Sair
-        </div>
+        </button>
       </div>
     </aside>
+    </>
   );
 }

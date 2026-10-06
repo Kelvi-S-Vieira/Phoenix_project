@@ -30,7 +30,7 @@ export default function FlameGauge({
         <path
           d="M100,18 C128,55 152,88 142,128 C136,156 116,172 100,172 C84,172 64,156 58,128 C48,88 72,55 100,18 Z"
           fill="none"
-          stroke="rgba(245,237,228,0.15)"
+          stroke="var(--gauge-track)"
           strokeWidth={2}
         />
         <path

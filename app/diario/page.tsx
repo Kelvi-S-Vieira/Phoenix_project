@@ -15,6 +15,7 @@ import WeekStrip from "./WeekStrip";
 import DietChip from "./DietChip";
 import WaterTracker from "./WaterTracker";
 import type { FlameGoal } from "./FlameBar";
+import type { WaterLog } from "@/lib/database.types";
 
 function weekDaysOf(dateStr: string): string[] {
   const [y, m, d] = dateStr.split("-").map(Number);
@@ -65,6 +66,14 @@ export default async function DiarioPage({
     .eq("logged_at", selectedDate)
     .order("created_at", { ascending: true });
 
+  const { data: waterRow } = await supabase
+    .from("water_logs")
+    .select("ml")
+    .eq("profile_id", user.id)
+    .eq("logged_at", selectedDate)
+    .maybeSingle();
+  const waterMl = (waterRow as Pick<WaterLog, "ml"> | null)?.ml ?? null;
+
   const today = todayBR();
   const weekDays = weekDaysOf(selectedDate);
   // Dias com registro (semana exibida + últimos 60 dias) para a tira da
@@ -84,7 +93,8 @@ export default async function DiarioPage({
     cafe: sum((e) => (e.meal === "cafe" ? e.kcal : 0)),
     almoco: sum((e) => (e.meal === "almoco" ? e.kcal : 0)),
     lanche: sum((e) => (e.meal === "lanche" ? e.kcal : 0)),
-    jantar: sum((e) => (e.meal === "jantar" ? e.kcal : 0)),
+    // A ceia soma na marca do jantar (a barra tem só 4 marcas).
+    jantar: sum((e) => (e.meal === "jantar" || e.meal === "ceia" ? e.kcal : 0)),
   };
   const goal: FlameGoal =
     profile.goal === "ganhar" ? "ganhar" : profile.goal === "manter" ? "manter" : "emagrecer";
@@ -146,7 +156,13 @@ export default async function DiarioPage({
             streak={streak}
           />
 
-          <WaterTracker key={selectedDate} date={selectedDate} targetMl={waterTargetMl} />
+          <WaterTracker
+            key={selectedDate}
+            profileId={user.id}
+            date={selectedDate}
+            targetMl={waterTargetMl}
+            initialMl={waterMl}
+          />
 
           <SummaryCards entries={list} targets={targets} />
 

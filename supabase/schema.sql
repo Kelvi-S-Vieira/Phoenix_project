@@ -460,7 +460,7 @@ create table if not exists public.diary_entries (
   id uuid primary key default gen_random_uuid(),
   profile_id uuid not null references public.profiles(id) on delete cascade,
   logged_at date not null default current_date,
-  meal text not null check (meal in ('cafe', 'almoco', 'lanche', 'jantar', 'extra')),
+  meal text not null check (meal in ('cafe', 'almoco', 'lanche', 'jantar', 'ceia', 'extra')),
   food_name text not null,
   quantity numeric,
   unit text,
@@ -480,6 +480,20 @@ create index if not exists diary_entries_profile_id_logged_at_idx
 -- table, so an existing deployment also needs the standalone
 -- supabase/migration_diary.sql run once in the SQL editor (it also adds the
 -- profiles.carb_target/fat_target/timeframe_weeks columns above).
+
+-- -----------------------------------------------------------------------------
+-- water_logs
+-- Consumo de água por dia (Diário → WaterTracker); upsert por (profile_id, logged_at).
+-- Also see supabase/migration_water_logs.sql.
+-- -----------------------------------------------------------------------------
+create table if not exists public.water_logs (
+  profile_id uuid not null references public.profiles(id) on delete cascade,
+  logged_at date not null,
+  ml integer not null default 0 check (ml >= 0),
+  updated_at timestamptz not null default now(),
+  primary key (profile_id, logged_at)
+);
+
 
 -- -----------------------------------------------------------------------------
 -- user_recipes / meal_prep_plan / shopping_extras
@@ -873,6 +887,7 @@ alter table public.exercise_set_logs enable row level security;
 alter table public.lifts enable row level security;
 alter table public.weekly_cardio enable row level security;
 alter table public.diary_entries enable row level security;
+alter table public.water_logs enable row level security;
 alter table public.user_recipes enable row level security;
 alter table public.meal_prep_plan enable row level security;
 alter table public.shopping_extras enable row level security;
@@ -1299,6 +1314,33 @@ create policy "diary_entries_update_own"
 
 create policy "diary_entries_delete_own"
   on public.diary_entries for delete
+  using (profile_id = auth.uid());
+
+-- --- water_logs --------------------------------------------------------------
+create policy "water_logs_select_own"
+  on public.water_logs for select
+  using (profile_id = auth.uid());
+
+create policy "water_logs_select_by_personal"
+  on public.water_logs for select
+  using (
+    exists (
+      select 1 from public.profiles p
+      where p.id = water_logs.profile_id and p.linked_personal_id = auth.uid()
+    )
+  );
+
+create policy "water_logs_insert_own"
+  on public.water_logs for insert
+  with check (profile_id = auth.uid());
+
+create policy "water_logs_update_own"
+  on public.water_logs for update
+  using (profile_id = auth.uid())
+  with check (profile_id = auth.uid());
+
+create policy "water_logs_delete_own"
+  on public.water_logs for delete
   using (profile_id = auth.uid());
 
 -- --- user_recipes -------------------------------------------------------------

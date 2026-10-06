@@ -67,8 +67,17 @@ export default function FlameBar({
 
   // (4) cores por objetivo: emagrecer -> acima = dourado (alerta); demais -> acima = verde
   const overBad = goal === "emagrecer";
-  const hotEnd = isOver ? (overBad ? "#e0b85c" : "#7fb88a") : "#f2a65a";
-  const hotMid = isOver ? (overBad ? "#f2a65a" : "#c9d98a") : "#ff6b35";
+  // Cores via tokens do tema (globals.css: --flame-*), para funcionar no claro e no escuro.
+  const hotEnd = isOver
+    ? overBad
+      ? "var(--flame-over-bad-end)"
+      : "var(--flame-over-ok-end)"
+    : "var(--flame-end)";
+  const hotMid = isOver
+    ? overBad
+      ? "var(--flame-over-bad-mid)"
+      : "var(--flame-over-ok-mid)"
+    : "var(--flame-mid)";
 
   // (6) força da chama pela sequência
   const power = streak >= 7 ? 1.25 : streak >= 3 ? 1.1 : 1;
@@ -174,8 +183,8 @@ export default function FlameBar({
       >
         <defs>
           <linearGradient id={`gf${uid}`} x1="0" x2="1">
-            <stop offset="0" stopColor="#7a1318" />
-            <stop offset=".45" stopColor="#c1272d" />
+            <stop offset="0" stopColor="var(--flame-base)" />
+            <stop offset=".45" stopColor="var(--flame-deep)" />
             <stop offset=".8" stopColor={hotMid} />
             <stop offset="1" stopColor={hotEnd} />
           </linearGradient>
@@ -198,13 +207,13 @@ export default function FlameBar({
           width={xz2 - xz1}
           height={BAR_H + 12}
           rx="6"
-          fill="#7fb88a"
+          fill="var(--fx-zone)"
           opacity=".22"
-          stroke="#7fb88a"
-          strokeOpacity=".6"
+          stroke="var(--fx-zone)"
+          strokeOpacity=".7"
           strokeDasharray="3 3"
         />
-        <text x={xm} y={BAR_Y - 12} textAnchor="middle" fontSize="9.5" fill="#7fb88a">
+        <text x={xm} y={BAR_Y - 12} textAnchor="middle" fontSize="9.5" fontWeight="600" fill="var(--fx-zone-text)">
           zona ideal
         </text>
 
@@ -221,9 +230,9 @@ export default function FlameBar({
         )}
         {k > 0 && view === "macro" && (
           <g clipPath={`url(#trk${uid})`}>
-            <rect x="0" y={BAR_Y} width={wp} height={BAR_H} fill="#e05c5c" />
-            <rect x={wp} y={BAR_Y} width={wc} height={BAR_H} fill="#f2a65a" />
-            <rect x={wp + wc} y={BAR_Y} width={wf} height={BAR_H} fill="#6aa6e0" />
+            <rect x="0" y={BAR_Y} width={wp} height={BAR_H} fill="var(--macro-p)" />
+            <rect x={wp} y={BAR_Y} width={wc} height={BAR_H} fill="var(--macro-c)" />
+            <rect x={wp + wc} y={BAR_Y} width={wf} height={BAR_H} fill="var(--macro-f)" />
           </g>
         )}
 
@@ -236,11 +245,11 @@ export default function FlameBar({
               <g className="fx-flame-fl fx-flame-fl2" fill={hotMid} transform="translate(-8 0)">
                 <path d={tongue(0.5)} />
               </g>
-              <g className="fx-flame-fl" fill="#fff6e0" transform="translate(-14 0) scale(.55)">
+              <g className="fx-flame-fl" fill="var(--flame-core)" transform="translate(-14 0) scale(.55)">
                 <path d={tongue(0.4)} />
               </g>
               {streak >= 7 && (
-                <g className="fx-flame-fl fx-flame-fl2" fill="#fff6e0" opacity=".7" transform="translate(-4 0) scale(.8)">
+                <g className="fx-flame-fl fx-flame-fl2" fill="var(--flame-core)" opacity=".7" transform="translate(-4 0) scale(.8)">
                   <path d={tongue(0.35)} />
                 </g>
               )}
@@ -255,8 +264,14 @@ export default function FlameBar({
 
         {marks.map((m) => (
           <g key={m.key}>
-            <rect x={m.px - 1} y={BAR_Y} width="2" height={BAR_H} fill="#14110f" opacity=".75" />
-            <circle cx={m.px} cy={BAR_Y + BAR_H + 12} r="4" fill={m.lit ? "#ff6b35" : "#3a312a"} />
+            <rect x={m.px - 1} y={BAR_Y} width="2" height={BAR_H} fill="var(--fx-mark)" opacity=".75" />
+            <circle
+              cx={m.px}
+              cy={BAR_Y + BAR_H + 12}
+              r="4"
+              fill={m.lit ? "var(--ember)" : "var(--fx-dot-off)"}
+              stroke={m.lit ? "none" : "var(--fx-dot-stroke)"}
+            />
           </g>
         ))}
       </svg>
@@ -264,9 +279,9 @@ export default function FlameBar({
       <div className="fx-flame-leg">
         {view === "macro" ? (
           <>
-            <span><i style={{ background: "#e05c5c" }} />Proteína</span>
-            <span><i style={{ background: "#f2a65a" }} />Carbo</span>
-            <span><i style={{ background: "#6aa6e0" }} />Gordura</span>
+            <span><i style={{ background: "var(--macro-p)" }} />Proteína</span>
+            <span><i style={{ background: "var(--macro-c)" }} />Carbo</span>
+            <span><i style={{ background: "var(--macro-f)" }} />Gordura</span>
           </>
         ) : (
           <span>● refeição registrada · ┆ meta = {T || "—"} kcal</span>

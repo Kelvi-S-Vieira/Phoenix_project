@@ -9,6 +9,7 @@ const MEALS: { key: Meal; label: string }[] = [
   { key: "almoco", label: "Almoço" },
   { key: "lanche", label: "Lanche" },
   { key: "jantar", label: "Jantar" },
+  { key: "ceia", label: "Ceia" },
   { key: "extra", label: "Extra" },
 ];
 
@@ -53,16 +54,15 @@ export default function EntriesList({ entries }: { entries: DiaryEntry[] }) {
     router.refresh();
   }
 
-  if (entries.length === 0) {
-    return (
-      <div className="fx-chart-empty">Nenhum alimento registrado neste dia ainda.</div>
-    );
+  function addTo(meal: Meal) {
+    window.dispatchEvent(new CustomEvent<Meal>("fx-add-meal", { detail: meal }));
   }
 
+  // Grupos vazios aparecem com o "+" (exceto "Extra", legado: só se tiver itens).
   const groups = MEALS.map((m) => ({
     meal: m,
     items: entries.filter((e) => e.meal === m.key),
-  })).filter((g) => g.items.length > 0);
+  })).filter((g) => g.items.length > 0 || g.meal.key !== "extra");
 
   return (
     <div>
@@ -72,14 +72,29 @@ export default function EntriesList({ entries }: { entries: DiaryEntry[] }) {
           <div className="meal-group" key={meal.key}>
             <div className="meal-group-title">
               <span>{meal.label}</span>
-              <span>{Math.round(kcalSum)} kcal</span>
+              <span className="fx-mealplus-right">
+                <span>{Math.round(kcalSum)} kcal</span>
+                <button
+                  type="button"
+                  className="fx-mealplus-btn"
+                  onClick={() => addTo(meal.key)}
+                  aria-label={`Adicionar alimento em ${meal.label}`}
+                  title={`Adicionar em ${meal.label}`}
+                >
+                  +
+                </button>
+              </span>
             </div>
-            <MacroChips
-              small
-              protein={items.reduce((a, e) => a + (e.protein || 0), 0)}
-              carb={items.reduce((a, e) => a + (e.carb || 0), 0)}
-              fat={items.reduce((a, e) => a + (e.fat || 0), 0)}
-            />
+            {items.length === 0 ? (
+              <div className="fx-mealplus-empty">Nada registrado ainda.</div>
+            ) : (
+              <MacroChips
+                small
+                protein={items.reduce((a, e) => a + (e.protein || 0), 0)}
+                carb={items.reduce((a, e) => a + (e.carb || 0), 0)}
+                fat={items.reduce((a, e) => a + (e.fat || 0), 0)}
+              />
+            )}
             {items.map((e) => (
               <div className="food-entry fe2" key={e.id}>
                 <div className="fe2-top">
